@@ -341,11 +341,11 @@ This gives you a basic JWT authentication system!`,
                 </div>
               )}
 
-              <div className="group flex-1 max-w-3xl">
+              <div className={`group ${msg.role === 'user' ? '' : 'flex-1 max-w-3xl'}`}>
                 <div
                   className={`relative ${
                     msg.role === 'user'
-                      ? 'bg-primary text-primary-foreground rounded-3xl px-6 py-4 shadow-lg shadow-primary/30 ml-auto max-w-2xl border-1 border-primary/20'
+                      ? 'bg-primary text-primary-foreground rounded-3xl px-6 py-4 shadow-lg shadow-primary/30 ml-auto max-w-sm border-1 border-primary/20'
                       : 'bg-card/50 backdrop-blur-sm border border-border/50 rounded-3xl px-6 py-5 shadow-sm hover:shadow-md hover:border-border transition-all duration-300'
                   }`}
                 >
