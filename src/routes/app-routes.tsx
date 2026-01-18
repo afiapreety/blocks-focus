@@ -3,7 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 // import { FinancePage } from '@/modules/finance';
 // import { CalendarPage } from '@/modules/big-calendar';
 // import { EmailPage } from '@/modules/email';
-import { GptChatPage } from '@/modules/chat';
+import { GptChatPage, GptChatPageDetails } from '@/modules/chat';
 import { NotFoundPage, ServiceUnavailablePage } from '@/modules/error-view';
 // import { FileManagerMyFilesPage, SharedWithMePage, TrashPage } from '@/modules/file-manager';
 // import { ActivityLogPage, TimelinePage } from '@/modules/activity-log';
@@ -77,7 +77,7 @@ export const AppRoutes = () => {
                 <Route path="/identity-management" element={<UsersTablePage />} />
                 <Route path="/task-manager" element={<TaskManagerPage />} /> */}
                 <Route path="/chat" element={<GptChatPage />} />
-                <Route path="/chat/:chatId" element={<GptChatPage />} />
+                <Route path="/chat/:chatId" element={<GptChatPageDetails />} />
                 {/* <Route path="/invoices" element={<InvoicesPage />} />
                 <Route path="/invoices/create-invoice" element={<CreateInvoicePage />} />
                 <Route path="/invoices/:invoiceId/edit" element={<EditInvoicePage />} />
