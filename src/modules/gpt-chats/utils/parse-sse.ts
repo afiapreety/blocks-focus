@@ -1,8 +1,8 @@
 export const parseSSEEvent = (
   line: string
 ): { eventType: string; eventData: Record<string, unknown> } | null => {
-  const eventMatch = line.match(/^event:\s*(.+)$/m);
-  const dataMatch = line.match(/^data:\s*(.+)$/m);
+  const eventMatch = line.match(/^event:\s*([^\r\n]+)$/m);
+  const dataMatch = line.match(/^data:\s*([^\r\n]+)$/m);
   if (!eventMatch || !dataMatch) return null;
   try {
     return {
