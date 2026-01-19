@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui-kit/button';
+import { useChatStore } from '@/modules/gpt-chats/hooks/use-chat-store';
 import {
   Sparkles,
   Compass,
@@ -15,7 +16,7 @@ import {
   MapPin,
   Globe,
 } from 'lucide-react';
-import { GptChatInput } from '../../components/gpt-chat-input/gpt-chat-input';
+import { GptChatInput } from '@/modules/gpt-chats/components/gpt-chat-input/gpt-chat-input';
 
 const categoryPrompts: Record<
   string,
@@ -120,19 +121,19 @@ const categories = [
 
 export const GptChatPage = () => {
   const navigate = useNavigate();
-  const [message, setMessage] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('learn');
+  const { initiateChat } = useChatStore();
 
-  const handleSendMessage = () => {
+  const handleSendMessage = (message: string) => {
     if (message.trim()) {
       const newChatId = crypto.randomUUID();
-      localStorage.setItem(`chat-initial-${newChatId}`, message);
+      initiateChat(newChatId, message);
       navigate(`/chat/${newChatId}`);
     }
   };
 
   const handlePromptClick = (prompt: { title: string; description: string }) => {
-    setMessage(`${prompt.title} ${prompt.description}`);
+    handleSendMessage(`${prompt.title} ${prompt.description}`);
   };
 
   return (
@@ -158,8 +159,8 @@ export const GptChatPage = () => {
                 onClick={() => setSelectedCategory(category.id)}
                 className={`gap-2 px-6 py-5 rounded-2xl transition-all duration-300 ${
                   isActive
-                    ? 'bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/25 scale-105'
-                    : 'bg-card/50 hover:bg-accent border-2 hover:border-primary/50 hover:scale-105'
+                    ? 'bg-primary  text-gray-200  scale-105 hover:bg-primary-300'
+                    : 'bg-card/50 hover:bg-accent border-2 hover:scale-105'
                 }`}
               >
                 <Icon className="h-4 w-4" />
@@ -176,10 +177,10 @@ export const GptChatPage = () => {
               <button
                 key={index}
                 onClick={() => handlePromptClick(prompt)}
-                className="group relative overflow-hidden text-left p-5 rounded-2xl border-2 border-border bg-card/50 backdrop-blur-sm hover:bg-accent/50 hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1"
+                className="group relative overflow-hidden text-left p-5 rounded-2xl border-2 border-border bg-card/50 backdrop-blur-sm hover:bg-accent/50  transition-all duration-300   hover:-translate-y-1"
               >
                 <div className="flex items-start gap-4">
-                  <div className="p-2.5 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300 group-hover:scale-110">
+                  <div className="p-2.5 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-gray-200 transition-all duration-300 group-hover:scale-110">
                     <PromptIcon className="h-5 w-5" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -198,11 +199,7 @@ export const GptChatPage = () => {
         </div>
       </div>
 
-      <GptChatInput
-        message={message}
-        onMessageChange={setMessage}
-        onSendMessage={handleSendMessage}
-      />
+      <GptChatInput onSendMessage={handleSendMessage} />
     </div>
   );
 };

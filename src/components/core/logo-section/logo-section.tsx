@@ -13,7 +13,7 @@ interface LogoSectionProps {
 
 export const LogoSection = ({ theme, open, isMobile, onClose }: Readonly<LogoSectionProps>) => {
   return (
-    <div className="relative h-10 w-full">
+    <div className="relative h-8  w-full">
       <img
         src={theme === 'dark' ? lightLogo : darkLogo}
         alt="logo"

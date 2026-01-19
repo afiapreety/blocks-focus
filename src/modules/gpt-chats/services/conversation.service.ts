@@ -14,11 +14,6 @@ import {
 export type IConversationConfigResponse = Widget;
 
 export class ConversationService {
-  baseUrl: string;
-  constructor() {
-    this.baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '';
-  }
-
   config(payload: IConversationConfigPayload): Promise<IConversationConfigResponse> {
     return fetch('/api/config', {
       method: 'POST',
@@ -51,6 +46,11 @@ export class ConversationService {
   ): Promise<IConversationByIdResponse> {
     const url = `/blocksai-api/v1/conversation/sessions/${payload.session_id}`;
     return clients.post(url, JSON.stringify(payload));
+  }
+
+  query(body: Record<string, any>) {
+    const url = `/blocksai-api/v1/ai-agent/query/stream`;
+    return clients.stream(url, JSON.stringify(body));
   }
 }
 
