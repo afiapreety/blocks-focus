@@ -37,7 +37,6 @@ export const AppSidebar = () => {
 
   const handleNewChat = () => {
     navigate('/chat');
-    // Implement the logic for creating a new chat
   };
 
   return (
