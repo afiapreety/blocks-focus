@@ -113,7 +113,7 @@ export const GroupedModelSelector = ({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-[220px] h-10 justify-between bg-card/50 hover:bg-card border-border/50 hover:border-primary/30 transition-all duration-200 rounded-xl px-3 group"
+          className="w-[220px] h-10 justify-between bg-card/50 hover:bg-card border-border/50 hover:border-primary transition-all duration-200 rounded-xl px-3 group"
         >
           <div className="flex items-center gap-2.5 flex-1 min-w-0">
             <div
@@ -177,7 +177,7 @@ export const GroupedModelSelector = ({
                         className={cn(
                           'w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-sm transition-all duration-200 group/item',
                           isSelected
-                            ? 'bg-primary/10 border-2 border-primary/30 shadow-sm'
+                            ? 'bg-primary/10 border-2 border-primary shadow-sm'
                             : 'hover:bg-accent/50 border-2 border-transparent hover:border-border/50'
                         )}
                       >
