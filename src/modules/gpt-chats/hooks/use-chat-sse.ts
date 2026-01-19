@@ -1,20 +1,17 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useMutation, onlineManager, focusManager } from '@tanstack/react-query';
-import { useChatPreviewSession } from './use-chat-preview-session';
+import { useCallback, useState } from 'react';
+import { onlineManager } from '@tanstack/react-query';
+import { useChatStore } from './use-chat-store';
 import { getRandomEventMessage } from '../utils/chat-event-messages';
 import { parseSSEBuffer } from '../utils/parse-sse';
 import { parseChatMessage } from '../utils/json-utils';
 import { conversationService } from '../services/conversation.service';
 
-interface UseChatPreviewSSE {
-  widget_id: string;
-  project_key: string;
-  pg?: boolean;
-  previewMode?: boolean;
+interface UseChatSSE {
+  chatId?: string;
 }
 
 export const handleSSEMessage = (
-  widgetId: string,
+  chatId: string,
   event: { eventType: string; eventData: Record<string, unknown> },
   setSuggestions?: (suggestions: string[]) => void
 ) => {
@@ -26,7 +23,8 @@ export const handleSSEMessage = (
     setBotErrorMessage,
     setCurrentEvent,
     setBotThinking,
-  } = useChatPreviewSession.getState();
+    setSessionId,
+  } = useChatStore.getState();
 
   const data = { type: event.eventType, ...event.eventData } as any;
 
@@ -50,9 +48,8 @@ export const handleSSEMessage = (
 
   if (eventTypes.includes(normalizedType) || normalizedType.startsWith('node_start')) {
     const eventMessage = getRandomEventMessage(data.type);
-    console.log('eventMessage', eventMessage);
-    setCurrentEvent(widgetId, data.type, eventMessage);
-    setBotThinking(widgetId, true);
+    setCurrentEvent(chatId, data.type, eventMessage);
+    setBotThinking(chatId, true);
     return;
   }
 
@@ -94,18 +91,18 @@ export const handleSSEMessage = (
       : messageToStream;
     const streamContent = isJsonObject ? `:::json\n${formattedJson}\n:::` : String(message);
 
-    startBotMessage(widgetId, '');
+    startBotMessage(chatId, '');
 
     if (isJsonObject) {
       const skeleton = generateJsonSkeleton(JSON.parse(messageToStream));
       const skeletonContent = `:::json-skeleton\n${skeleton}\n:::`;
-      streamBotMessage(widgetId, skeletonContent);
+      streamBotMessage(chatId, skeletonContent);
 
       timeoutId = setTimeout(() => {
-        startBotMessage(widgetId, '');
-        streamBotMessage(widgetId, streamContent);
+        startBotMessage(chatId, '');
+        streamBotMessage(chatId, streamContent);
         if (setSuggestions) setSuggestions(suggestions);
-        endBotMessage(widgetId);
+        endBotMessage(chatId);
       }, 2000);
 
       return () => clearTimeout(timeoutId);
@@ -114,7 +111,7 @@ export const handleSSEMessage = (
     const sendNextChunk = () => {
       if (index >= streamContent.length) {
         if (setSuggestions) setSuggestions(suggestions);
-        endBotMessage(widgetId);
+        endBotMessage(chatId);
         return;
       }
 
@@ -136,7 +133,7 @@ export const handleSSEMessage = (
         chunk = streamContent.slice(index, index + chunkSize);
       }
 
-      streamBotMessage(widgetId, chunk);
+      streamBotMessage(chatId, chunk);
       index += chunk.length;
       timeoutId = setTimeout(sendNextChunk, 50);
     };
@@ -157,7 +154,7 @@ export const handleSSEMessage = (
           ``,
           `${spaces}▒▒▒▒▒▒▒▒▒▒▒▒▒▒   ▒▒▒▒▒▒▒▒`,
           ``,
-          `${spaces}▒▒▒▒▒▒   ▒▒▒▒▒▒▒▒▒▒▒▒`,
+          `${spaces}▒▒▒▒▒▒    ▒▒▒▒▒▒▒▒▒▒▒▒`,
           ``,
           `${spaces}▒▒▒▒▒▒▒▒▒   ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒`,
         ].join('\n');
@@ -247,6 +244,9 @@ export const handleSSEMessage = (
   };
 
   switch (data.type) {
+    case 'start':
+      setSessionId(chatId, data.session_id);
+      break;
     case 'typing':
       break;
 
@@ -254,198 +254,98 @@ export const handleSSEMessage = (
       break;
 
     case 'chat_response':
-      setCurrentEvent(widgetId, null, '');
-      initiateBotMessage(widgetId, data.message);
+      setCurrentEvent(chatId, null, '');
+      initiateBotMessage(chatId, data.message);
       fakeStream(data.message, data.next_step_questions || []);
       break;
 
     case 'error':
-      setCurrentEvent(widgetId, null, '');
-      initiateBotMessage(widgetId, data.message);
-      setBotErrorMessage(widgetId, data.message);
-      endBotMessage(widgetId);
+      setCurrentEvent(chatId, null, '');
+      initiateBotMessage(chatId, data.message);
+      setBotErrorMessage(chatId, data.message);
+      endBotMessage(chatId);
       break;
 
     case 'message_end':
     case 'workflow_end':
-      setCurrentEvent(widgetId, null, '');
-      setBotThinking(widgetId, false);
+      setCurrentEvent(chatId, null, '');
+      setBotThinking(chatId, false);
       break;
-
     default:
   }
 };
 
-const useInitiateConversation = () =>
-  useMutation({
-    mutationKey: ['chatbot', 'initiate'],
-    mutationFn: conversationService.initiate,
-  });
-
-export const useChatPreviewSSE = ({
-  widget_id,
-  project_key,
-  previewMode = false,
-}: UseChatPreviewSSE) => {
+export const useChatSSE = ({ chatId = '' }: UseChatSSE) => {
   const [suggestions, setSuggestions] = useState<string[]>([]);
-  const { sessions, setSessionId, addUserMessage, setBotThinking, setCurrentEvent } =
-    useChatPreviewSession();
-  const [isConnected, setIsConnected] = useState(false);
-  const { mutateAsync: initiateConversationMutation } = useInitiateConversation();
-  const sessionId = sessions[widget_id]?.sessionId || '';
-  const conversations = sessions[widget_id]?.conversations || [];
-  const isBotStreaming = sessions[widget_id]?.isBotStreaming || false;
-  const isBotThinking = sessions[widget_id]?.isBotThinking || false;
+  const { chats, addUserMessage, setBotThinking, setCurrentEvent } = useChatStore();
+  const sessionId = chats[chatId]?.sessionId || '';
+  const conversations = chats[chatId]?.conversations || [];
+  const isBotStreaming = chats[chatId]?.isBotStreaming || false;
+  const isBotThinking = chats[chatId]?.isBotThinking || false;
+  const isPendingSend = chats[chatId]?.pendingSend || false;
 
-  const streamInfoRef = useRef<{ token: string } | null>(null);
-  const connectingRef = useRef<boolean>(false);
-  const retriesRef = useRef<number>(0);
-
-  const connect = useCallback(
-    async (currentSessionId: string) => {
-      if (connectingRef.current) return;
-
-      const retryHandler = () => {
-        retriesRef.current += 1;
-        if (retriesRef.current > 5) return;
-        const delay = Math.min(1000 * Math.pow(2, retriesRef.current), 30000);
-        setTimeout(() => {
-          connect(currentSessionId);
-        }, delay);
-      };
+  const generateBotMessage = useCallback(
+    async (data: { message: string }) => {
+      setBotThinking(chatId, true);
+      setSuggestions([]);
 
       try {
-        connectingRef.current = true;
-        const res = await initiateConversationMutation({
-          widget_id,
-          project_key,
-          session_id: currentSessionId,
+        const reader = await conversationService.query({
+          query: data.message,
+          session_id: sessionId,
+          base_prompt: 'You are helpful',
+          model_id: 'gpt-4',
+          tool_ids: [],
+          last_n_turn: 5,
+          enable_summary: false,
+          enable_next_suggestion: false,
+          response_type: 'text',
+          response_format: 'string',
+          call_from: 'web',
         });
-        if (!res.is_success) throw new Error(res.detail || 'Initiation failed');
 
-        streamInfoRef.current = {
-          token: res.token,
-        };
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let isDone = false;
 
-        setSessionId(widget_id, res.session_id);
-        setIsConnected(true);
-        connectingRef.current = false;
-        retriesRef.current = 0;
-      } catch (error) {
-        connectingRef.current = false;
-        setIsConnected(false);
+        while (!isDone) {
+          const { done, value } = await reader.read();
+          isDone = done;
 
-        // if (isErrorWithErrors(error)) {
-        //   if (
-        //     (error.errors as { detail: string })?.detail?.toLowerCase() ===
-        //     'Session creation failed'.toLowerCase()
-        //   ) {
-        //     setSessionId(widget_id, '');
-        //     return retryHandler();
-        //   }
-        // }
-        if (
-          (error as { message: string })?.message?.toLowerCase() ===
-          'Session not found'.toLowerCase()
-        ) {
-          if (currentSessionId) connect('');
-          else retryHandler();
-          return;
+          if (value) {
+            buffer += decoder.decode(value, { stream: true });
+            const { events, remaining } = parseSSEBuffer(buffer);
+            buffer = remaining;
+
+            events.forEach((event) => {
+              handleSSEMessage(chatId, event, setSuggestions);
+            });
+          }
         }
-        retryHandler();
+      } catch (error) {
+        setBotThinking(chatId, false);
+        setCurrentEvent(chatId, null, '');
       }
     },
-    [initiateConversationMutation, setSessionId, widget_id, project_key]
+    [chatId, sessionId, setBotThinking, setCurrentEvent]
   );
 
-  // Connect on mount
-  useEffect(() => {
-    if (!previewMode) {
-      connect(sessionId);
-    }
-  }, [connect, sessionId, previewMode]);
-
-  useEffect(() => {
-    if (previewMode) return;
-    const unsubscribe = onlineManager.subscribe((isOnline) => {
-      if (isOnline) connect(sessionId);
-    });
-    return () => unsubscribe();
-  }, [connect, sessionId, previewMode]);
-
-  useEffect(() => {
-    if (previewMode) return;
-    const unsubscribe = focusManager.subscribe((isVisible) => {
-      if (isVisible) connect(sessionId);
-    });
-    return () => unsubscribe();
-  }, [connect, sessionId, previewMode]);
-
   const sendMessage = async (data: { message: string }) => {
-    if (!streamInfoRef.current) {
-      if (isConnected) connect(sessionId);
-      return;
-    }
-
-    addUserMessage(widget_id, data.message);
-    setBotThinking(widget_id, true);
-    setSuggestions([]);
-
-    try {
-      const token = streamInfoRef.current.token;
-      const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/blocksai-api/v1/chat/${sessionId}?x_blocks_token=${token}&x_blocks_key=${project_key}&pg=true&se=true`;
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-blocks-token': token,
-          'x-blocks-key': project_key,
-        },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok || !response.body) {
-        throw new Error(response.statusText || 'Stream request failed');
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
-        const { done, value } = await reader.read();
-
-        if (value) {
-          buffer += decoder.decode(value, { stream: true });
-          const { events, remaining } = parseSSEBuffer(buffer);
-          buffer = remaining;
-
-          events.forEach((event) => {
-            handleSSEMessage(widget_id, event, setSuggestions);
-          });
-        }
-
-        if (done) {
-          break;
-        }
-      }
-    } catch (error) {
-      setBotThinking(widget_id, false);
-      setCurrentEvent(widget_id, null, '');
-    }
+    addUserMessage(chatId, data.message);
+    await generateBotMessage(data);
   };
 
+  const isOnline = onlineManager.isOnline;
+
   return {
-    isConnected,
     sessionId,
     sendMessage,
     conversations,
     isBotThinking,
     isBotStreaming,
     suggestions,
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
-    setIsUserIdle: () => {},
+    isOnline,
+    generateBotMessage,
+    isPendingSend,
   };
 };

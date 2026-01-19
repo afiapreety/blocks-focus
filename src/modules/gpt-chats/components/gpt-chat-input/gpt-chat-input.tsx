@@ -5,27 +5,22 @@ import { useState } from 'react';
 import { GroupedModelSelector } from './model-selector';
 
 interface GptChatInputProps {
-  message: string;
-  onMessageChange: (message: string) => void;
-  onSendMessage: () => void;
+  onSendMessage: (message: string) => void;
   disabled?: boolean;
   placeholder?: string;
 }
 
 export const GptChatInput = ({
-  message,
-  onMessageChange,
   onSendMessage,
   disabled = false,
   placeholder = 'Ask me anything...',
 }: GptChatInputProps) => {
+  const [message, setMessage] = useState('');
   const [selectedModel, setSelectedModel] = useState('gemini-3-flash');
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      onSendMessage();
-    }
+  const onMessageHandler = () => {
+    onSendMessage(message);
+    setMessage('');
   };
 
   return (
@@ -34,8 +29,13 @@ export const GptChatInput = ({
         <div className="relative bg-card/80 backdrop-blur-sm rounded-3xl border-2 border-border hover:border-primary/30 focus-within:border-primary/50 transition-all duration-300 shadow-xl shadow-black/5">
           <Textarea
             value={message}
-            onChange={(e) => onMessageChange(e.target.value)}
-            onKeyDown={handleKeyPress}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                onMessageHandler();
+              }
+            }}
             placeholder={placeholder}
             disabled={disabled}
             className="min-h-[80px] max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 pr-16 px-6 py-5 text-base placeholder:text-muted-foreground/60"
@@ -49,7 +49,7 @@ export const GptChatInput = ({
                   ? 'bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/25 hover:scale-110'
                   : 'bg-muted text-muted-foreground cursor-not-allowed'
               }`}
-              onClick={onSendMessage}
+              onClick={onMessageHandler}
               disabled={!message.trim() || disabled}
             >
               <ArrowUp className="h-5 w-5" />

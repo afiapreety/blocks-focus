@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui-kit/button';
+import { useChatStore } from '@/modules/gpt-chats/hooks/use-chat-store';
 import {
   Sparkles,
   Compass,
@@ -120,19 +121,19 @@ const categories = [
 
 export const GptChatPage = () => {
   const navigate = useNavigate();
-  const [message, setMessage] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('learn');
+  const { initiateChat } = useChatStore();
 
-  const handleSendMessage = () => {
+  const handleSendMessage = (message: string) => {
     if (message.trim()) {
       const newChatId = crypto.randomUUID();
-      localStorage.setItem(`chat-initial-${newChatId}`, message);
+      initiateChat(newChatId, message);
       navigate(`/chat/${newChatId}`);
     }
   };
 
   const handlePromptClick = (prompt: { title: string; description: string }) => {
-    setMessage(`${prompt.title} ${prompt.description}`);
+    handleSendMessage(`${prompt.title} ${prompt.description}`);
   };
 
   return (
@@ -198,11 +199,7 @@ export const GptChatPage = () => {
         </div>
       </div>
 
-      <GptChatInput
-        message={message}
-        onMessageChange={setMessage}
-        onSendMessage={handleSendMessage}
-      />
+      <GptChatInput onSendMessage={handleSendMessage} />
     </div>
   );
 };

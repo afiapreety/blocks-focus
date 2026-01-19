@@ -58,6 +58,11 @@ interface Https {
   post<T>(url: string, body: BodyInit, headers?: HeadersInit): Promise<T>;
   put<T>(url: string, body: BodyInit, headers?: HeadersInit): Promise<T>;
   delete<T>(url: string, headers?: HeadersInit): Promise<T>;
+  stream(
+    url: string,
+    body: BodyInit,
+    headers?: HeadersInit
+  ): Promise<ReadableStreamDefaultReader<Uint8Array>>;
   request<T>(url: string, options: RequestOptions): Promise<T>;
   createHeaders(headers: any): Headers;
   handleAuthError<T>(url: string, method: string, headers: any, body: any): Promise<T>;
@@ -101,6 +106,42 @@ export const clients: Https = {
 
   async delete<T>(url: string, headers: HeadersInit = {}): Promise<T> {
     return this.request<T>(url, { method: 'DELETE', headers });
+  },
+
+  async stream(
+    url: string,
+    body: BodyInit,
+    headers: HeadersInit = {}
+  ): Promise<ReadableStreamDefaultReader<Uint8Array>> {
+    const fullUrl = url.startsWith('http') ? url : `${BASE_URL}/${url.replace(/^\//, '')}`;
+    const requestHeaders = this.createHeaders(headers);
+
+    const config: RequestInit = {
+      method: 'POST',
+      headers: requestHeaders,
+      body,
+      referrerPolicy: 'no-referrer',
+      credentials: !localHostChecker ? 'include' : undefined,
+    };
+
+    let response: Response;
+    try {
+      response = await fetch(fullUrl, config);
+
+      if (response.status === 401) {
+        await this.handleAuthError(url, 'POST', headers, body);
+        return this.stream(url, body, headers);
+      }
+
+      if (!response.ok || !response.body) {
+        throw new HttpError(response.status, { error: 'Streaming failed' });
+      }
+    } catch (err) {
+      if (err instanceof HttpError) throw err;
+      throw new HttpError(500, { error: 'Network error' });
+    }
+
+    return response.body.getReader();
   },
 
   async request<T>(url: string, { method, headers = {}, body }: RequestOptions): Promise<T> {
