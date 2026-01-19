@@ -36,7 +36,9 @@ export const GroupedModelSelector = ({ value = '', onChange }: GroupedModelSelec
   const groupedModels = useMemo(() => {
     if (!models) return [];
 
-    const grouped = models.reduce(
+    const chatModels = models.filter((model) => model.model_type === 'chat');
+
+    const grouped = chatModels.reduce(
       (acc, model) => {
         const existingGroup = acc.find((g) => g.provider === model.provider);
         if (existingGroup) {
@@ -53,7 +55,7 @@ export const GroupedModelSelector = ({ value = '', onChange }: GroupedModelSelec
       [] as Array<{
         provider: string;
         provider_label: string;
-        models: typeof models;
+        models: typeof chatModels;
       }>
     );
 
@@ -156,10 +158,10 @@ export const GroupedModelSelector = ({ value = '', onChange }: GroupedModelSelec
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-[95vw] sm:w-[600px] lg:w-[720px] p-0 rounded-2xl border-border/50 shadow-xl"
+        className="w-[95vw] sm:w-[420px] lg:w-[480px] p-0 rounded-2xl border-border/50 shadow-xl"
         align="start"
       >
-        <div className="flex h-[450px] sm:h-[420px]">
+        <div className="flex h-[320px] sm:h-[300px]">
           <div
             className={cn(
               'w-full sm:w-[200px] border-r border-border/30 flex flex-col bg-muted/20',
@@ -241,26 +243,24 @@ export const GroupedModelSelector = ({ value = '', onChange }: GroupedModelSelec
                   </Button>
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate flex-1">
                     {selectedProviderGroup.provider_label || selectedProviderGroup.provider} Models
+                    ({selectedProviderGroup.models.length})
                   </p>
-                  <span className="text-xs text-muted-foreground hidden sm:inline">
-                    {selectedProviderGroup.models.length}
-                  </span>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-2 sm:p-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {selectedProviderGroup.models.map((model) => {
+                  <div className="flex flex-row flex-wrap gap-2">
+                      {selectedProviderGroup.models.map((model) => {
                       const isSelected = value === model.model_name;
                       return (
                         <button
                           key={model.model_name}
                           onClick={() => handleSelect(model.model_name)}
-                          className={cn(
-                            'group/model flex flex-col gap-2 p-2.5 sm:p-3 rounded-xl text-left transition-all duration-200 border-2 relative overflow-hidden',
-                            isSelected
-                              ? 'bg-primary/10 border-primary '
-                              : 'bg-card/50 border-border/40 hover:bg-accent/50 hover:border-primary '
-                          )}
+                            className={cn(
+                              'group/model flex flex-col gap-2 p-2.5 sm:p-3 rounded-xl text-left transition-all duration-200 border-2 relative overflow-hidden w-fit',
+                              isSelected
+                                ? 'bg-primary/10 border-primary '
+                                : 'bg-card/50 border-border/40 hover:bg-accent/50 hover:border-primary '
+                            )}
                         >
                           {!isSelected && (
                             <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 opacity-0 group-hover/model:opacity-100 transition-opacity duration-300" />
@@ -280,10 +280,6 @@ export const GroupedModelSelector = ({ value = '', onChange }: GroupedModelSelec
                               <Check className="h-4 w-4 text-primary flex-shrink-0 animate-in zoom-in-50 duration-200" />
                             )}
                           </div>
-
-                          <span className="text-xs text-muted-foreground px-2 py-0.5 bg-muted/50 rounded-md border border-border/30 w-fit relative z-10">
-                            {model.model_type}
-                          </span>
                         </button>
                       );
                     })}
