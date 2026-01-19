@@ -253,21 +253,21 @@ export const handleSSEMessage = (
     case 'message_start':
       break;
 
-    case 'chat_response':
+    case 'final_answer':
       setCurrentEvent(chatId, null, '');
-      initiateBotMessage(chatId, data.message);
-      fakeStream(data.message, data.next_step_questions || []);
+      initiateBotMessage(chatId, data.result);
+      fakeStream(data.result, data.next_step_questions || []);
       break;
 
     case 'error':
       setCurrentEvent(chatId, null, '');
-      initiateBotMessage(chatId, data.message);
+      initiateBotMessage(chatId, data.result);
       setBotErrorMessage(chatId, data.message);
       endBotMessage(chatId);
       break;
 
     case 'message_end':
-    case 'workflow_end':
+    case 'internal_use':
       setCurrentEvent(chatId, null, '');
       setBotThinking(chatId, false);
       break;
