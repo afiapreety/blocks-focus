@@ -98,6 +98,7 @@ export const AppSidebar = () => {
                             setOpenMobile(false);
                           }
                         }}
+                        role="chat-list-button"
                       >
                         <span className="text-sm text-high-emphasis truncate block">
                           {chat.conversations[1]?.message.slice(0, 30) || 'New Chat'}

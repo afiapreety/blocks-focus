@@ -292,11 +292,8 @@ export interface WorkflowTraceEvent {
 }
 
 export interface WorkflowMetrics {
-  // total_tokens: TokenUsage;
   nodes_executed: number;
   edges_evaluated: number;
-  // events_logged: number;
-  // failed_nodes: number;
   nodes_failed?: number;
   tasks_executed?: number;
   tasks_failed?: number;
