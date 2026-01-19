@@ -258,8 +258,8 @@ export const GroupedModelSelector = ({ value = '', onChange }: GroupedModelSelec
                           className={cn(
                             'group/model flex flex-col gap-2 p-2.5 sm:p-3 rounded-xl text-left transition-all duration-200 border-2 relative overflow-hidden',
                             isSelected
-                              ? 'bg-primary/10 border-primary shadow-sm'
-                              : 'bg-card/50 border-border/40 hover:bg-accent/50 hover:border-primary/20 hover:shadow-sm'
+                              ? 'bg-primary/10 border-primary '
+                              : 'bg-card/50 border-border/40 hover:bg-accent/50 hover:border-primary '
                           )}
                         >
                           {!isSelected && (
