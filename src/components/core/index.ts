@@ -25,7 +25,6 @@ export { LogoSection } from './logo-section/logo-section';
 export { MenuSection } from './menu-selection/menu-section';
 export { AppSidebar } from './app-sidebar/app-sidebar';
 export { SidebarMenuItemComponent } from './sidebar-menu-item/sidebar-menu-Item';
-export { ChatHistoryItemComponent } from './chat-history-item/chat-history-item';
 export { Captcha } from './captcha/components/captcha/captcha';
 export { useCaptcha } from './captcha/hooks/use-captcha';
 export type { CaptchaRef, CaptchaProps } from './captcha/types/captcha.type';

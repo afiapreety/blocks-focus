@@ -1,5 +1,4 @@
 export const parseChatMessage = (response: string) => {
-  // if (typeof response !== "string") return { message: "", suggestions: [] };
   try {
     const parse = JSON.parse(response);
     if (typeof parse === 'object' && parse !== null) {

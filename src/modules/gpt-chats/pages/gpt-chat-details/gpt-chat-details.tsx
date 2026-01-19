@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, JSX } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Button } from '@/components/ui-kit/button';
 import { Bot, User, Copy, ThumbsUp, ThumbsDown, RotateCcw, Check } from 'lucide-react';
@@ -46,115 +46,9 @@ export const GptChatPageDetails = () => {
   };
 
   const renderMessageContent = (content: string, isStreaming = false) => {
-    const parts: JSX.Element[] = [];
-    const lines = content.split('\n');
-    let inCodeBlock = false;
-    let codeBlockContent: string[] = [];
-    let codeLanguage = '';
-
-    lines.forEach((line, index) => {
-      if (line.startsWith('```')) {
-        if (!inCodeBlock) {
-          inCodeBlock = true;
-          codeLanguage = line.replace('```', '').trim();
-          codeBlockContent = [];
-        } else {
-          inCodeBlock = false;
-          parts.push(
-            <div key={`code-${index}`} className="my-4 group/code relative">
-              <div className="absolute top-3 right-3 z-10">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 px-2 text-xs bg-background/80 backdrop-blur-sm hover:bg-background opacity-0 group-hover/code:opacity-100 transition-all duration-200"
-                  onClick={() => handleCopy(codeBlockContent.join('\n'), `code-${index}` as any)}
-                >
-                  {copiedId === (`code-${index}` as any) ? (
-                    <>
-                      <Check className="h-3 w-3 mr-1" />
-                      Copied
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="h-3 w-3 mr-1" />
-                      Copy
-                    </>
-                  )}
-                </Button>
-              </div>
-              <div className="bg-zinc-950 border border-zinc-800 rounded-lg overflow-hidden">
-                {codeLanguage && (
-                  <div className="px-4 py-2 border-b border-zinc-800 bg-zinc-900 text-xs text-zinc-400 font-mono">
-                    {codeLanguage}
-                  </div>
-                )}
-                <pre className="p-4 overflow-x-auto">
-                  <code className="text-sm font-mono leading-relaxed text-zinc-100">
-                    {codeBlockContent.join('\n')}
-                  </code>
-                </pre>
-              </div>
-            </div>
-          );
-          codeBlockContent = [];
-        }
-      } else if (inCodeBlock) {
-        codeBlockContent.push(line);
-      } else {
-        if (line.trim()) {
-          const formattedLine = line.split('**').map((part, i) =>
-            i % 2 === 1 ? (
-              <strong key={i} className="font-semibold">
-                {part}
-              </strong>
-            ) : (
-              part
-            )
-          );
-
-          if (line.trim().startsWith('-')) {
-            parts.push(
-              <div key={index} className="flex gap-2 my-1">
-                <span className="mt-2">•</span>
-                <span className="flex-1">{formattedLine}</span>
-              </div>
-            );
-          } else if (/^\d+\./.test(line.trim())) {
-            parts.push(
-              <div key={index} className="flex gap-2 my-1">
-                <span className="font-medium min-w-[24px]">{line.trim().match(/^\d+\./)?.[0]}</span>
-                <span className="flex-1">
-                  {line
-                    .replace(/^\d+\.\s*/, '')
-                    .split('**')
-                    .map((part, i) =>
-                      i % 2 === 1 ? (
-                        <strong key={i} className="font-semibold">
-                          {part}
-                        </strong>
-                      ) : (
-                        part
-                      )
-                    )}
-                </span>
-              </div>
-            );
-          } else {
-            parts.push(
-              <p key={index} className="mb-2 leading-7">
-                {formattedLine}
-              </p>
-            );
-          }
-        } else {
-          parts.push(<div key={index} className="h-2" />);
-        }
-      }
-    });
-
     return (
       <div className="text-[15px]">
-        {parts}
+        {content}
         {isStreaming && (
           <span className="inline-block w-1.5 h-5 bg-foreground ml-0.5 animate-pulse" />
         )}
