@@ -1,9 +1,11 @@
 import { Button } from '@/components/ui-kit/button';
 import { Textarea } from '@/components/ui-kit/textarea';
-import { Search, Paperclip, ArrowUp, Mic, Plus, Globe, FileImage, Video } from 'lucide-react';
+import { ArrowUp } from 'lucide-react';
 import { useState } from 'react';
 import { GroupedModelSelector } from './model-selector';
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui-kit/tooltip';
+import { ToolsSelector } from './tools-selector';
+import { Tooltip, TooltipTrigger } from '@/components/ui-kit/tooltip';
+import { useSidebar } from '@/components/ui-kit/sidebar';
 
 interface GptChatInputProps {
   onSendMessage: (message: string) => void;
@@ -18,6 +20,8 @@ export const GptChatInput = ({
 }: GptChatInputProps) => {
   const [message, setMessage] = useState('');
   const [selectedModel, setSelectedModel] = useState('gemini-3-flash');
+  const [selectedTools, setSelectedTools] = useState<string[]>([]);
+  const { state } = useSidebar();
 
   const onMessageHandler = () => {
     onSendMessage(message);
@@ -25,8 +29,10 @@ export const GptChatInput = ({
   };
 
   return (
-    <div className="flex-shrink-0 backdrop-blur-xl">
-      <div className="max-w-5xl mx-auto px-4 py-4">
+    <div
+      className={`fixed bottom-0 left-0 right-0 z-10 ${state === 'collapsed' ? 'ml-16' : 'ml-60'}`}
+    >
+      <div className="max-w-5xl mx-auto  pb-4 backdrop-blur-xl rounded-3xl">
         <div className="relative bg-card/80 backdrop-blur-sm rounded-3xl border-2 border-border hover:border-primary focus-within:border-primary transition-all duration-300 shadow-xl shadow-black/5">
           <Textarea
             value={message}
@@ -42,7 +48,7 @@ export const GptChatInput = ({
             className="min-h-[80px] max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 pr-16 px-6 py-5 text-base placeholder:text-muted-foreground/60"
           />
 
-          <div className="absolute bottom-[72px] right-4">
+          <div className="absolute bottom-[75px] right-4">
             <Button
               size="icon"
               className={`h-10 w-10 rounded-2xl transition-all duration-300 ${
@@ -57,7 +63,7 @@ export const GptChatInput = ({
             </Button>
           </div>
 
-          <div className="flex items-center justify-between px-6 pb-4 pt-2 border-t border-border/50">
+          <div className="flex items-center justify-between px-6 pb-3 pt-2 border-t border-border/50">
             <div className="flex items-center gap-2">
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -65,100 +71,14 @@ export const GptChatInput = ({
                     <GroupedModelSelector value={selectedModel} onChange={setSelectedModel} />
                   </div>
                 </TooltipTrigger>
-                <TooltipContent className="text-gray-200">Model</TooltipContent>
               </Tooltip>
 
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary  transition-all duration-200 hover:scale-105"
-                  >
-                    <Search className="h-4 w-4" />
-                  </Button>
+                  <div>
+                    <ToolsSelector value={selectedTools} onChange={setSelectedTools} />
+                  </div>
                 </TooltipTrigger>
-                <TooltipContent className="text-gray-200">Search</TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary transition-all duration-200 hover:scale-105"
-                  >
-                    <Paperclip className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent className="text-gray-200">Attach</TooltipContent>
-              </Tooltip>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary transition-all duration-200 hover:scale-105"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent className="text-gray-200">Actions</TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary transition-all duration-200 hover:scale-105"
-                  >
-                    <Globe className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent className="text-gray-200">Translate</TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary transition-all duration-200 hover:scale-105"
-                  >
-                    <FileImage className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent className="text-gray-200">Image</TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary transition-all duration-200 hover:scale-105"
-                  >
-                    <Video className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent className="text-gray-200">Video</TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary transition-all duration-200 hover:scale-105"
-                  >
-                    <Mic className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent className="text-gray-200">Voice</TooltipContent>
               </Tooltip>
             </div>
           </div>

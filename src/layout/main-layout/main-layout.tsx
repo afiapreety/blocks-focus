@@ -33,8 +33,8 @@ export const MainLayout = () => {
     <div className="flex w-full h-full overflow-hidden">
       <AppSidebar />
 
-      <div className={`flex flex-1 flex-col  duration-300 ease-in-out`}>
-        <div className="bg-card z-20 border-b py-2 px-4 sm:px-6 md:px-8 flex justify-between items-center">
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <div className="flex-shrink-0 sticky top-0 bg-card z-20 border-b py-2 px-4 sm:px-6 md:px-8 flex justify-between items-center">
           <div className="flex items-center">
             <SidebarTrigger className="pl-0" />
           </div>
@@ -61,7 +61,7 @@ export const MainLayout = () => {
             <ProfileMenu />
           </div>
         </div>
-        <div className="flex-1 overflow-hidden bg-background p-4 sm:p-6 md:p-8">
+        <div className="flex-1 overflow-auto bg-background scrollbar-hide">
           <Outlet />
         </div>
       </div>
