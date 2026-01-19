@@ -65,7 +65,7 @@ export const GptChatInput = ({
                     <GroupedModelSelector value={selectedModel} onChange={setSelectedModel} />
                   </div>
                 </TooltipTrigger>
-                <TooltipContent className="text-gray-200">Model</TooltipContent>
+                {/* <TooltipContent className="text-gray-200">Model</TooltipContent> */}
               </Tooltip>
 
               <Tooltip>
