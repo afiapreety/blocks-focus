@@ -319,75 +319,189 @@ export interface WorkflowTrace {
   last_state?: WorkflowTraceLastState;
 }
 
-export interface ConversationSession {
+export interface Conversation {
   _id: string;
+  CreatedDate: string;
+  LastUpdatedDate: string;
+  CreatedBy: string;
+  Language: string;
+  LastUpdatedBy: string;
+  OrganizationIds: string[];
+  Tags: string[];
   SessionId: string;
-  WidgetId: string;
-  AgentId: string;
-  CreatedAt: string;
   Query: string;
-  QueryId: string;
   Response: string;
   NextStepQuestions: string[];
-  ResponseId: string;
-  Filters?: ConversationFilters;
-  // Sources: ConversationSource[];
-  // GuardrailViolations: string[];
-  Metadata: ConversationMetadata;
+  Summary: string | null;
   QueryTimestamp: string;
   ResponseTimestamp: string;
-  ConversationType: string;
-  UserId: string;
-  UserEmail: string;
-  UserRole: string[];
-  Summary: string | null;
-  Playground: boolean;
-  IsPrivate: boolean;
-  WorkflowName: string;
-  TokenUsage: TokenUsage;
-  // TokenReport: Record<string, TokenReportNode>;
-  WorkflowTrace: WorkflowTrace;
-  Error: string | null;
+  CallFrom: string;
 }
 
 export interface ConversationSessionSummary {
-  agent_id: string;
-  widget_id: string;
+  call_from: string;
   session_id: string;
   created_at: string;
   last_entry_date: string;
   total_count: number;
   conversation: {
     _id: string;
-    SessionId: string;
-    WidgetId: string;
-    AgentId: string;
-    CreatedAt: string;
-    Query: string;
-    QueryId: string;
-    Response: string;
-    ResponseId: string;
-    // GuardrailViolations: string[];
+    CallFrom: string;
+    CreatedBy: string;
+    CreatedDate: string;
+    Error: string | null;
+    Language: string | null;
+    LastUpdatedBy: string;
+    LastUpdatedDate: string;
     Metadata: {
-      processing_time: number;
-      total_tokens: number;
-      prompt_tokens: number;
-      completion_tokens: number;
-      word_count: number;
-      source_count: number;
-      total_messages_in_history: number;
-      kb_ids: string[] | null;
+      duration: number;
       tool_calls_made: number;
-      summary_updated: boolean;
+      had_errors: boolean;
+      consecutive_errors: number;
+      retrievals_made: number;
     };
+    ModelId: string;
+    NextStepQuestions: string[];
+    OrganizationIds: string[];
+    Query: string;
     QueryTimestamp: string;
+    Response: string;
     ResponseTimestamp: string;
-    ConversationType: string;
-    UserId: string;
-    UserEmail: string;
-    UserRole: string[];
-    Summary: string;
-    Playground: boolean;
+    SessionId: string;
+    Summary: string | null;
+    Tags: string[];
+    TokenUsage: {
+      input_tokens: number;
+      output_tokens: number;
+      total_tokens: number;
+      llm_calls: number;
+      duration_seconds: number;
+      provider: string;
+      model_name: string;
+    };
+    WorkflowTrace: {
+      workflow_id: string;
+      workflow_name: string;
+      started_at: number;
+      started_at_str: string;
+      completed_at: number;
+      completed_at_str: string;
+      duration: number;
+      success: boolean;
+      error: string | null;
+      nodes: [
+        {
+          node_id: string;
+          node_type: string;
+          name: string;
+          started_at: number;
+          started_at_str: string;
+          completed_at: number;
+          completed_at_str: string;
+          duration: number;
+          tokens_used: {
+            input: number;
+            output: number;
+            total: number;
+            model: string;
+            provider: string;
+            operation: string;
+          };
+          sub_operations: [];
+          success: true;
+          error: null;
+        },
+      ];
+      edges: [
+        {
+          from_node: string;
+          to_node: string;
+          condition: string;
+          timestamp: number;
+          timestamp_str: string;
+          taken: boolean;
+          condition_result: null;
+          context: {
+            tool_calls: number;
+            consecutive_errors: number;
+            blocked_tool: string | null;
+          };
+          error: string | null;
+        },
+      ];
+      state: {
+        langchain_runs: [
+          {
+            run_id: string;
+            run_type: string;
+            name: string;
+            parent_run_id: null;
+            started_at: number;
+            started_at_str: string;
+            completed_at: number;
+            completed_at_str: string;
+            duration: number;
+            success: boolean;
+            error: string | null;
+            workflow_node_id: string;
+            workflow_node_type: string;
+            prompts: string[];
+            prompt_count: number;
+            completions: string[];
+            model_params: {
+              model: null;
+              temperature: number;
+              max_tokens: null;
+              top_p: null;
+            };
+          },
+        ];
+        session_id: string;
+        original_query: string;
+        start_time: number;
+        messages: [
+          {
+            type: string;
+            content: string;
+            additional_kwargs: unknown;
+            response_metadata: unknown;
+            id: string;
+          },
+        ];
+        history: [];
+        tool_calls: 0;
+        consecutive_tool_errors: 0;
+        current_node: 'agent';
+        last_action: 'input_validation_passed';
+        plan_created: false;
+        execution_plan: string;
+        current_plan_step: number;
+        results: {
+          final_answer: string;
+          tool_execution_results: string[];
+          retrieval_operations: string[];
+          validation_passed: boolean;
+          violations: string[];
+          risk_score: number;
+        };
+        error: unknown;
+        is_valid_query: boolean;
+        cleaned_query: string;
+      };
+      last_state: {
+        node_id: string;
+        timestamp: number;
+        timestamp_str: string;
+      };
+      metrics: {
+        nodes_executed: number;
+        nodes_failed: number;
+        edges_evaluated: number;
+        tasks_executed: number;
+        tasks_failed: number;
+      };
+      execution_path: string[];
+    };
   };
 }
 
@@ -397,23 +511,9 @@ export interface IConversationConfigPayload {
   application_domain: string;
 }
 
-export interface IConversationInitiatePayload {
-  widget_id: string;
-  project_key: string;
-  session_id?: string;
-}
-
-export interface IConversationInitiateResponse {
-  session_id: string;
-  token: string;
-  websocket_url: string;
-  expires_at: string;
-  is_success: boolean;
-  detail: string;
-}
-
 export interface IConversationListPayload {
-  agent_id: string;
+  allow_created_by_filter: boolean;
+  call_from: string;
   project_key: string;
   limit: number;
   offset: number;
@@ -425,16 +525,16 @@ export interface IConversationListResponse {
 }
 
 export interface IConversationByIdPayload {
-  widget_id: string;
+  allow_created_by_filter: boolean;
+  call_from: string;
   session_id: string;
-  agent_id: string;
+  project_key: string;
   limit: number;
   offset: number;
-  project_key: string;
 }
 
 export interface IConversationByIdResponse {
-  sessions: ConversationSession[];
+  sessions: Conversation[];
   total_count: number;
 }
 
@@ -447,14 +547,4 @@ export interface ConversationDetails {
   QueryId?: string;
   Sources: string[];
   Summary: string;
-}
-
-export interface Conversation {
-  sessionId: string;
-  lastMessage: string;
-  createDate: string;
-  lastUpdated: string;
-  widget_id: string;
-  agentId: string;
-  playground: boolean;
 }

@@ -4,8 +4,6 @@ import {
   IConversationByIdPayload,
   IConversationByIdResponse,
   IConversationConfigPayload,
-  IConversationInitiatePayload,
-  IConversationInitiateResponse,
   IConversationListPayload,
   IConversationListResponse,
   Widget,
@@ -25,26 +23,14 @@ export class ConversationService {
     }).then((res) => res.json());
   }
 
-  initiate(payload: IConversationInitiatePayload): Promise<IConversationInitiateResponse> {
-    const url = `/api/initiate`;
-    return fetch(url, {
-      method: 'post',
-      body: JSON.stringify({
-        widget_id: payload.widget_id,
-        project_key: payload.project_key,
-        session_id: payload.session_id,
-      }),
-    }).then((res) => res.json());
-  }
-
   getConversationList(payload: IConversationListPayload): Promise<IConversationListResponse> {
-    return clients.post(`/blocksai-api/v1/conversation/sessions`, JSON.stringify(payload));
+    return clients.post(`/blocksai-api/v1/conversation/llm-sessions`, JSON.stringify(payload));
   }
 
   getConversationSessionById(
     payload: IConversationByIdPayload
   ): Promise<IConversationByIdResponse> {
-    const url = `/blocksai-api/v1/conversation/sessions/${payload.session_id}`;
+    const url = `/blocksai-api/v1/conversation/llm-sessions/${payload.session_id}`;
     return clients.post(url, JSON.stringify(payload));
   }
 

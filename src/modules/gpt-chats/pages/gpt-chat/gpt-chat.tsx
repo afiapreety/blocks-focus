@@ -153,17 +153,19 @@ export const GptChatPage = () => {
   };
 
   return (
-    <div className="flex flex-col h-full w-full bg-gradient-to-b from-background to-muted/20">
-      <div className="flex-1 flex flex-col items-center justify-center px-4 max-w-5xl mx-auto w-full py-8">
-        <div className="text-center mb-12 space-y-2">
-          <h1 className="text-4xl md:text-5xl font-bold  bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+    <div className="flex flex-col h-full w-full bg-gradient-to-b from-background to-muted/20 overflow-y-auto pb-[220px] sm:pb-[200px] md:pb-[180px]">
+      <div className="flex-1 flex flex-col items-center justify-center px-4 max-w-5xl mx-auto w-full py-4">
+        <div className="text-center mb-6 sm:mb-8 md:mb-10 space-y-1 sm:space-y-2">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
             How can I help you today?
           </h1>
-          <p className="text-muted-foreground text-lg">Choose a category to get started</p>
+          <p className="text-muted-foreground text-sm sm:text-base">
+            Choose a category to get started
+          </p>
         </div>
 
         {/* Category Tabs */}
-        <div className="flex items-center justify-center gap-3 mb-10">
+        <div className="flex items-center justify-center gap-2 sm:gap-3 mb-6 sm:mb-8 md:mb-10 flex-wrap">
           {categories.map((category) => {
             const Icon = category.icon;
             const isActive = selectedCategory === category.id;
@@ -173,20 +175,20 @@ export const GptChatPage = () => {
                 variant={isActive ? 'default' : 'outline'}
                 size="default"
                 onClick={() => setSelectedCategory(category.id)}
-                className={`gap-2 px-6 py-5 rounded-2xl transition-all duration-300 ${
+                className={`gap-2 px-4 sm:px-6 py-3 sm:py-5 rounded-2xl transition-all duration-300 text-sm sm:text-base ${
                   isActive
                     ? 'bg-primary  text-gray-200  scale-105 hover:bg-primary-300'
                     : 'bg-card/50 hover:bg-accent border-2 hover:scale-105'
                 }`}
               >
-                <Icon className="h-4 w-4" />
+                <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 {category.label}
               </Button>
             );
           })}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-4xl mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 w-full max-w-4xl mb-4 sm:mb-6">
           {categoryPrompts[selectedCategory].map((prompt) => {
             const PromptIcon = prompt.icon;
             return (

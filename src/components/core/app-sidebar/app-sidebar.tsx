@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useMemo } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Sidebar, SidebarContent, SidebarHeader, useSidebar } from '@/components/ui-kit/sidebar';
 import { useTheme } from '@/styles/theme/theme-provider';
 import { getSidebarStyle } from '@/lib/utils/sidebar-utils';
@@ -10,18 +10,26 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui-kit/accordion';
-import { useChatStore } from '@/modules/gpt-chats/hooks/use-chat-store';
 import { Button } from '@/components/ui-kit/button';
-import { PenSquare, Trash } from 'lucide-react';
+import { PenSquare } from 'lucide-react';
+import { useGetConversations } from '@/modules/gpt-chats/hooks/use-conversation-api';
+
+const projectKey = import.meta.env.VITE_X_BLOCKS_KEY || '';
+const projectSlug = import.meta.env.VITE_PROJECT_SLUG || '';
 
 export const AppSidebar = () => {
   const { theme } = useTheme();
   const { pathname } = useLocation();
-  const { chatId } = useParams();
   const { setOpenMobile, open, isMobile, openMobile } = useSidebar();
   const navigate = useNavigate();
 
-  const { chats, deleteChat } = useChatStore();
+  const { data, isFetching } = useGetConversations({
+    limit: 10,
+    offset: 0,
+    allow_created_by_filter: true,
+    call_from: projectSlug,
+    project_key: projectKey,
+  });
 
   useEffect(() => {
     if (!isMobile) {
@@ -30,6 +38,15 @@ export const AppSidebar = () => {
   }, [pathname, setOpenMobile, isMobile]);
 
   const sidebarStyle = getSidebarStyle(isMobile, open, openMobile);
+  const chatList = useMemo(() => {
+    if (!data || data.total_count === 0 || isFetching) return [];
+
+    return data.sessions.map((session) => ({
+      id: session.session_id,
+      lastEntryDate: session.last_entry_date,
+      title: session.conversation.Response.slice(0, 30) || session.conversation.Query,
+    }));
+  }, [data, isFetching]);
 
   if (isMobile && !openMobile) {
     return null;
@@ -37,7 +54,6 @@ export const AppSidebar = () => {
 
   const handleNewChat = () => {
     navigate('/chat');
-    // Implement the logic for creating a new chat
   };
 
   return (
@@ -64,14 +80,13 @@ export const AppSidebar = () => {
       <SidebarContent className="text-base mx-3 my-4 text-high-emphasis font-normal overflow-x-hidden">
         <Button
           onClick={handleNewChat}
-          variant={!isMobile ? 'outline' : 'ghost'}
-          className={`mb-2 justify-start gap-2 ${
-            !isMobile ? 'w-full' : 'w-full min-w-[48px] justify-center'
+          variant={open && !isMobile ? 'outline' : 'ghost'}
+          className={`mb-2 gap-2 ${
+            open && !isMobile ? 'w-full justify-start' : 'w-full min-w-[48px] justify-center'
           }`}
-          size="default"
         >
           <PenSquare className="h-4 w-4" />
-          {!isMobile && <span>New Chat</span>}
+          {open && !isMobile && <span>New Chat</span>}
         </Button>
         <Accordion type="single" collapsible defaultValue="list">
           <AccordionItem value="list" className="border-none">
@@ -79,19 +94,19 @@ export const AppSidebar = () => {
               Your chats
             </AccordionTrigger>
             <AccordionContent>
-              {Object.values(chats).length === 0 ? (
+              {chatList.length === 0 ? (
                 <p className="text-sm text-muted-foreground mt-2">No chats available.</p>
               ) : (
-                <div className="space-y-1 max-h-[400px] overflow-y-auto">
-                  {Object.values(chats)
+                <div className="max-h-[400px] overflow-y-auto">
+                  {chatList
                     .sort(
                       (a, b) =>
-                        new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime()
+                        new Date(b.lastEntryDate).getTime() - new Date(a.lastEntryDate).getTime()
                     )
                     .map((chat) => (
                       <div
                         key={chat.id}
-                        className="rounded-lg hover:bg-accent/50 cursor-pointer flex justify-between items-center h-fit group/item"
+                        className="rounded-lg hover:bg-accent/100 cursor-pointer flex justify-between items-center h-fit group/item p-2"
                         onClick={() => {
                           navigate(`/chat/${chat.id}`);
                           if (isMobile) {
@@ -101,24 +116,8 @@ export const AppSidebar = () => {
                         role="button"
                       >
                         <span className="text-sm text-high-emphasis truncate block">
-                          {chat.conversations[1]?.message.slice(0, 30) || 'New Chat'}
+                          {chat.title}
                         </span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="opacity-0 group-hover/item:opacity-100 transition-opacity"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (chat.id) {
-                              if (chat.id === chatId) {
-                                navigate('/chat');
-                              }
-                              deleteChat(chat.id);
-                            }
-                          }}
-                        >
-                          <Trash className="w-3 h-3 text-destructive" />
-                        </Button>
                       </div>
                     ))}
                 </div>

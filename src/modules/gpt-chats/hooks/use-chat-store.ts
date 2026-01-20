@@ -1,5 +1,9 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import { Conversation } from '../types/conversation.service.type';
+import { conversationService } from '../services/conversation.service';
+import { parseSSEBuffer } from '../utils/parse-sse';
+import { handleSSEMessage } from '../utils/sse-message-handler';
 
 type MessageType = 'user' | 'bot';
 
@@ -40,6 +44,8 @@ interface ChatStore {
     };
   };
   initiateChat: (chatId: string, message: string) => void;
+  // startChat: (message: string, navigateUrl: string) => void;
+  loadChat: (chatId: string, conversations: Conversation[]) => void;
   setSessionId: (chatId: string, id: string) => void;
   addUserMessage: (chatId: string, message: string) => void;
   initiateBotMessage: (chatId: string, chunk: string) => void;
@@ -51,11 +57,21 @@ interface ChatStore {
   setBotThinking: (chatId: string, thinking: boolean) => void;
   setCurrentEvent: (chatId: string, eventType: string | null, message: string) => void;
   deleteChat: (chatId: string) => void;
+  generateBotMessage: (
+    chatId: string,
+    message: string,
+    setSuggestions?: (suggestions: string[]) => void
+  ) => Promise<void>;
+  sendMessage: (chatId: string, message: string) => Promise<void>;
+  reset: () => void;
 }
+
+// const projectKey = import.meta.env.VITE_X_BLOCKS_KEY || '';
+const projectSlug = import.meta.env.VITE_PROJECT_SLUG || '';
 
 export const useChatStore = create<ChatStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       chats: {},
 
       initiateChat: (chatId, message) =>
@@ -76,6 +92,41 @@ export const useChatStore = create<ChatStore>()(
                 ],
                 isBotThinking: true,
                 pendingSend: true,
+                lastUpdated: new Date().toISOString(),
+              },
+            },
+          };
+        }),
+
+      // startChat: (message, navigateUrl) => {
+      //   return {};
+      // },
+      loadChat: (chatId, conversations) =>
+        set((state) => {
+          const chat = state.chats[chatId] || { ...chatDefaultValue, id: chatId };
+          const chatConversations: ChatMessage[] = conversations.flatMap((conversation) => {
+            return [
+              {
+                message: conversation.Query,
+                type: 'user',
+                streaming: false,
+                timestamp: conversation.QueryTimestamp,
+              },
+              {
+                message: conversation.Response,
+                type: 'bot',
+                streaming: false,
+                timestamp: conversation.ResponseTimestamp,
+              },
+            ];
+          });
+          return {
+            chats: {
+              ...state.chats,
+              [chatId]: {
+                ...chat,
+                sessionId: conversations[0].SessionId,
+                conversations: chatConversations,
                 lastUpdated: new Date().toISOString(),
               },
             },
@@ -325,6 +376,63 @@ export const useChatStore = create<ChatStore>()(
             chats: updatedChats,
           };
         }),
+
+      generateBotMessage: async (chatId, message, setSuggestions) => {
+        const state = get();
+        const sessionId = state.chats[chatId]?.sessionId || '';
+
+        state.setBotThinking(chatId, true);
+        if (setSuggestions) setSuggestions([]);
+
+        try {
+          const reader = await conversationService.query({
+            query: message,
+            session_id: sessionId || undefined,
+            base_prompt: 'You are helpful',
+            model_id: 'gpt-4',
+            tool_ids: [],
+            last_n_turn: 5,
+            enable_summary: false,
+            enable_next_suggestion: false,
+            response_type: 'text',
+            response_format: 'string',
+            call_from: projectSlug,
+          });
+
+          const decoder = new TextDecoder();
+          let buffer = '';
+          let isDone = false;
+
+          while (!isDone) {
+            const { done, value } = await reader.read();
+            isDone = done;
+
+            if (value) {
+              buffer += decoder.decode(value, { stream: true });
+              const { events, remaining } = parseSSEBuffer(buffer);
+              buffer = remaining;
+
+              events.forEach((event) => {
+                handleSSEMessage(chatId, event, setSuggestions);
+              });
+            }
+          }
+        } catch (error) {
+          state.setBotThinking(chatId, false);
+          state.setCurrentEvent(chatId, null, '');
+        }
+      },
+
+      sendMessage: async (chatId, message) => {
+        const state = get();
+        state.addUserMessage(chatId, message);
+        await state.generateBotMessage(chatId, message);
+      },
+
+      reset: () => {
+        console.log;
+        set({ chats: {} });
+      },
     }),
     {
       name: 'selise-blocks-chatbot-store',
