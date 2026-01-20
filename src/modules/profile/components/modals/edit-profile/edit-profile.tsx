@@ -300,7 +300,7 @@ export function EditProfile({ userInfo, onClose }: Readonly<EditProfileProps>) {
               name="phoneNumber"
               rules={{
                 validate: (value) => {
-                  if (!value) return t('PHONE_NUMBER_IS_REQUIRED');
+                  if (!value) return true;
                   if (!isPossiblePhoneNumber(value)) return t('PHONE_NUMBER_LENGTH_INVALID');
                   if (!isValidPhoneNumber(value)) return t('INVALID_PHONE_NUMBER');
                   return true;

@@ -80,14 +80,13 @@ export const AppSidebar = () => {
       <SidebarContent className="text-base mx-3 my-4 text-high-emphasis font-normal overflow-x-hidden">
         <Button
           onClick={handleNewChat}
-          variant={!isMobile ? 'outline' : 'ghost'}
-          className={`mb-2 justify-start gap-2 ${
-            !isMobile ? 'w-full' : 'w-full min-w-[48px] justify-center'
+          variant={open && !isMobile ? 'outline' : 'ghost'}
+          className={`mb-2 gap-2 ${
+            open && !isMobile ? 'w-full justify-start' : 'w-full min-w-[48px] justify-center'
           }`}
-          size="default"
         >
           <PenSquare className="h-4 w-4" />
-          {!isMobile && <span>New Chat</span>}
+          {open && !isMobile && <span>New Chat</span>}
         </Button>
         <Accordion type="single" collapsible defaultValue="list">
           <AccordionItem value="list" className="border-none">
