@@ -11,7 +11,7 @@ import {
 } from 'react';
 import { Slot } from '@radix-ui/react-slot';
 import { VariantProps, cva } from 'class-variance-authority';
-import { Menu } from 'lucide-react';
+import { PanelLeft } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { cn } from '../../lib/utils';
 import { Button } from '@/components/ui-kit/button';
@@ -260,7 +260,7 @@ function SidebarTrigger({ className, onClick, ...props }: ComponentProps<typeof 
         }}
         {...props}
       >
-        <Menu className="!w-5 !h-5 text-medium-emphasis" />
+        <PanelLeft className="!w-5 !h-5 text-medium-emphasis" />
         <span className="sr-only">Toggle Sidebar</span>
       </Button>
       <DynamicBreadcrumb />
