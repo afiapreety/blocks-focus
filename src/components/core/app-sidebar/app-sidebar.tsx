@@ -13,6 +13,7 @@ import {
 import { Button } from '@/components/ui-kit/button';
 import { PenSquare } from 'lucide-react';
 import { useGetConversations } from '@/modules/gpt-chats/hooks/use-conversation-api';
+import { MarkdownRenderer } from '@/modules/gpt-chats/components/markdown-renderer';
 
 const projectKey = import.meta.env.VITE_X_BLOCKS_KEY || '';
 const projectSlug = import.meta.env.VITE_PROJECT_SLUG || '';
@@ -44,7 +45,10 @@ export const AppSidebar = () => {
     return data.sessions.map((session) => ({
       id: session.session_id,
       lastEntryDate: session.last_entry_date,
-      title: session.conversation.Title.slice(0, 30) || session.conversation.Query,
+      title:
+        session.conversation.Title.slice(0, 30) ||
+        session.conversation.Response.slice(0, 30) ||
+        session.conversation.Query,
     }));
   }, [data, isFetching]);
 
@@ -115,9 +119,9 @@ export const AppSidebar = () => {
                         }}
                         role="button"
                       >
-                        <span className="text-sm text-high-emphasis truncate block">
-                          {chat.title}
-                        </span>
+                        <div className="text-sm text-high-emphasis truncate block flex-1 line-clamp-1">
+                          <MarkdownRenderer content={chat.title.slice(0, 30)} className="text-sm" />
+                        </div>
                       </div>
                     ))}
                 </div>
