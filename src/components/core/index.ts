@@ -28,7 +28,5 @@ export { SidebarMenuItemComponent } from './sidebar-menu-item/sidebar-menu-Item'
 export { Captcha } from './captcha/components/captcha/captcha';
 export { useCaptcha } from './captcha/hooks/use-captcha';
 export type { CaptchaRef, CaptchaProps } from './captcha/types/captcha.type';
-export { Notification } from './notification/component/notification/notification';
-export { NotificationItem } from './notification/component/notification-item/notification-item';
-export * from './notification/hooks/use-notification';
+
 export { ExtensionBanner } from './extension-banner/extension-banner';

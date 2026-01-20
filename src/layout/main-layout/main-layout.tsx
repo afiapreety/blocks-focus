@@ -1,21 +1,7 @@
 import { Outlet, useLocation } from 'react-router-dom';
-import { Bell } from 'lucide-react';
 import { useSidebar } from '@/components/ui-kit/sidebar';
-import { Button } from '@/components/ui-kit/button';
-import { Menubar, MenubarMenu, MenubarTrigger } from '@/components/ui-kit/menubar';
-import {
-  LanguageSelector,
-  ProfileMenu,
-  AppSidebar,
-  Notification,
-  useGetNotifications,
-} from '@/components/core';
-
-type NotificationsData = {
-  notifications: any[];
-  unReadNotificationsCount: number;
-  totalNotificationsCount: number;
-};
+import { Menubar, MenubarMenu } from '@/components/ui-kit/menubar';
+import { LanguageSelector, ProfileMenu, AppSidebar } from '@/components/core';
 
 export const MainLayout = () => {
   const { open, isMobile } = useSidebar();
@@ -24,17 +10,6 @@ export const MainLayout = () => {
   const firstSegment = segments?.[0] ?? undefined;
   const isEmailRoute = firstSegment === 'mail';
   const isChatRoute = firstSegment === 'chat';
-
-  const { data: notificationsData } = useGetNotifications({
-    Page: 0,
-    PageSize: 10,
-  });
-
-  const notifications: NotificationsData = notificationsData ?? {
-    notifications: [],
-    unReadNotificationsCount: 0,
-    totalNotificationsCount: 0,
-  };
 
   const getMarginClass = () => {
     if (isMobile) return 'ml-0';
@@ -58,22 +33,7 @@ export const MainLayout = () => {
           <div className="flex items-center"></div>
           <div className="flex justify-between items-center gap-1 sm:gap-3 md:gap-8">
             <Menubar className="border-none p-0">
-              <MenubarMenu>
-                <MenubarTrigger
-                  asChild
-                  className="cursor-pointer focus:bg-transparent data-[state=open]:bg-transparent p-0"
-                >
-                  <div className="relative">
-                    <Button variant="ghost" size="icon" className="rounded-full hover:bg-muted">
-                      <Bell className="!w-5 !h-5 text-medium-emphasis" />
-                    </Button>
-                    {notifications.unReadNotificationsCount > 0 && (
-                      <div className="w-2 h-2 bg-error rounded-full absolute top-[13px] right-[20px]" />
-                    )}
-                  </div>
-                </MenubarTrigger>
-                <Notification />
-              </MenubarMenu>
+              <MenubarMenu></MenubarMenu>
             </Menubar>
             <LanguageSelector />
             <ProfileMenu />
