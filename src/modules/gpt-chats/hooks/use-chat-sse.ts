@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { onlineManager } from '@tanstack/react-query';
 import { useChatStore } from './use-chat-store';
 import { useGetConversationById } from './use-conversation-api';
+import { useParams } from 'react-router-dom';
 
 interface UseChatSSE {
   chatId?: string;
@@ -11,18 +12,26 @@ const projectKey = import.meta.env.VITE_X_BLOCKS_KEY || '';
 const projectSlug = import.meta.env.VITE_PROJECT_SLUG || '';
 
 export const useChatSSE = ({ chatId = '' }: UseChatSSE) => {
+  const { chatId: testChatID } = useParams();
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const {
     chats,
     loadChat,
     generateBotMessage: generateFromStore,
     sendMessage: sendFromStore,
+    resolveChatId,
   } = useChatStore();
-  const sessionId = chats[chatId]?.sessionId || '';
-  const conversations = chats[chatId]?.conversations || [];
-  const isBotStreaming = chats[chatId]?.isBotStreaming || false;
-  const isBotThinking = chats[chatId]?.isBotThinking || false;
-  const isPendingSend = chats[chatId]?.pendingSend || false;
+  const chat = chats[resolveChatId(chatId)] || {
+    sessionId: '',
+    conversations: [],
+    isBotStreaming: false,
+    isBotThinking: false,
+    pendingSend: false,
+  };
+  const sessionId = chat.sessionId || '';
+  const conversations = chat.conversations || [];
+  const isBotStreaming = chat.isBotStreaming || false;
+  const isBotThinking = chat.isBotThinking || false;
 
   const { data, isFetched } = useGetConversationById({
     allow_created_by_filter: true,
@@ -58,6 +67,8 @@ export const useChatSSE = ({ chatId = '' }: UseChatSSE) => {
 
   const isOnline = onlineManager.isOnline;
 
+  console.log('useChatSSE called with chatId:', testChatID);
+
   return {
     sessionId,
     sendMessage,
@@ -67,6 +78,5 @@ export const useChatSSE = ({ chatId = '' }: UseChatSSE) => {
     suggestions,
     isOnline,
     generateBotMessage,
-    isPendingSend,
   };
 };

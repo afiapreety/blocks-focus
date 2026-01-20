@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui-kit/button';
 import { useChatStore } from '@/modules/gpt-chats/hooks/use-chat-store';
 import {
@@ -17,6 +16,7 @@ import {
   Globe,
 } from 'lucide-react';
 import { GptChatInput } from '@/modules/gpt-chats/components/gpt-chat-input/gpt-chat-input';
+import { useNavigate } from 'react-router-dom';
 
 const categoryPrompts: Record<
   string,
@@ -138,13 +138,11 @@ const categories = [
 export const GptChatPage = () => {
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<string>('learn');
-  const { initiateChat } = useChatStore();
+  const { startChat } = useChatStore();
 
   const handleSendMessage = (message: string) => {
     if (message.trim()) {
-      const newChatId = crypto.randomUUID();
-      initiateChat(newChatId, message);
-      navigate(`/chat/${newChatId}`);
+      startChat(message, navigate);
     }
   };
 

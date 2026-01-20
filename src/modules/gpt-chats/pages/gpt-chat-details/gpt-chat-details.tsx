@@ -35,14 +35,8 @@ export const GptChatPageDetails = () => {
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasInitialized = useRef(false);
-  const {
-    sendMessage,
-    conversations,
-    isBotStreaming,
-    isBotThinking,
-    generateBotMessage,
-    isPendingSend,
-  } = useChatSSE({ chatId });
+  const { sendMessage, conversations, isBotStreaming, isBotThinking, generateBotMessage } =
+    useChatSSE({ chatId });
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -50,14 +44,14 @@ export const GptChatPageDetails = () => {
 
   // Auto-send the first message if chat was just created
   useEffect(() => {
-    if (chatId && isPendingSend && !hasInitialized.current) {
+    if (chatId && !hasInitialized.current) {
       const lastMessage = conversations[conversations.length - 1];
       if (lastMessage && lastMessage.type === 'user') {
         hasInitialized.current = true;
         generateBotMessage({ message: lastMessage.message });
       }
     }
-  }, [chatId, conversations, generateBotMessage, isBotThinking, isPendingSend, sendMessage]);
+  }, [chatId, conversations, generateBotMessage, isBotThinking, sendMessage]);
 
   const handleSendMessage = (message: string) => {
     if (!message.trim()) return;
