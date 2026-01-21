@@ -32,6 +32,7 @@ export const useChatSSE = ({ chatId = '' }: UseChatSSE) => {
   const conversations = chat.conversations || [];
   const isBotStreaming = chat.isBotStreaming || false;
   const isBotThinking = chat.isBotThinking || false;
+  const currentEvent = chat?.currentEvent || null;
 
   const { data, isFetching } = useGetConversationById({
     allow_created_by_filter: true,
@@ -93,7 +94,7 @@ export const useChatSSE = ({ chatId = '' }: UseChatSSE) => {
     onModelChange,
     onToolsChange,
     generateBotMessage,
-
+    currentEvent,
     isOnline,
     isReady,
   };
