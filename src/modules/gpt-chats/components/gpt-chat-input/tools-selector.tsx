@@ -40,11 +40,10 @@ export const ToolsSelector = ({ value = [], onChange, tenantId }: ToolsSelectorP
       <Button
         variant="outline"
         disabled
-        className="w-[180px] h-11 justify-between bg-card/50 border-border rounded-xl px-3"
+        className=" h-11 justify-between bg-card/50 border-border rounded-xl px-3"
       >
         <div className="flex items-center gap-2.5">
           <Loader2 className="h-4 w-4 animate-spin" />
-          <span className="text-sm">Loading...</span>
         </div>
       </Button>
     );
@@ -74,7 +73,7 @@ export const ToolsSelector = ({ value = [], onChange, tenantId }: ToolsSelectorP
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-[95vw] sm:w-[420px] lg:w-[480px] p-0 rounded-2xl border-border/50 shadow-xl"
+        className="w-[95vw] sm:w-[420px] lg:w-[480px] p-0 rounded-2xl border-border"
         align="start"
       >
         <div className="flex flex-col h-[380px] sm:h-[360px]">
