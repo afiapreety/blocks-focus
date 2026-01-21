@@ -8,6 +8,42 @@ export type IGetAgentModelResponse = {
   model_type: 'chat' | 'embedding';
 }[];
 
+export type IGetCustomLlmModelsResponse = {
+  models: {
+    _id: string;
+    CreatedDate: string;
+    LastUpdatedDate: string;
+    CreatedBy: string;
+    Language: string | null;
+    LastUpdatedBy: string;
+    OrganizationIds: string[];
+    Tags: string[];
+    Provider: string;
+    ModelType: 'chat' | 'embedding';
+    ServicePlatform: string;
+    ProjectKey: string | null;
+    Description: string | null;
+    Capabilities: {
+      max_tokens: number | null;
+      context_length: number | null;
+      default_temp: number | null;
+    };
+    DisplayName: string;
+    ModelName: string;
+    ApiKey: string;
+    BaseUrl: string;
+    OpenAiOrganizationId: string;
+    OpenAiProjectId: string;
+    ApiVersion: string | null;
+    DeploymentName: string | null;
+    CustomParameters: Record<string, unknown> | null;
+    CustomHeaders: Record<string, unknown> | null;
+    Status: string;
+    IsActive: boolean;
+    HasStreaming: boolean;
+  }[];
+};
+
 export type ToolType = 'api' | 'mcp_server' | 'webhook' | 'graphql';
 export type ToolStatus = 'active' | 'inactive' | 'deprecated' | 'maintenance';
 
@@ -42,7 +78,7 @@ export class GptChatService {
     return clients.get(`/blocksai-api/v1/agents/models`);
   }
 
-  getCustomllmModels(): Promise<IGetAgentModelResponse> {
+  getCustomllmModels(): Promise<IGetCustomLlmModelsResponse> {
     return clients.get(`/blocksai-api/v1/models/`);
   }
 

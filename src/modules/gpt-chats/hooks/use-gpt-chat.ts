@@ -8,6 +8,13 @@ export const useGetLlmModels = () => {
   });
 };
 
+export const useGetCustomLlmModels = () => {
+  return useQuery({
+    queryKey: ['custom-llm-models'],
+    queryFn: () => gptChatService.getCustomllmModels(),
+  });
+};
+
 export const useGetTools = (payload: IGetToolsPayload) => {
   return useQuery({
     queryKey: ['tools', payload],

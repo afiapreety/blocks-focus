@@ -1,26 +1,14 @@
 import { useState, useMemo } from 'react';
-import { Check, ChevronDown, Sparkles, Zap, Brain, Code, Loader2, ArrowLeft } from 'lucide-react';
+import { Check, ChevronDown, Loader2, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui-kit/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui-kit/popover';
 import { cn } from '@/lib/utils';
-import { useGetLlmModels } from '@/modules/gpt-chats/hooks/use-gpt-chat';
-
-const providerColors: Record<string, { color: string; bgColor: string; icon: typeof Sparkles }> = {
-  OpenAI: { color: 'text-green-500', bgColor: 'bg-green-500/10', icon: Sparkles },
-  Google: { color: 'text-blue-500', bgColor: 'bg-blue-500/10', icon: Zap },
-  Anthropic: { color: 'text-orange-500', bgColor: 'bg-orange-500/10', icon: Code },
-  DeepSeek: { color: 'text-purple-500', bgColor: 'bg-purple-500/10', icon: Brain },
-};
-
-const getProviderConfig = (provider: string) => {
-  return (
-    providerColors[provider] || {
-      color: 'text-slate-500',
-      bgColor: 'bg-slate-500/10',
-      icon: Sparkles,
-    }
-  );
-};
+import { useGetCustomLlmModels, useGetLlmModels } from '@/modules/gpt-chats/hooks/use-gpt-chat';
+import {
+  IGetAgentModelResponse,
+  IGetCustomLlmModelsResponse,
+} from '../../services/gpt-chat.service';
+import { formatProviderName, getProviderConfig } from '../../utils/model-selector';
 
 interface GroupedModelSelectorProps {
   value?: string;
@@ -31,36 +19,93 @@ export const GroupedModelSelector = ({ value = '', onChange }: GroupedModelSelec
   const [open, setOpen] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<'providers' | 'models'>('providers');
-  const { data: models, isLoading, error } = useGetLlmModels();
+
+  const {
+    data: customModels,
+    isLoading: isLoadingCustom,
+    error: customError,
+  } = useGetCustomLlmModels();
+  const { data: blocksModels, isLoading: isLoadingBlocks, error: blocksError } = useGetLlmModels();
+
+  const isLoading = isLoadingCustom || isLoadingBlocks;
+  const hasError = customError && blocksError;
 
   const groupedModels = useMemo(() => {
-    if (!models) return [];
-
-    const chatModels = models.filter((model) => model.model_type === 'chat');
-
-    const grouped = chatModels.reduce(
-      (acc, model) => {
-        const existingGroup = acc.find((g) => g.provider === model.provider);
-        if (existingGroup) {
-          existingGroup.models.push(model);
-        } else {
-          acc.push({
-            provider: model.provider,
-            provider_label: model.provider_label,
-            models: [model],
-          });
-        }
-        return acc;
-      },
-      [] as Array<{
+    const allModels: Array<{
+      provider: string;
+      provider_label: string;
+      models: Array<{
+        model_name: string;
+        model_name_label: string;
         provider: string;
         provider_label: string;
-        models: typeof chatModels;
-      }>
-    );
+        model_type: string;
+      }>;
+    }> = [];
 
-    return grouped.sort((a, b) => a.provider.localeCompare(b.provider));
-  }, [models]);
+    if (customModels) {
+      const customResponse = customModels as IGetCustomLlmModelsResponse;
+      const chatModels = customResponse.models.filter((m) => m.ModelType === 'chat');
+
+      chatModels.forEach((model) => {
+        const provider = model.Provider.toLowerCase();
+        const existingGroup = allModels.find((g) => g.provider === provider);
+
+        const transformedModel = {
+          model_name: model.ModelName,
+          model_name_label: model.DisplayName,
+          provider: provider,
+          provider_label: formatProviderName(model.Provider),
+          model_type: model.ModelType,
+        };
+
+        if (existingGroup) {
+          existingGroup.models.push(transformedModel);
+        } else {
+          allModels.push({
+            provider: provider,
+            provider_label: formatProviderName(model.Provider),
+            models: [transformedModel],
+          });
+        }
+      });
+    }
+
+    if (blocksModels) {
+      const blocksResponse = blocksModels as IGetAgentModelResponse;
+      const chatModels = blocksResponse.filter((model) => model.model_type === 'chat');
+
+      chatModels.forEach((model) => {
+        const provider = model.provider.toLowerCase();
+        const existingGroup = allModels.find((g) => g.provider === provider);
+
+        const transformedModel = {
+          model_name: model.model_name,
+          model_name_label: model.model_name_label,
+          provider: model.provider,
+          provider_label: formatProviderName(model.provider_label || model.provider),
+          model_type: model.model_type,
+        };
+
+        if (existingGroup) {
+          const modelExists = existingGroup.models.some(
+            (m) => m.model_name === transformedModel.model_name
+          );
+          if (!modelExists) {
+            existingGroup.models.push(transformedModel);
+          }
+        } else {
+          allModels.push({
+            provider: model.provider,
+            provider_label: formatProviderName(model.provider_label || model.provider),
+            models: [transformedModel],
+          });
+        }
+      });
+    }
+
+    return allModels.sort((a, b) => a.provider.localeCompare(b.provider));
+  }, [customModels, blocksModels]);
 
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen);
@@ -71,9 +116,37 @@ export const GroupedModelSelector = ({ value = '', onChange }: GroupedModelSelec
   };
 
   const selectedModel = useMemo(() => {
-    if (!models) return null;
-    return models.find((m) => m.model_name === value) || models[0];
-  }, [models, value]);
+    if (customModels) {
+      const customResponse = customModels as IGetCustomLlmModelsResponse;
+      const found = customResponse.models.find((m) => m.ModelName === value);
+      if (found) {
+        return {
+          model_name: found.ModelName,
+          model_name_label: found.DisplayName,
+          provider: found.Provider.toLowerCase(),
+          provider_label: formatProviderName(found.Provider),
+          model_type: found.ModelType,
+        };
+      }
+    }
+
+    if (blocksModels) {
+      const blocksResponse = blocksModels as IGetAgentModelResponse;
+      const found = blocksResponse.find((m) => m.model_name === value);
+      if (found) {
+        return {
+          ...found,
+          provider_label: formatProviderName(found.provider_label || found.provider),
+        };
+      }
+    }
+
+    if (groupedModels.length > 0 && groupedModels[0].models.length > 0) {
+      return groupedModels[0].models[0];
+    }
+
+    return null;
+  }, [customModels, blocksModels, value, groupedModels]);
 
   const selectedProviderGroup = useMemo(() => {
     return groupedModels.find((g) => g.provider === selectedProvider);
@@ -100,13 +173,13 @@ export const GroupedModelSelector = ({ value = '', onChange }: GroupedModelSelec
       >
         <div className="flex items-center gap-2.5">
           <Loader2 className="h-4 w-4 animate-spin" />
-          <span className="text-sm">Loading...</span>
+          <span className="text-sm">Loading models...</span>
         </div>
       </Button>
     );
   }
 
-  if (error || !selectedModel) {
+  if (hasError || !selectedModel) {
     return (
       <Button
         variant="outline"
@@ -128,7 +201,7 @@ export const GroupedModelSelector = ({ value = '', onChange }: GroupedModelSelec
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-[220px] h-11 justify-between bg-card/50 hover:bg-card border-border/50  transition-all duration-200 rounded-xl px-3 group"
+          className="w-[220px] h-11 justify-between bg-card/50 hover:bg-card border-border/50 transition-all duration-200 rounded-xl px-3 group"
         >
           <div className="flex items-center gap-2.5 flex-1 min-w-0">
             <div
@@ -145,7 +218,7 @@ export const GroupedModelSelector = ({ value = '', onChange }: GroupedModelSelec
                 {selectedModel.model_name_label || selectedModel.model_name}
               </span>
               <span className="text-xs text-muted-foreground truncate w-full text-left">
-                {selectedModel.provider}
+                {selectedModel.provider_label || formatProviderName(selectedModel.provider)}
               </span>
             </div>
           </div>
@@ -158,7 +231,7 @@ export const GroupedModelSelector = ({ value = '', onChange }: GroupedModelSelec
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-[95vw] sm:w-[420px] lg:w-[480px] p-0 rounded-2xl border-border/50 "
+        className="w-[95vw] sm:w-[420px] lg:w-[480px] p-0 rounded-2xl border-border/50"
         align="start"
       >
         <div className="flex h-[320px] sm:h-[300px]">
@@ -176,50 +249,56 @@ export const GroupedModelSelector = ({ value = '', onChange }: GroupedModelSelec
 
             <div className="flex-1 overflow-y-auto">
               <div className="p-2 space-y-1">
-                {groupedModels.map((group) => {
-                  const groupConfig = getProviderConfig(group.provider);
-                  const GroupIcon = groupConfig.icon;
-                  const isProviderSelected = selectedProvider === group.provider;
+                {groupedModels.length === 0 ? (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    No providers available
+                  </div>
+                ) : (
+                  groupedModels.map((group) => {
+                    const groupConfig = getProviderConfig(group.provider);
+                    const GroupIcon = groupConfig.icon;
+                    const isProviderSelected = selectedProvider === group.provider;
 
-                  return (
-                    <button
-                      key={group.provider}
-                      onClick={() => handleProviderSelect(group.provider)}
-                      className={cn(
-                        'w-full flex items-center gap-2.5 px-2.5 py-2 text-left transition-all duration-200 rounded-xl group/provider relative',
-                        isProviderSelected
-                          ? 'bg-primary/15 border-b border-border'
-                          : 'hover:bg-accent/50 border-2 border-transparent'
-                      )}
-                    >
-                      <div
+                    return (
+                      <button
+                        key={group.provider}
+                        onClick={() => handleProviderSelect(group.provider)}
                         className={cn(
-                          'p-1.5 rounded-lg flex-shrink-0 transition-all duration-200',
-                          groupConfig.bgColor,
-                          !isProviderSelected && 'group-hover/provider:scale-110'
+                          'w-full flex items-center gap-2.5 px-2.5 py-2 text-left transition-all duration-200 rounded-xl group/provider relative',
+                          isProviderSelected
+                            ? 'bg-primary/15 border-b border-border'
+                            : 'hover:bg-accent/50 border-2 border-transparent'
                         )}
                       >
-                        <GroupIcon className={cn('h-3.5 w-3.5', groupConfig.color)} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p
+                        <div
                           className={cn(
-                            'font-medium text-sm truncate transition-colors',
-                            isProviderSelected && 'text-primary'
+                            'p-1.5 rounded-lg flex-shrink-0 transition-all duration-200',
+                            groupConfig.bgColor,
+                            !isProviderSelected && 'group-hover/provider:scale-110'
                           )}
                         >
-                          {group.provider_label || group.provider}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {group.models.length} {group.models.length === 1 ? 'model' : 'models'}
-                        </p>
-                      </div>
-                      {isProviderSelected && (
-                        <div className="w-1 h-8 bg-primary rounded-l-full absolute right-0" />
-                      )}
-                    </button>
-                  );
-                })}
+                          <GroupIcon className={cn('h-3.5 w-3.5', groupConfig.color)} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p
+                            className={cn(
+                              'font-medium text-sm truncate transition-colors',
+                              isProviderSelected && 'text-primary'
+                            )}
+                          >
+                            {group.provider_label || formatProviderName(group.provider)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {group.models.length} {group.models.length === 1 ? 'model' : 'models'}
+                          </p>
+                        </div>
+                        {isProviderSelected && (
+                          <div className="w-1 h-8 bg-primary rounded-l-full absolute right-0" />
+                        )}
+                      </button>
+                    );
+                  })
+                )}
               </div>
             </div>
           </div>
@@ -242,8 +321,9 @@ export const GroupedModelSelector = ({ value = '', onChange }: GroupedModelSelec
                     <ArrowLeft className="h-4 w-4" />
                   </Button>
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate flex-1">
-                    {selectedProviderGroup.provider_label || selectedProviderGroup.provider} Models
-                    ({selectedProviderGroup.models.length})
+                    {selectedProviderGroup.provider_label ||
+                      formatProviderName(selectedProviderGroup.provider)}{' '}
+                    Models ({selectedProviderGroup.models.length})
                   </p>
                 </div>
 
@@ -258,8 +338,8 @@ export const GroupedModelSelector = ({ value = '', onChange }: GroupedModelSelec
                           className={cn(
                             'group/model flex flex-col gap-2 p-2.5 sm:p-3 rounded-xl text-left transition-all duration-200 border-2 relative overflow-hidden w-fit',
                             isSelected
-                              ? 'bg-primary/10 border-primary '
-                              : 'bg-card/50 border-border/40 hover:bg-accent/50 hover:border-primary '
+                              ? 'bg-primary/10 border-primary'
+                              : 'bg-card/50 border-border/40 hover:bg-accent/50 hover:border-primary'
                           )}
                         >
                           {!isSelected && (
