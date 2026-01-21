@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { GptChatInput } from '@/modules/gpt-chats/components/gpt-chat-input/gpt-chat-input';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const categoryPrompts: Record<
   string,
@@ -141,6 +142,7 @@ export const GptChatPage = () => {
   const [selectModel, setSelectedModel] = useState<string>('gpt-4o-mini');
   const [selectedTools, setSelectedTools] = useState<string[]>([]);
   const { startChat } = useChatStore();
+  const { t } = useTranslation();
 
   const handleSendMessage = (message: string) => {
     if (message.trim()) {
@@ -157,10 +159,10 @@ export const GptChatPage = () => {
       <div className="flex-1 flex flex-col items-center justify-center px-4 max-w-5xl mx-auto w-full py-4">
         <div className="text-center mb-6 sm:mb-8 md:mb-10 space-y-1 sm:space-y-2">
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-            How can I help you today?
+            {t('NEW_CHAT_PAGE_HEADER')}
           </h1>
           <p className="text-muted-foreground text-sm sm:text-base">
-            Choose a category to get started
+            {t('NEW_CHAT_PAGE_SUBHEADER')}
           </p>
         </div>
 
