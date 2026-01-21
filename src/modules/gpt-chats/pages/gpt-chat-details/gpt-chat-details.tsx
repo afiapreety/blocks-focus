@@ -5,7 +5,7 @@ import { Bot, User, Copy, ThumbsUp, ThumbsDown, RotateCcw, Check } from 'lucide-
 import { GptChatInput } from '../../components/gpt-chat-input/gpt-chat-input';
 import { useChatSSE } from '../../hooks/use-chat-sse';
 import { MarkdownRenderer } from '../../components/markdown-renderer/markdown-renderer';
-import { ChatEventMessage } from '../../utils/chat-event-messages';
+// import { ChatEventMessage } from '../../utils/chat-event-messages';
 
 const ThinkingIndicator = () => (
   <div className="flex gap-4 animate-in fade-in duration-300">
@@ -31,44 +31,39 @@ const ThinkingIndicator = () => (
   </div>
 );
 
-const ChatEventMessageIndicator = ({ message }: { message: string }) => (
-  <div className="flex gap-4 animate-in fade-in duration-300">
-    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
-      <Bot className="h-4 w-4 text-white" />
-    </div>
-    <div className="flex-1 py-3">
-      <ChatEventMessage message={message} />
-    </div>
-  </div>
-);
+// const ChatEventMessageIndicator = ({ message }: { message: string }) => (
+//   <div className="flex gap-4 animate-in fade-in duration-300">
+//     <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+//       <Bot className="h-4 w-4 text-white" />
+//     </div>
+//     <div className="flex-1 py-3">
+//       <ChatEventMessage message={message} />
+//     </div>
+//   </div>
+// );
 
 export const GptChatPageDetails = () => {
   const { chatId } = useParams();
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const hasInitialized = useRef(false);
   const {
     sendMessage,
     conversations,
     isBotStreaming,
     isBotThinking,
-    generateBotMessage,
-    currentEvent,
-  } = useChatSSE({ chatId });
+    isReady,
+    selectedModel,
+    onModelChange,
+
+    selectedTools,
+    onToolsChange,
+  } = useChatSSE({
+    chatId,
+  });
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversations, isBotThinking]);
-
-  useEffect(() => {
-    if (chatId && !hasInitialized.current) {
-      const lastMessage = conversations[conversations.length - 1];
-      if (lastMessage && lastMessage.type === 'user') {
-        hasInitialized.current = true;
-        generateBotMessage({ message: lastMessage.message });
-      }
-    }
-  }, [chatId, conversations, generateBotMessage, isBotThinking, sendMessage]);
 
   const handleSendMessage = (message: string) => {
     if (!message.trim()) return;
@@ -95,87 +90,91 @@ export const GptChatPageDetails = () => {
   return (
     <div className="flex flex-col h-full w-full bg-background">
       <div className="flex-1 overflow-y-auto scrollbar-hide">
-        <div className="max-w-3xl mx-auto px-4 py-6 pb-64 space-y-6">
-          {conversations.map((msg, index) => (
-            <div
-              key={index}
-              className={`flex gap-4 ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              {msg.type === 'bot' && (
-                <div className="flex-shrink-0 w-8 h-8 rounded-full  flex items-center justify-center border">
-                  <Bot className="h-4 w-4 text-primary" />
-                </div>
-              )}
+        {isReady && (
+          <div className="max-w-3xl mx-auto px-4 py-6 pb-64 space-y-6">
+            {conversations.map((msg, index) => (
+              <div
+                key={index}
+                className={`flex gap-4 ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                {msg.type === 'bot' && (
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full  flex items-center justify-center border">
+                    <Bot className="h-4 w-4 text-primary" />
+                  </div>
+                )}
 
-              <div className={`group flex-1 ${msg.type === 'user' ? 'flex justify-end' : ''}`}>
-                <div
-                  className={`max-w-[90%] px-5 py-1 ${msg.type === 'user' && 'bg-accent rounded '}`}
-                >
-                  {msg.type === 'user' ? (
-                    <p className="text-[15px] leading-7 whitespace-pre-wrap">{msg.message}</p>
-                  ) : (
-                    renderMessageContent(msg.message, msg.streaming && isBotStreaming)
+                <div className={`group flex-1 ${msg.type === 'user' ? 'flex justify-end' : ''}`}>
+                  <div
+                    className={`max-w-[90%] px-5 py-1 ${msg.type === 'user' && 'bg-accent rounded '}`}
+                  >
+                    {msg.type === 'user' ? (
+                      <p className="text-[15px] leading-7 whitespace-pre-wrap">{msg.message}</p>
+                    ) : (
+                      renderMessageContent(msg.message, msg.streaming && isBotStreaming)
+                    )}
+                  </div>
+
+                  {msg.type === 'bot' && !msg.streaming && (
+                    <div className="flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 rounded-lg hover:bg-muted"
+                        onClick={() => handleCopy(msg.message, index)}
+                      >
+                        {copiedId === index ? (
+                          <Check className="h-3.5 w-3.5" />
+                        ) : (
+                          <Copy className="h-3.5 w-3.5" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 rounded-lg hover:bg-muted"
+                      >
+                        <ThumbsUp className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 rounded-lg hover:bg-muted"
+                      >
+                        <ThumbsDown className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 rounded-lg hover:bg-muted"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   )}
                 </div>
 
-                {msg.type === 'bot' && !msg.streaming && (
-                  <div className="flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 rounded-lg hover:bg-muted"
-                      onClick={() => handleCopy(msg.message, index)}
-                    >
-                      {copiedId === index ? (
-                        <Check className="h-3.5 w-3.5" />
-                      ) : (
-                        <Copy className="h-3.5 w-3.5" />
-                      )}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 rounded-lg hover:bg-muted"
-                    >
-                      <ThumbsUp className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 rounded-lg hover:bg-muted"
-                    >
-                      <ThumbsDown className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 rounded-lg hover:bg-muted"
-                    >
-                      <RotateCcw className="h-3.5 w-3.5" />
-                    </Button>
+                {msg.type === 'user' && (
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full border flex items-center justify-center">
+                    <User className="h-4 w-4 " />
                   </div>
                 )}
               </div>
+            ))}
 
-              {msg.type === 'user' && (
-                <div className="flex-shrink-0 w-8 h-8 rounded-full border flex items-center justify-center">
-                  <User className="h-4 w-4 " />
-                </div>
-              )}
-            </div>
-          ))}
+            {isBotThinking && <ThinkingIndicator />}
 
-          {isBotThinking && currentEvent && (
-            <ChatEventMessageIndicator message={currentEvent.message} />
-          )}
-
-          {isBotThinking && !currentEvent && <ThinkingIndicator />}
-
-          <div ref={messagesEndRef} />
-        </div>
+            <div ref={messagesEndRef} />
+          </div>
+        )}
       </div>
 
-      <GptChatInput onSendMessage={handleSendMessage} />
+      <GptChatInput
+        onSendMessage={handleSendMessage}
+        selectedModel={selectedModel}
+        onModelChange={onModelChange}
+        selectedTools={selectedTools}
+        onToolsChange={onToolsChange}
+      />
     </div>
   );
 };

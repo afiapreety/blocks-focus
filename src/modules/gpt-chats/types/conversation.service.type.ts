@@ -549,3 +549,8 @@ export interface ConversationDetails {
   Sources: string[];
   Summary: string;
 }
+
+export interface IDeleteConversationByIdPayload {
+  session_id: string;
+  project_key: string;
+}

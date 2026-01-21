@@ -138,11 +138,13 @@ const categories = [
 export const GptChatPage = () => {
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<string>('learn');
+  const [selectModel, setSelectedModel] = useState<string>('gpt-4o-mini');
+  const [selectedTools, setSelectedTools] = useState<string[]>([]);
   const { startChat } = useChatStore();
 
   const handleSendMessage = (message: string) => {
     if (message.trim()) {
-      startChat(message, navigate);
+      startChat(message, selectModel, selectedTools, navigate);
     }
   };
 
@@ -215,7 +217,13 @@ export const GptChatPage = () => {
         </div>
       </div>
 
-      <GptChatInput onSendMessage={handleSendMessage} />
+      <GptChatInput
+        onSendMessage={handleSendMessage}
+        selectedModel={selectModel}
+        onModelChange={setSelectedModel}
+        selectedTools={selectedTools}
+        onToolsChange={setSelectedTools}
+      />
     </div>
   );
 };

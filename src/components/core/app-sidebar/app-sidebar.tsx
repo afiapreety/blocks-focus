@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Sidebar, SidebarContent, SidebarHeader, useSidebar } from '@/components/ui-kit/sidebar';
 import { useTheme } from '@/styles/theme/theme-provider';
 import { getSidebarStyle } from '@/lib/utils/sidebar-utils';
@@ -11,20 +11,24 @@ import {
   AccordionTrigger,
 } from '@/components/ui-kit/accordion';
 import { Button } from '@/components/ui-kit/button';
-import { PenSquare } from 'lucide-react';
-import { useGetConversations } from '@/modules/gpt-chats/hooks/use-conversation-api';
-import { MarkdownRenderer } from '@/modules/gpt-chats/components/markdown-renderer';
+import { PenSquare, Trash } from 'lucide-react';
+import {
+  useDeleteConversationById,
+  useGetConversations,
+} from '@/modules/gpt-chats/hooks/use-conversation-api';
 
 const projectKey = import.meta.env.VITE_X_BLOCKS_KEY || '';
 const projectSlug = import.meta.env.VITE_PROJECT_SLUG || '';
 
 export const AppSidebar = () => {
+  const { chatId } = useParams();
   const { theme } = useTheme();
   const { pathname } = useLocation();
   const { setOpenMobile, open, isMobile, openMobile } = useSidebar();
+  const { mutateAsync: deleteMutateAsync } = useDeleteConversationById();
   const navigate = useNavigate();
 
-  const { data, isFetching } = useGetConversations({
+  const { data } = useGetConversations({
     limit: 10,
     offset: 0,
     allow_created_by_filter: true,
@@ -40,7 +44,7 @@ export const AppSidebar = () => {
 
   const sidebarStyle = getSidebarStyle(isMobile, open, openMobile);
   const chatList = useMemo(() => {
-    if (!data || data.total_count === 0 || isFetching) return [];
+    if (!data || data.total_count === 0) return [];
 
     return data.sessions.map((session) => ({
       id: session.session_id,
@@ -50,7 +54,7 @@ export const AppSidebar = () => {
         session.conversation.Response.slice(0, 30) ||
         session.conversation.Query,
     }));
-  }, [data, isFetching]);
+  }, [data]);
 
   if (isMobile && !openMobile) {
     return null;
@@ -58,6 +62,13 @@ export const AppSidebar = () => {
 
   const handleNewChat = () => {
     navigate('/chat');
+  };
+
+  const deleteHandler = (id: string) => {
+    if (chatId === id) {
+      navigate('/chat');
+    }
+    deleteMutateAsync({ session_id: id, project_key: projectKey });
   };
 
   return (
@@ -119,9 +130,19 @@ export const AppSidebar = () => {
                         }}
                         role="button"
                       >
-                        <div className="text-sm text-high-emphasis truncate block flex-1 line-clamp-1">
-                          <MarkdownRenderer content={chat.title.slice(0, 30)} className="text-sm" />
-                        </div>
+                        <span className="text-sm text-high-emphasis truncate block">
+                          {chat.title}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          className="w-fit h-fit p-1"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteHandler(chat.id);
+                          }}
+                        >
+                          <Trash className="w-3 h-3 text-destructive" />
+                        </Button>
                       </div>
                     ))}
                 </div>

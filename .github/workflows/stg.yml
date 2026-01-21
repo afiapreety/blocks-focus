@@ -3,7 +3,7 @@ name: Build (stg)
 on:
   push:
     branches:
-      - stg
+      - test_main
 
 env:
   RUN_UNIT_TEST: 'false'
