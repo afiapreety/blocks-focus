@@ -43,7 +43,7 @@ export const GptChatInput = ({
         state === 'collapsed' ? 'md:ml-16' : 'md:ml-60'
       }`}
     >
-      <div className="w-full max-w-3xl xl:max-w-5xl mx-auto px-4 pb-4  backdrop-blur-xl">
+      <div className="w-full max-w-3xl xl:max-w-5xl mx-auto px-4 pb-4  backdrop-blur-3xl">
         <div className="relative bg-card/80  rounded-3xl border-2 border-border hover:border-primary focus-within:border-primary transition-all duration-300 ">
           <Textarea
             value={message}
@@ -59,12 +59,12 @@ export const GptChatInput = ({
             className="min-h-[80px] max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 pr-16 px-6 py-5 pb-12 sm:pb-5 text-base placeholder:text-muted-foreground/60"
           />
 
-          <div className="absolute bottom-[52px] right-4 sm:bottom-[75px] sm:right-4">
+          <div className="absolute  right-4 bottom-[75px] sm:right-4">
             <Button
               size="icon"
               className={`h-10 w-10 rounded-2xl transition-all duration-300 ${
                 message.trim() && !disabled
-                  ? 'bg-primary hover:bg-primary/90 text-gray-200 shadow-lg shadow-primary/25 hover:scale-110'
+                  ? 'bg-primary hover:bg-primary/90 text-gray-200  hover:scale-110'
                   : 'bg-muted text-muted-foreground cursor-not-allowed'
               }`}
               onClick={onMessageHandler}

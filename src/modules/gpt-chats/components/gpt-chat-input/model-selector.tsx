@@ -169,7 +169,7 @@ export const GroupedModelSelector = ({ value = '', onChange }: GroupedModelSelec
       <Button
         variant="outline"
         disabled
-        className="w-[220px] h-10 justify-between bg-card/50 border-border/50 rounded-xl px-3"
+        className="w-[220px] h-10 justify-between bg-card/50 border rounded-xl px-3"
       >
         <div className="flex items-center gap-2.5">
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -184,7 +184,7 @@ export const GroupedModelSelector = ({ value = '', onChange }: GroupedModelSelec
       <Button
         variant="outline"
         disabled
-        className="w-[220px] h-10 justify-between bg-card/50 border-border/50 rounded-xl px-3"
+        className="w-[220px] h-10 justify-between bg-card/50 border-border rounded-xl px-3"
       >
         <span className="text-sm text-muted-foreground">No models available</span>
       </Button>
@@ -201,7 +201,7 @@ export const GroupedModelSelector = ({ value = '', onChange }: GroupedModelSelec
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-[220px] h-11 justify-between bg-card/50 hover:bg-card border-border/50 transition-all duration-200 rounded-xl px-3 group"
+          className="w-[220px] h-11 justify-between bg-card/50 hover:bg-card border-border transition-all duration-200 rounded-xl px-3 group"
         >
           <div className="flex items-center gap-2.5 flex-1 min-w-0">
             <div

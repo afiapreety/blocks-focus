@@ -11,12 +11,18 @@ import {
   AccordionTrigger,
 } from '@/components/ui-kit/accordion';
 import { Button } from '@/components/ui-kit/button';
-import { PenSquare, Trash } from 'lucide-react';
+import { MoreHorizontal, PenSquare, Trash } from 'lucide-react';
 import {
   useDeleteConversationById,
   useGetConversations,
 } from '@/modules/gpt-chats/hooks/use-conversation-api';
 import { useTranslation } from 'react-i18next';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui-kit/dropdown-menu';
 
 const projectKey = import.meta.env.VITE_X_BLOCKS_KEY || '';
 const projectSlug = import.meta.env.VITE_PROJECT_SLUG || '';
@@ -128,7 +134,7 @@ export const AppSidebar = () => {
                       .map((chat) => (
                         <div
                           key={chat.id}
-                          className="rounded-lg hover:bg-accent/100 cursor-pointer flex justify-between items-center h-fit group/item p-2"
+                          className="rounded-lg hover:bg-accent/100 cursor-pointer flex justify-between items-center h-fit group/item p-2 transition-colors"
                           onClick={() => {
                             navigate(`/chat/${chat.id}`);
                             if (isMobile) {
@@ -137,19 +143,35 @@ export const AppSidebar = () => {
                           }}
                           role="button"
                         >
-                          <span className="text-sm text-high-emphasis truncate block">
+                          <span className="text-sm text-high-emphasis truncate block flex-1 pr-2">
                             {chat.title}
                           </span>
-                          <Button
-                            variant="ghost"
-                            className="w-fit h-fit p-1"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteHandler(chat.id);
-                            }}
-                          >
-                            <Trash className="w-3 h-3 text-destructive" />
-                          </Button>
+
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                className="w-8 h-8 p-0 opacity-0 group-hover/item:opacity-100 transition-opacity"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                }}
+                              >
+                                <MoreHorizontal className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" side="right" className="w-40">
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteHandler(chat.id);
+                                }}
+                              >
+                                <Trash className="w-4 h-4 mr-2" />
+                                {t('DELETE')}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       ))}
                   </div>

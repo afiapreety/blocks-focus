@@ -40,11 +40,10 @@ export const ToolsSelector = ({ value = [], onChange, tenantId }: ToolsSelectorP
       <Button
         variant="outline"
         disabled
-        className="w-[180px] h-11 justify-between bg-card/50 border-border/50 rounded-xl px-3"
+        className=" h-11 justify-between bg-card/50 border-border rounded-xl px-3"
       >
         <div className="flex items-center gap-2.5">
           <Loader2 className="h-4 w-4 animate-spin" />
-          <span className="text-sm">Loading...</span>
         </div>
       </Button>
     );
@@ -59,7 +58,7 @@ export const ToolsSelector = ({ value = [], onChange, tenantId }: ToolsSelectorP
           variant="ghost"
           role="combobox"
           aria-expanded={open}
-          className="w-11 h-11 justify-center bg-gradient-to-br from-card/80 to-card/50 hover:from-card hover:to-card/80 border border-border/50  transition-all duration-300 rounded-xl p-0 group relative  backdrop-blur-sm"
+          className="w-11 h-11 justify-center bg-gradient-to-br from-card/80 to-card/50 hover:from-card hover:to-card/80 border border-border  transition-all duration-300 rounded-xl p-0 group relative  backdrop-blur-sm"
         >
           <div className="p-1.5 rounded-lg flex-shrink-0 transition-all duration-300 bg-gradient-to-br from-primary/15 to-primary/5 group-hover:from-primary/20 group-hover:to-primary/10 group-hover:scale-110 group-hover:rotate-12">
             <Wrench className="h-5 w-5 text-primary transition-transform duration-300 group-hover:rotate-12" />
@@ -74,7 +73,7 @@ export const ToolsSelector = ({ value = [], onChange, tenantId }: ToolsSelectorP
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-[95vw] sm:w-[420px] lg:w-[480px] p-0 rounded-2xl border-border/50 shadow-xl"
+        className="w-[95vw] sm:w-[420px] lg:w-[480px] p-0 rounded-2xl border-border"
         align="start"
       >
         <div className="flex flex-col h-[380px] sm:h-[360px]">
@@ -122,7 +121,7 @@ export const ToolsSelector = ({ value = [], onChange, tenantId }: ToolsSelectorP
                         'group/tool flex flex-col gap-2.5 p-3.5 rounded-xl text-left transition-all duration-200 border relative overflow-hidden',
                         isSelected
                           ? 'bg-primary/5 border-primary shadow-sm'
-                          : 'bg-card border-border/50 hover:border-primary hover:shadow-sm'
+                          : 'bg-card border-border hover:border-primary hover:shadow-sm'
                       )}
                     >
                       {!isSelected && (
