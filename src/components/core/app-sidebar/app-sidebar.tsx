@@ -58,9 +58,10 @@ export const AppSidebar = () => {
       id: session.session_id,
       lastEntryDate: session.last_entry_date,
       title:
-        session.conversation.Title.slice(0, 30) ||
-        session.conversation.Response.slice(0, 30) ||
-        session.conversation.Query,
+        session.conversation?.Title?.slice(0, 30) ||
+        session.conversation?.Response?.slice(0, 30) ||
+        session.conversation?.Query ||
+        '',
     }));
   }, [data]);
 
