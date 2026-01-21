@@ -6,7 +6,6 @@ import { SigninEmail } from '../signin-email';
 import { useTheme } from '@/styles/theme/theme-provider';
 import darklogo from '@/assets/images/construct_logo_dark.svg';
 import lightlogo from '@/assets/images/construct_logo_light.svg';
-import { Link } from 'react-router-dom';
 import { useGetLoginOptions } from '../../hooks/use-auth';
 import { SigninOidc } from '../signin-oidc';
 
