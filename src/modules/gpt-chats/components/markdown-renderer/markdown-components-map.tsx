@@ -31,4 +31,9 @@ export const MarkdownComponentsMap: Partial<Components> = {
   td: (props) => (
     <td className="min-w-[150px] max-w-[350px] break-words border p-2">{props.children}</td>
   ),
+  ul: (props) => <ul className="list-disc pl-6 my-2">{props.children}</ul>,
+  ol: (props) => <ol className="list-decimal pl-6 my-2">{props.children}</ol>,
+  li: (props) => <li className="my-1 leading-relaxed">{props.children}</li>,
+
+  pre: (props) => <div className="my-4">{props.children}</div>,
 };
