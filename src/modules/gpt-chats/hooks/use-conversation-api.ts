@@ -9,7 +9,7 @@ export const useGetConversations = (payload: IConversationListPayload) => {
   return useQuery({
     queryKey: ['conversations', payload],
     queryFn: () => conversationService.getConversationList(payload),
-    refetchInterval: 10000,
+    refetchInterval: 5000,
   });
 };
 
