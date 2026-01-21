@@ -1,9 +1,10 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Sidebar, SidebarContent, SidebarHeader, useSidebar } from '@/components/ui-kit/sidebar';
 import { useTheme } from '@/styles/theme/theme-provider';
 import { getSidebarStyle } from '@/lib/utils/sidebar-utils';
 import { LogoSection } from '@/components/core';
+import { ConfirmationModal } from '@/components/core/confirmation-modal/confirmation-modal';
 import {
   Accordion,
   AccordionContent,
@@ -11,7 +12,17 @@ import {
   AccordionTrigger,
 } from '@/components/ui-kit/accordion';
 import { Button } from '@/components/ui-kit/button';
-import { MoreHorizontal, PenSquare, Trash } from 'lucide-react';
+import {
+  MoreHorizontal,
+  Pencil,
+  PenSquare,
+  Share2,
+  Trash2,
+  Download,
+  Bookmark,
+  Copy,
+  Archive,
+} from 'lucide-react';
 import {
   useDeleteConversationById,
   useGetConversations,
@@ -35,9 +46,11 @@ export const AppSidebar = () => {
   const { mutateAsync: deleteMutateAsync } = useDeleteConversationById();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [chatToDelete, setChatToDelete] = useState<string | null>(null);
 
   const { data } = useGetConversations({
-    limit: 10,
+    limit: 100,
     offset: 0,
     allow_created_by_filter: true,
     call_from: projectSlug,
@@ -74,10 +87,18 @@ export const AppSidebar = () => {
   };
 
   const deleteHandler = (id: string) => {
-    if (chatId === id) {
-      navigate('/chat');
+    setChatToDelete(id);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = () => {
+    if (chatToDelete) {
+      if (chatId === chatToDelete) {
+        navigate('/chat/new');
+      }
+      deleteMutateAsync({ session_id: chatToDelete, project_key: projectKey });
+      setChatToDelete(null);
     }
-    deleteMutateAsync({ session_id: id, project_key: projectKey });
   };
 
   return (
@@ -89,16 +110,12 @@ export const AppSidebar = () => {
         />
       )}
       <Sidebar
-        className={`bg-gradient-to-b from-card to-card/95 h-full border-r border-border/50 backdrop-blur-xl ${
-          isMobile ? 'mobile-sidebar' : ''
-        }`}
+        className={`bg-card h-full border-r border-border/50  ${isMobile ? 'mobile-sidebar' : ''}`}
         collapsible={isMobile ? 'none' : 'icon'}
         style={sidebarStyle}
       >
         <SidebarHeader
-          className={`${
-            !open && !isMobile ? 'border-b border-border/50' : ''
-          } p-3 bg-gradient-to-b from-background/50 to-transparent`}
+          className={`${!open && !isMobile ? 'border-b border-border/50' : ''} p-3 bg-card`}
         >
           <LogoSection
             theme={theme}
@@ -108,21 +125,21 @@ export const AppSidebar = () => {
           />
         </SidebarHeader>
 
-        <SidebarContent className="text-base mx-3 my-4 text-high-emphasis font-normal overflow-x-hidden">
+        <SidebarContent className="text-base px-3 py-4 text-high-emphasis font-normal overflow-x-hidden bg-card">
           <Button
             onClick={handleNewChat}
             variant="outline"
-            className="mt-2 mb-2 gap-2 justify-start"
+            className="mt-2 mb-2 gap-2 justify-start bg-card"
           >
             <PenSquare className="h-4 w-4" />
             <span>{t('NEW_CHAT')}</span>
           </Button>
-          <Accordion type="single" collapsible defaultValue="list">
-            <AccordionItem value="list" className="border-none">
+          <Accordion type="single" collapsible defaultValue="list" className="bg-card">
+            <AccordionItem value="list" className="border-none bg-card">
               <AccordionTrigger className=" hover:no-underline justify-start gap-1 [&[data-state=closed]>svg]:-rotate-90 [&[data-state=open]>svg]:rotate-0">
                 {t('YOUR_CHATS')}
               </AccordionTrigger>
-              <AccordionContent>
+              <AccordionContent className="bg-card">
                 {chatList.length === 0 ? (
                   <p className="text-sm text-muted-foreground mt-2">{t('NO_CHATS_AVAILABLE')}</p>
                 ) : (
@@ -135,7 +152,7 @@ export const AppSidebar = () => {
                       .map((chat) => (
                         <div
                           key={chat.id}
-                          className="rounded-lg hover:bg-accent/100 cursor-pointer flex justify-between items-center h-fit group/item p-2 transition-colors"
+                          className="rounded-lg hover:bg-accent/100 cursor-pointer flex justify-between items-center h-fit group/item px-2 py-1 transition-colors"
                           onClick={() => {
                             navigate(`/chat/${chat.id}`);
                             if (isMobile) {
@@ -152,7 +169,7 @@ export const AppSidebar = () => {
                             <DropdownMenuTrigger asChild>
                               <Button
                                 variant="ghost"
-                                className="w-8 h-8 p-0 opacity-0 group-hover/item:opacity-100 transition-opacity"
+                                className="w-8 h-8 p-0 opacity-0 group-hover/item:opacity-100 transition-opacity hover:bg-accent shrink-0"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                 }}
@@ -160,16 +177,87 @@ export const AppSidebar = () => {
                                 <MoreHorizontal className="w-4 h-4" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" side="right" className="w-40">
+                            <DropdownMenuContent
+                              className="w-44 p-1 rounded-md text-high-emphasis bg-card"
+                              align="start"
+                              side="right"
+                              sideOffset={8}
+                            >
                               <DropdownMenuItem
-                                className="text-destructive focus:text-destructive cursor-pointer"
+                                disabled
+                                className="cursor-not-allowed opacity-50 px-3 py-1.5 rounded-md"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                }}
+                              >
+                                <Share2 className="w-4 h-4 mr-3" />
+                                <span className="text-sm font-medium">{t('SHARE')}</span>
+                              </DropdownMenuItem>
+
+                              <DropdownMenuItem
+                                disabled
+                                className="cursor-not-allowed opacity-50 px-3 py-1.5 rounded-md"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                }}
+                              >
+                                <Download className="w-4 h-4 mr-3" />
+                                <span className="text-sm font-medium">{t('DOWNLOAD')}</span>
+                              </DropdownMenuItem>
+
+                              <DropdownMenuItem
+                                disabled
+                                className="cursor-not-allowed opacity-50 px-3 py-1.5 rounded-md"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                }}
+                              >
+                                <Pencil className="w-4 h-4 mr-3" />
+                                <span className="text-sm font-medium">{t('RENAME')}</span>
+                              </DropdownMenuItem>
+
+                              <DropdownMenuItem
+                                disabled
+                                className="cursor-not-allowed opacity-50 px-3 py-1.5 rounded-md"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                }}
+                              >
+                                <Bookmark className="w-4 h-4 mr-3" />
+                                <span className="text-sm font-medium">{t('PIN')}</span>
+                              </DropdownMenuItem>
+
+                              <DropdownMenuItem
+                                disabled
+                                className="cursor-not-allowed opacity-50 px-3 py-1.5 rounded-md"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                }}
+                              >
+                                <Copy className="w-4 h-4 mr-3" />
+                                <span className="text-sm font-medium">{t('CLONE')}</span>
+                              </DropdownMenuItem>
+
+                              <DropdownMenuItem
+                                disabled
+                                className="cursor-not-allowed opacity-50 px-3 py-1.5 rounded-md"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                }}
+                              >
+                                <Archive className="w-4 h-4 mr-3" />
+                                <span className="text-sm font-medium">{t('ARCHIVE')}</span>
+                              </DropdownMenuItem>
+
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer px-3 py-1.5 rounded-md"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   deleteHandler(chat.id);
                                 }}
                               >
-                                <Trash className="w-4 h-4 mr-2" />
-                                {t('DELETE')}
+                                <Trash2 className="w-4 h-4 mr-3" />
+                                <span className="text-sm font-medium">{t('DELETE')}</span>
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -182,6 +270,16 @@ export const AppSidebar = () => {
           </Accordion>
         </SidebarContent>
       </Sidebar>
+
+      <ConfirmationModal
+        open={showDeleteModal}
+        onOpenChange={setShowDeleteModal}
+        title={t('DELETE_CHAT')}
+        description={t('DELETE_CHAT_CONFIRMATION')}
+        onConfirm={confirmDelete}
+        confirmText="DELETE"
+        cancelText="CANCEL"
+      />
     </>
   );
 };
