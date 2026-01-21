@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Button } from '@/components/ui-kit/button';
-import { Bot, User, Copy, ThumbsUp, ThumbsDown, RotateCcw, Check } from 'lucide-react';
+import { Bot, User, Copy, Check } from 'lucide-react';
 import { GptChatInput } from '../../components/gpt-chat-input/gpt-chat-input';
 import { useChatSSE } from '../../hooks/use-chat-sse';
 import { MarkdownRenderer } from '../../components/markdown-renderer/markdown-renderer';
@@ -107,7 +107,9 @@ export const GptChatPageDetails = () => {
                   </div>
                 )}
 
-                <div className={`group flex-1 ${msg.type === 'user' ? 'flex justify-end' : ''}`}>
+                <div
+                  className={`group flex-1 relative ${msg.type === 'user' ? 'flex justify-end' : ''}`}
+                >
                   <div
                     className={`max-w-[90%] px-5 py-1 ${msg.type === 'user' && 'bg-accent rounded '}`}
                   >
@@ -119,7 +121,7 @@ export const GptChatPageDetails = () => {
                   </div>
 
                   {msg.type === 'bot' && !msg.streaming && (
-                    <div className="flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="absolute -bottom-8 left-0 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
                       <Button
                         variant="ghost"
                         size="icon"
@@ -131,27 +133,6 @@ export const GptChatPageDetails = () => {
                         ) : (
                           <Copy className="h-3.5 w-3.5" />
                         )}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 rounded-lg hover:bg-muted"
-                      >
-                        <ThumbsUp className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 rounded-lg hover:bg-muted"
-                      >
-                        <ThumbsDown className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 rounded-lg hover:bg-muted"
-                      >
-                        <RotateCcw className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                   )}
