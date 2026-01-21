@@ -129,7 +129,11 @@ export const ProfileMenu = () => {
       >
         <DropdownMenuItem onClick={() => navigate('profile')}>{t('MY_PROFILE')}</DropdownMenuItem>
         <DropdownMenuItem disabled>{t('ABOUT')}</DropdownMenuItem>
-        <DropdownMenuItem disabled>{t('PRIVACY_POLICY')}</DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => window.open('https://selisegroup.com/privacy-policy/', '_blank')}
+        >
+          {t('PRIVACY_POLICY')}
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           className="flex justify-between items-center transition-colors"
