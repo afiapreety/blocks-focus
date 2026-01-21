@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { AuthState } from './index.type';
-import { useChatStore } from '@/modules/gpt-chats/hooks/use-chat-store';
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -12,9 +11,6 @@ export const useAuthStore = create<AuthState>()(
       refreshToken: null,
       tokens: null,
       login: (accessToken, refreshToken) => {
-        const { reset } = useChatStore.getState();
-        reset();
-        useChatStore.persist.clearStorage();
         return set((state) => ({
           ...state,
           isAuthenticated: true,
