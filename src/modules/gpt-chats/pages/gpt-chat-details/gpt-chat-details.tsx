@@ -8,13 +8,13 @@ import { MarkdownRenderer } from '../../components/markdown-renderer/markdown-re
 import { ChatEventMessage } from '../../utils/chat-event-messages';
 
 const ThinkingIndicator = () => (
-  <div className="flex gap-4 animate-in fade-in duration-300 ml-1 items-start">
-    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-primary-300 to-primary-600 flex items-center justify-center">
+  <div className="flex gap-4 animate-in fade-in duration-300 items-start ml-1">
+    <div className=" w-8 h-8 rounded-full bg-gradient-to-br from-primary-300 to-primary-600 flex items-center justify-center flex-shrink-0">
       <Bot className="h-4 w-4 text-white" />
     </div>
-    <div className="flex-1 py-1 pl-5">
+    <div className="flex-1 py-1 ml-4">
       <div className="flex items-center gap-2">
-        <span className="text-foreground/60 text-sm">Sending</span>
+        <span className="text-foreground/60 text-sm italic">Sending</span>
         <div className="flex items-center gap-1">
           <div
             className="w-2 h-2 bg-foreground/60 rounded-full animate-bounce"
@@ -35,11 +35,11 @@ const ThinkingIndicator = () => (
 );
 
 const ChatEventMessageIndicator = ({ message }: { message: string }) => (
-  <div className="flex gap-4 animate-in fade-in duration-300 ml-1 items-start">
-    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-primary-300 to-primary-600 flex items-center justify-center">
+  <div className="flex gap-4 animate-in fade-in duration-300 items-start ml-1">
+    <div className=" w-8 h-8 rounded-full bg-gradient-to-br from-primary-300 to-primary-600 flex items-center justify-center flex-shrink-0">
       <Bot className="h-4 w-4 text-white" />
     </div>
-    <div className="flex-1 py-1 pl-5">
+    <div className="flex-1 py-1 ml-4">
       <ChatEventMessage message={message} />
     </div>
   </div>
