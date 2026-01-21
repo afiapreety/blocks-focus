@@ -129,7 +129,7 @@ export const clients: Https = {
       response = await fetch(fullUrl, config);
 
       if (response.status === 401) {
-        await this.handleAuthError(url, 'POST', headers, body);
+        await refreshAccessToken();
         return this.stream(url, body, headers);
       }
 
@@ -224,4 +224,12 @@ export const clients: Https = {
     authStore.setAccessToken(refreshTokenRes.access_token);
     return this.request<T>(url, { method, headers, body });
   },
+};
+
+const refreshAccessToken = async (): Promise<void> => {
+  const authStore = useAuthStore.getState();
+  if (!authStore.refreshToken) throw new HttpError(401, { error: 'invalid_request' });
+  const refreshTokenRes = await getRefreshToken();
+  if (refreshTokenRes.error === 'invalid_request') throw new HttpError(401, refreshTokenRes);
+  authStore.setAccessToken(refreshTokenRes.access_token);
 };

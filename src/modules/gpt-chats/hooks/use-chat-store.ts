@@ -241,6 +241,8 @@ export const useChatStore = create<ChatStore>()(
                 sessionId: conversations[0].SessionId,
                 conversations: chatConversations,
                 lastUpdated: new Date().toISOString(),
+                isBotThinking: false,
+                isBotStreaming: false,
               },
             },
             activeChatId: conversations[0].SessionId,
