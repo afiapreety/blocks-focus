@@ -11,16 +11,23 @@ interface GptChatInputProps {
   onSendMessage: (message: string) => void;
   disabled?: boolean;
   placeholder?: string;
+  selectedModel: string;
+  onModelChange: (model: string) => void;
+
+  selectedTools: string[];
+  onToolsChange: (tools: string[]) => void;
 }
 
 export const GptChatInput = ({
   onSendMessage,
   disabled = false,
   placeholder = 'Ask me anything...',
+  selectedModel,
+  onModelChange,
+  selectedTools,
+  onToolsChange,
 }: GptChatInputProps) => {
   const [message, setMessage] = useState('');
-  const [selectedModel, setSelectedModel] = useState('gemini-3-flash');
-  const [selectedTools, setSelectedTools] = useState<string[]>([]);
   const { state } = useSidebar();
 
   const onMessageHandler = () => {
@@ -70,7 +77,7 @@ export const GptChatInput = ({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div>
-                    <GroupedModelSelector value={selectedModel} onChange={setSelectedModel} />
+                    <GroupedModelSelector value={selectedModel} onChange={onModelChange} />
                   </div>
                 </TooltipTrigger>
               </Tooltip>
@@ -78,7 +85,7 @@ export const GptChatInput = ({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div>
-                    <ToolsSelector value={selectedTools} onChange={setSelectedTools} />
+                    <ToolsSelector value={selectedTools} onChange={onToolsChange} />
                   </div>
                 </TooltipTrigger>
               </Tooltip>

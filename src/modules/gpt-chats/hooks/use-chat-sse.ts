@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { onlineManager } from '@tanstack/react-query';
 import { useChatStore } from './use-chat-store';
 import { useGetConversationById } from './use-conversation-api';
-import { useParams } from 'react-router-dom';
 
 interface UseChatSSE {
   chatId?: string;
@@ -12,16 +11,17 @@ const projectKey = import.meta.env.VITE_X_BLOCKS_KEY || '';
 const projectSlug = import.meta.env.VITE_PROJECT_SLUG || '';
 
 export const useChatSSE = ({ chatId = '' }: UseChatSSE) => {
-  const { chatId: testChatID } = useParams();
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const {
     chats,
     loadChat,
     generateBotMessage: generateFromStore,
     sendMessage: sendFromStore,
-    resolveChatId,
+    setSelectedModel,
+    setSelectedTools,
   } = useChatStore();
-  const chat = chats[resolveChatId(chatId)] || {
+  const activeChatId = useChatStore((state) => state.resolveChatId(chatId || ''));
+  const chat = chats[activeChatId] || {
     sessionId: '',
     conversations: [],
     isBotStreaming: false,
@@ -33,42 +33,53 @@ export const useChatSSE = ({ chatId = '' }: UseChatSSE) => {
   const isBotStreaming = chat.isBotStreaming || false;
   const isBotThinking = chat.isBotThinking || false;
 
-  const { data, isFetched } = useGetConversationById({
+  const { data, isFetching } = useGetConversationById({
     allow_created_by_filter: true,
     call_from: projectSlug,
     project_key: projectKey,
-    session_id: chatId,
+    session_id: activeChatId,
     limit: 100,
     offset: 0,
   });
 
   useEffect(() => {
-    if (chatId && isFetched && data) {
+    if (activeChatId && activeChatId != 'new' && data) {
       if (data.total_count > 0) {
         const conversationData = data.sessions;
-        loadChat(chatId, conversationData);
+        loadChat(activeChatId, conversationData);
       }
     }
-  }, [chatId, data, isFetched, loadChat]);
+  }, [activeChatId, data, loadChat]);
 
   const generateBotMessage = useCallback(
     async (data: { message: string }) => {
-      await generateFromStore(chatId, data.message, setSuggestions);
+      await generateFromStore(activeChatId, data.message, setSuggestions);
     },
-    [chatId, generateFromStore]
+    [activeChatId, generateFromStore]
   );
 
   const sendMessage = useCallback(
     async (data: { message: string }) => {
-      await sendFromStore(chatId, data.message);
+      await sendFromStore(activeChatId, data.message);
     },
-    [chatId, sendFromStore]
+    [activeChatId, sendFromStore]
+  );
+
+  const onModelChange = useCallback(
+    (model: string) => setSelectedModel(activeChatId, model),
+    [activeChatId, setSelectedModel]
+  );
+
+  const onToolsChange = useCallback(
+    (tools: string[]) => {
+      setSelectedTools(activeChatId, tools);
+    },
+    [activeChatId, setSelectedTools]
   );
 
   const isOnline = onlineManager.isOnline;
-
-  console.log('useChatSSE called with chatId:', testChatID);
-
+  const isReady = chatId == 'new' ? true : !isFetching;
+  const { selectedModel, selectedTools } = chat;
   return {
     sessionId,
     sendMessage,
@@ -76,7 +87,14 @@ export const useChatSSE = ({ chatId = '' }: UseChatSSE) => {
     isBotThinking,
     isBotStreaming,
     suggestions,
-    isOnline,
+    selectedModel,
+    selectedTools,
+
+    onModelChange,
+    onToolsChange,
     generateBotMessage,
+
+    isOnline,
+    isReady,
   };
 };

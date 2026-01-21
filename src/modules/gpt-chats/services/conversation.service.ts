@@ -6,6 +6,7 @@ import {
   IConversationConfigPayload,
   IConversationListPayload,
   IConversationListResponse,
+  IDeleteConversationByIdPayload,
   Widget,
 } from '../types/conversation.service.type';
 
@@ -37,6 +38,11 @@ export class ConversationService {
   query(body: Record<string, any>) {
     const url = `/blocksai-api/v1/ai-agent/query/stream`;
     return clients.stream(url, JSON.stringify(body));
+  }
+
+  deleteConversationSession(payload: IDeleteConversationByIdPayload) {
+    const url = `/blocksai-api/v1/conversation/llm-sessions/${payload.session_id}?project_key=${payload.project_key}`;
+    return clients.delete(url);
   }
 }
 
