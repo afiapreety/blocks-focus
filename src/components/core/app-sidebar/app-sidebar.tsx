@@ -110,16 +110,12 @@ export const AppSidebar = () => {
         />
       )}
       <Sidebar
-        className={`bg-background h-full border-r border-border/50 backdrop-blur-xl ${
-          isMobile ? 'mobile-sidebar' : ''
-        }`}
+        className={`bg-card h-full border-r border-border/50  ${isMobile ? 'mobile-sidebar' : ''}`}
         collapsible={isMobile ? 'none' : 'icon'}
         style={sidebarStyle}
       >
         <SidebarHeader
-          className={`${
-            !open && !isMobile ? 'border-b border-border/50' : ''
-          } p-3 bg-gradient-to-b from-background/50 to-transparent`}
+          className={`${!open && !isMobile ? 'border-b border-border/50' : ''} p-3 bg-card`}
         >
           <LogoSection
             theme={theme}
@@ -129,21 +125,21 @@ export const AppSidebar = () => {
           />
         </SidebarHeader>
 
-        <SidebarContent className="text-base mx-3 my-4 text-high-emphasis font-normal overflow-x-hidden">
+        <SidebarContent className="text-base px-3 py-4 text-high-emphasis font-normal overflow-x-hidden bg-card">
           <Button
             onClick={handleNewChat}
             variant="outline"
-            className="mt-2 mb-2 gap-2 justify-start"
+            className="mt-2 mb-2 gap-2 justify-start bg-card"
           >
             <PenSquare className="h-4 w-4" />
             <span>{t('NEW_CHAT')}</span>
           </Button>
-          <Accordion type="single" collapsible defaultValue="list">
-            <AccordionItem value="list" className="border-none">
+          <Accordion type="single" collapsible defaultValue="list" className="bg-card">
+            <AccordionItem value="list" className="border-none bg-card">
               <AccordionTrigger className=" hover:no-underline justify-start gap-1 [&[data-state=closed]>svg]:-rotate-90 [&[data-state=open]>svg]:rotate-0">
                 {t('YOUR_CHATS')}
               </AccordionTrigger>
-              <AccordionContent>
+              <AccordionContent className="bg-card">
                 {chatList.length === 0 ? (
                   <p className="text-sm text-muted-foreground mt-2">{t('NO_CHATS_AVAILABLE')}</p>
                 ) : (
@@ -182,7 +178,7 @@ export const AppSidebar = () => {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent
-                              className="w-44 p-1 rounded-md text-high-emphasis"
+                              className="w-44 p-1 rounded-md text-high-emphasis bg-card"
                               align="start"
                               side="right"
                               sideOffset={8}
