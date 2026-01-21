@@ -6,6 +6,7 @@ import { GroupedModelSelector } from './model-selector';
 import { ToolsSelector } from './tools-selector';
 import { Tooltip, TooltipTrigger } from '@/components/ui-kit/tooltip';
 import { useSidebar } from '@/components/ui-kit/sidebar';
+import { useTranslation } from 'react-i18next';
 
 interface GptChatInputProps {
   onSendMessage: (message: string) => void;
@@ -21,7 +22,7 @@ interface GptChatInputProps {
 export const GptChatInput = ({
   onSendMessage,
   disabled = false,
-  placeholder = 'Ask me anything...',
+  placeholder,
   selectedModel,
   onModelChange,
   selectedTools,
@@ -29,6 +30,7 @@ export const GptChatInput = ({
 }: GptChatInputProps) => {
   const [message, setMessage] = useState('');
   const { state } = useSidebar();
+  const { t } = useTranslation();
 
   const onMessageHandler = () => {
     onSendMessage(message);
@@ -52,7 +54,7 @@ export const GptChatInput = ({
                 onMessageHandler();
               }
             }}
-            placeholder={placeholder}
+            placeholder={placeholder || t('ASK_ME_ANYTHING')}
             disabled={disabled}
             className="min-h-[80px] max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 pr-16 px-6 py-5 pb-12 sm:pb-5 text-base placeholder:text-muted-foreground/60"
           />
