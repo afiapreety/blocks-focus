@@ -54,15 +54,15 @@ export const MarkdownComponentsMap: Partial<Components> = {
     if (!inline && match) {
       const language = match[1];
       return (
-        <div className="relative max-w-full overflow-auto rounded-md bg-gray-900">
-          <div className="absolute left-0 top-0 z-10 flex w-full items-center justify-between bg-gray-700 p-2.5 text-xs text-gray-300">
+        <div className="max-w-full overflow-auto rounded-md bg-gray-900">
+          <div className="flex w-full items-center justify-between bg-gray-700 p-2.5 text-xs text-gray-300">
             <span className="text-sm uppercase">{language}</span>
           </div>
           <SyntaxHighlighter
             showLineNumbers
             style={dark}
             customStyle={{
-              marginTop: '28px',
+              margin: 0,
               scrollbarColor: '#424242 transparent',
               scrollMargin: '0',
             }}
