@@ -2,57 +2,6 @@ import { useAuthStore } from '@/state/store/auth';
 import { getRefreshToken } from '@/modules/auth/services/auth.service';
 import { isLocalhost } from './utils/localhost-checker/locahost-checker';
 
-/**
- * HTTP Client Module
- *
- * A robust HTTP client utility that provides standardized methods for making API requests
- * with built-in error handling, authentication token management, and automatic token refresh.
- *
- * Features:
- * - Typed request/response handling with generics
- * - Standardized methods for GET, POST, PUT, DELETE operations
- * - Automatic handling of authentication token expiration
- * - Consistent error handling with custom HttpError class
- * - URL normalization for relative and absolute paths
- * - Configurable request headers
- * - Environment-based configuration
- *
- * @example
- * // GET request
- * const users = await clients.get<User[]>('users');
- *
- * // POST request with body
- * const newUser = await clients.post<User>(
- *   'users',
- *   JSON.stringify({ name: 'John', email: 'john@example.com' })
- * );
- *
- * // PUT request with custom headers
- * const updatedUser = await clients.put<User>(
- *   `users/${userId}`,
- *   JSON.stringify({ name: 'John Updated' }),
- *   { 'X-Custom-Header': 'value' }
- * );
- *
- * // DELETE request
- * const deleteResult = await clients.delete<{ success: boolean }>(`users/${userId}`);
- *
- * // Handling errors
- * try {
- *   const data = await clients.get<Data>('some-endpoint');
- *   // Process data
- * } catch (error) {
- *   if (error instanceof HttpError) {
- *     console.error(`API Error ${error.status}: ${error.message}`);
- *   }
- * }
- *
- * @note Requires environment variables:
- * - VITE_PUBLIC_BLOCKS_API_URL: Base URL for API requests
- * - VITE_X_BLOCKS_KEY: API key for authentication
- *
- */
-
 interface Https {
   get<T>(url: string, headers?: HeadersInit): Promise<T>;
   post<T>(url: string, body: BodyInit, headers?: HeadersInit): Promise<T>;
@@ -65,7 +14,7 @@ interface Https {
   ): Promise<ReadableStreamDefaultReader<Uint8Array>>;
   request<T>(url: string, options: RequestOptions): Promise<T>;
   createHeaders(headers: any): Headers;
-  handleAuthError<T>(url: string, method: string, headers: any, body: any): Promise<T>;
+  refreshAccessToken(): Promise<void>;
 }
 
 interface RequestOptions {
@@ -129,7 +78,7 @@ export const clients: Https = {
       response = await fetch(fullUrl, config);
 
       if (response.status === 401) {
-        await refreshAccessToken();
+        await this.refreshAccessToken();
         return this.stream(url, body, headers);
       }
 
@@ -171,7 +120,8 @@ export const clients: Https = {
       }
 
       if (response.status === 401) {
-        return this.handleAuthError<T>(url, method, headers, body);
+        await this.refreshAccessToken();
+        return this.request<T>(url, { method, headers, body });
       }
 
       const err = await response.json();
@@ -203,33 +153,19 @@ export const clients: Https = {
     return newHeader;
   },
 
-  async handleAuthError<T>(
-    url: string,
-    method: 'GET' | 'POST' | 'PUT' | 'DELETE',
-    headers: any,
-    body: any
-  ): Promise<T> {
+  async refreshAccessToken(): Promise<void> {
     const authStore = useAuthStore.getState();
-
-    if (!authStore.refreshToken) {
-      throw new HttpError(401, { error: 'invalid_request' });
+    try {
+      if (!authStore.refreshToken) throw new HttpError(401, { error: 'invalid_request' });
+      const refreshTokenRes = await getRefreshToken();
+      if (refreshTokenRes.error === 'invalid_refresh_token') {
+        authStore.logout();
+        throw new HttpError(401, refreshTokenRes);
+      }
+      authStore.setAccessToken(refreshTokenRes.access_token);
+    } catch (error) {
+      authStore.logout();
+      throw error;
     }
-
-    const refreshTokenRes = await getRefreshToken();
-
-    if (refreshTokenRes.error === 'invalid_request') {
-      throw new HttpError(401, refreshTokenRes);
-    }
-
-    authStore.setAccessToken(refreshTokenRes.access_token);
-    return this.request<T>(url, { method, headers, body });
   },
-};
-
-const refreshAccessToken = async (): Promise<void> => {
-  const authStore = useAuthStore.getState();
-  if (!authStore.refreshToken) throw new HttpError(401, { error: 'invalid_request' });
-  const refreshTokenRes = await getRefreshToken();
-  if (refreshTokenRes.error === 'invalid_request') throw new HttpError(401, refreshTokenRes);
-  authStore.setAccessToken(refreshTokenRes.access_token);
 };

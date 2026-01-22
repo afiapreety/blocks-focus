@@ -6,7 +6,15 @@ import { parseSSEBuffer } from '../utils/parse-sse';
 import { handleSSEMessage } from '../utils/sse-message-handler';
 import { NavigateFunction } from 'react-router-dom';
 
+const generateUniqueId = (): string => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
 type MessageType = 'user' | 'bot';
+
+export type SelectModelType = {
+  isBlocksModels: boolean;
+  provider: string;
+  model: string;
+} | null;
 
 interface ChatMessage {
   message: string;
@@ -23,7 +31,7 @@ interface Chat {
   isBotThinking: boolean;
   currentEvent: ChatEvent | null;
   lastUpdated: string;
-  selectedModel: string;
+  selectedModel: SelectModelType;
   selectedTools: string[];
 }
 
@@ -40,7 +48,7 @@ const chatDefaultValue = {
   isBotThinking: false,
   currentEvent: null as ChatEvent | null,
   lastUpdated: '',
-  selectedModel: 'gpt-4o-mini',
+  selectedModel: null,
   selectedTools: [],
 };
 
@@ -50,8 +58,12 @@ interface ChatStore {
   };
   resolveChatId: (chatId: string) => string;
   activeChatId: string | null;
-  initiateChat: (id: string, message: string) => void;
-  startChat: (message: string, model: string, tools: string[], navigate: NavigateFunction) => void;
+  startChat: (
+    message: string,
+    model: SelectModelType,
+    tools: string[],
+    navigate: NavigateFunction
+  ) => void;
   loadChat: (id: string, conversations: Conversation[]) => void;
   setSessionId: (id: string, sessionId: string) => void;
   addUserMessage: (id: string, message: string) => void;
@@ -63,7 +75,7 @@ interface ChatStore {
   clearChat: (id: string) => void;
   setBotThinking: (id: string, thinking: boolean) => void;
   setCurrentEvent: (id: string, eventType: string | null, message: string) => void;
-  setSelectedModel: (id: string, modelId: string) => void;
+  setSelectedModel: (id: string, model: SelectModelType) => void;
   setSelectedTools: (id: string, toolIds: string[]) => void;
   deleteChat: (id: string) => void;
   generateBotMessage: (
@@ -89,12 +101,29 @@ const getBotSSE = async (
     done: boolean
   ) => void
 ) => {
+  const modelId = chat?.selectedModel
+    ? chat?.selectedModel.isBlocksModels
+      ? ''
+      : chat?.selectedModel.model
+    : '';
+  const modelName = chat?.selectedModel
+    ? chat?.selectedModel.isBlocksModels
+      ? chat?.selectedModel.model
+      : ''
+    : '';
+  const modelProvider = chat?.selectedModel
+    ? chat?.selectedModel.isBlocksModels
+      ? chat?.selectedModel.provider
+      : ''
+    : '';
   try {
     const reader = await conversationService.query({
       query: query,
       session_id: (chat.sessionId as string) || undefined,
       base_prompt: 'You are helpful',
-      model_id: chat.selectedModel,
+      model_id: modelId,
+      model_name: modelName,
+      model_provider: modelProvider,
       tool_ids: chat.selectedTools,
       last_n_turn: 5,
       enable_summary: false,
@@ -140,29 +169,6 @@ export const useChatStore = create<ChatStore>()(
         }
         return chatId;
       },
-      initiateChat: (chatId, message) =>
-        set((state) => {
-          return {
-            chats: {
-              ...state.chats,
-              [chatId]: {
-                ...chatDefaultValue,
-                id: chatId,
-                conversations: [
-                  {
-                    message,
-                    type: 'user',
-                    streaming: false,
-                    timestamp: new Date().toISOString(),
-                  },
-                ],
-                isBotThinking: true,
-                pendingSend: true,
-                lastUpdated: new Date().toISOString(),
-              },
-            },
-          };
-        }),
 
       startChat: (message, model, tools, navigate) => {
         const chatMessage: ChatMessage = {
@@ -172,7 +178,7 @@ export const useChatStore = create<ChatStore>()(
           timestamp: new Date().toISOString(),
         };
 
-        const chatId = crypto.randomUUID();
+        const chatId = generateUniqueId();
         const chat = {
           ...chatDefaultValue,
           id: chatId,

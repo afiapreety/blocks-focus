@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui-kit/button';
-import { useChatStore } from '@/modules/gpt-chats/hooks/use-chat-store';
+import { SelectModelType, useChatStore } from '@/modules/gpt-chats/hooks/use-chat-store';
 import {
   Sparkles,
   Compass,
@@ -139,7 +139,7 @@ const categories = [
 export const GptChatPage = () => {
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<string>('learn');
-  const [selectModel, setSelectedModel] = useState<string>('gpt-4o-mini');
+  const [selectModel, setSelectedModel] = useState<SelectModelType | null>(null);
   const [selectedTools, setSelectedTools] = useState<string[]>([]);
   const { startChat } = useChatStore();
   const { t } = useTranslation();

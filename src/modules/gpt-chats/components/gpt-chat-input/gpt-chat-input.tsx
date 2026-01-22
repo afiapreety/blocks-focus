@@ -7,14 +7,14 @@ import { ToolsSelector } from './tools-selector';
 import { Tooltip, TooltipTrigger } from '@/components/ui-kit/tooltip';
 import { useSidebar } from '@/components/ui-kit/sidebar';
 import { useTranslation } from 'react-i18next';
+import { SelectModelType } from '../../hooks/use-chat-store';
 
 interface GptChatInputProps {
   onSendMessage: (message: string) => void;
   disabled?: boolean;
   placeholder?: string;
-  selectedModel: string;
-  onModelChange: (model: string) => void;
-
+  selectedModel: SelectModelType;
+  onModelChange: (model: SelectModelType) => void;
   selectedTools: string[];
   onToolsChange: (tools: string[]) => void;
 }

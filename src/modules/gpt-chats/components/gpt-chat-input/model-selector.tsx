@@ -4,20 +4,28 @@ import { Button } from '@/components/ui-kit/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui-kit/popover';
 import { cn } from '@/lib/utils';
 import { useGetCustomLlmModels, useGetLlmModels } from '@/modules/gpt-chats/hooks/use-gpt-chat';
-import {
-  IGetAgentModelResponse,
-  IGetCustomLlmModelsResponse,
-} from '../../services/gpt-chat.service';
 import { formatProviderName, getProviderConfig } from '../../utils/model-selector';
+import { SelectModelType } from '../../hooks/use-chat-store';
+
+type GroupModel = {
+  provider: string;
+  label: string;
+  isBlocksModels: boolean;
+  models: {
+    model: string;
+    label: string;
+    type: string;
+  }[];
+};
 
 interface GroupedModelSelectorProps {
-  value?: string;
-  onChange?: (value: string) => void;
+  value?: SelectModelType;
+  onChange?: (value: SelectModelType) => void;
 }
 
-export const GroupedModelSelector = ({ value = '', onChange }: GroupedModelSelectorProps) => {
+export const GroupedModelSelector = ({ value = null, onChange }: GroupedModelSelectorProps) => {
   const [open, setOpen] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
+  const [selectedProvider, setSelectedProvider] = useState<GroupModel | null>(null);
   const [mobileView, setMobileView] = useState<'providers' | 'models'>('providers');
 
   const {
@@ -31,136 +39,86 @@ export const GroupedModelSelector = ({ value = '', onChange }: GroupedModelSelec
   const hasError = customError && blocksError;
 
   const groupedModels = useMemo(() => {
-    const allModels: Array<{
-      provider: string;
-      provider_label: string;
-      models: Array<{
-        model_name: string;
-        model_name_label: string;
-        provider: string;
-        provider_label: string;
-        model_type: string;
-      }>;
-    }> = [];
+    const allModels: Record<string, GroupModel> = {};
 
-    if (customModels) {
-      const customResponse = customModels as IGetCustomLlmModelsResponse;
-      const chatModels = customResponse.models.filter((m) => m.ModelType === 'chat');
+    if (!customModels && !blocksModels) return allModels;
 
-      chatModels.forEach((model) => {
-        const provider = model.Provider.toLowerCase();
-        const existingGroup = allModels.find((g) => g.provider === provider);
-
-        const transformedModel = {
-          model_name: model.ModelName,
-          model_name_label: model.DisplayName,
+    blocksModels?.forEach((model) => {
+      if (model.model_type !== 'chat') return;
+      const provider = model.provider.toLowerCase();
+      if (!allModels[provider]) {
+        allModels[provider] = {
           provider: provider,
-          provider_label: formatProviderName(model.Provider),
-          model_type: model.ModelType,
+          label: formatProviderName(model.provider_label || model.provider),
+          isBlocksModels: true,
+          models: [],
         };
-
-        if (existingGroup) {
-          existingGroup.models.push(transformedModel);
-        } else {
-          allModels.push({
-            provider: provider,
-            provider_label: formatProviderName(model.Provider),
-            models: [transformedModel],
-          });
-        }
+      }
+      allModels[provider].models.push({
+        model: model.model_name,
+        label: model.model_name_label,
+        type: model.model_type,
       });
-    }
+    });
 
-    if (blocksModels) {
-      const blocksResponse = blocksModels as IGetAgentModelResponse;
-      const chatModels = blocksResponse.filter((model) => model.model_type === 'chat');
-
-      chatModels.forEach((model) => {
-        const provider = model.provider.toLowerCase();
-        const existingGroup = allModels.find((g) => g.provider === provider);
-
-        const transformedModel = {
-          model_name: model.model_name,
-          model_name_label: model.model_name_label,
-          provider: model.provider,
-          provider_label: formatProviderName(model.provider_label || model.provider),
-          model_type: model.model_type,
+    customModels?.models?.forEach((model) => {
+      const provider = model.Provider.toLowerCase();
+      if (!allModels[provider]) {
+        allModels[provider] = {
+          provider: provider,
+          label: formatProviderName(model.Provider),
+          isBlocksModels: false,
+          models: [],
         };
-
-        if (existingGroup) {
-          const modelExists = existingGroup.models.some(
-            (m) => m.model_name === transformedModel.model_name
-          );
-          if (!modelExists) {
-            existingGroup.models.push(transformedModel);
-          }
-        } else {
-          allModels.push({
-            provider: model.provider,
-            provider_label: formatProviderName(model.provider_label || model.provider),
-            models: [transformedModel],
-          });
-        }
+      }
+      allModels[provider].models.push({
+        model: model._id,
+        label: model.ModelName,
+        type: model.ModelType,
       });
-    }
+    });
 
-    return allModels.sort((a, b) => a.provider.localeCompare(b.provider));
+    return allModels;
   }, [customModels, blocksModels]);
 
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen);
-    if (newOpen && !selectedProvider && groupedModels.length > 0) {
-      setSelectedProvider(groupedModels[0].provider);
+    if (newOpen && !selectedProvider && Object.keys(groupedModels).length > 0) {
+      setSelectedProvider(groupedModels[Object.keys(groupedModels)[0]]);
       setMobileView('providers');
     }
   };
 
   const selectedModel = useMemo(() => {
-    if (customModels) {
-      const customResponse = customModels as IGetCustomLlmModelsResponse;
-      const found = customResponse.models.find((m) => m.ModelName === value);
-      if (found) {
+    if (!value) return null;
+    if (groupedModels[value.provider]) {
+      const model = groupedModels[value.provider].models.find((m) => m.model === value.model);
+      if (model) {
         return {
-          model_name: found.ModelName,
-          model_name_label: found.DisplayName,
-          provider: found.Provider.toLowerCase(),
-          provider_label: formatProviderName(found.Provider),
-          model_type: found.ModelType,
+          model: model.model,
+          label: model.label,
+          provider: value.provider,
+          providerLabel: groupedModels[value.provider].label,
         };
       }
     }
-
-    if (blocksModels) {
-      const blocksResponse = blocksModels as IGetAgentModelResponse;
-      const found = blocksResponse.find((m) => m.model_name === value);
-      if (found) {
-        return {
-          ...found,
-          provider_label: formatProviderName(found.provider_label || found.provider),
-        };
-      }
-    }
-
-    if (groupedModels.length > 0 && groupedModels[0].models.length > 0) {
-      return groupedModels[0].models[0];
-    }
-
     return null;
-  }, [customModels, blocksModels, value, groupedModels]);
+  }, [value, groupedModels]);
 
   const selectedProviderGroup = useMemo(() => {
-    return groupedModels.find((g) => g.provider === selectedProvider);
+    if (!selectedProvider) return null;
+    return groupedModels[selectedProvider.provider];
   }, [groupedModels, selectedProvider]);
 
-  const handleSelect = (modelName: string) => {
-    onChange?.(modelName);
+  const handleSelect = (model: SelectModelType) => {
+    onChange?.(model);
     setOpen(false);
     setSelectedProvider(null);
     setMobileView('providers');
   };
 
-  const handleProviderSelect = (provider: string) => {
-    setSelectedProvider(provider);
+  const handleProviderSelect = (group: GroupModel) => {
+    setSelectedProvider(group);
     setMobileView('models');
   };
 
@@ -179,7 +137,7 @@ export const GroupedModelSelector = ({ value = '', onChange }: GroupedModelSelec
     );
   }
 
-  if (hasError || !selectedModel) {
+  if (hasError) {
     return (
       <Button
         variant="outline"
@@ -191,7 +149,7 @@ export const GroupedModelSelector = ({ value = '', onChange }: GroupedModelSelec
     );
   }
 
-  const providerConfig = getProviderConfig(selectedModel.provider);
+  const providerConfig = getProviderConfig(selectedModel?.provider || '');
   const ProviderIcon = providerConfig.icon;
 
   return (
@@ -215,13 +173,14 @@ export const GroupedModelSelector = ({ value = '', onChange }: GroupedModelSelec
             </div>
             <div className="flex flex-col items-start min-w-0 flex-1">
               <span className="text-sm font-medium truncate w-full text-left">
-                {selectedModel.model_name_label || selectedModel.model_name}
+                {selectedModel?.label || 'Select Model'}
               </span>
               <span className="text-xs text-muted-foreground truncate w-full text-left">
-                {selectedModel.provider_label || formatProviderName(selectedModel.provider)}
+                {selectedModel?.providerLabel || formatProviderName(selectedModel?.provider || '')}
               </span>
             </div>
           </div>
+
           <ChevronDown
             className={cn(
               'h-4 w-4 shrink-0 opacity-50 transition-all duration-200',
@@ -249,20 +208,20 @@ export const GroupedModelSelector = ({ value = '', onChange }: GroupedModelSelec
 
             <div className="flex-1 overflow-y-auto">
               <div className="p-2 space-y-1">
-                {groupedModels.length === 0 ? (
+                {Object.values(groupedModels).length === 0 ? (
                   <div className="p-4 text-center text-sm text-muted-foreground">
                     No providers available
                   </div>
                 ) : (
-                  groupedModels.map((group) => {
+                  Object.values(groupedModels).map((group) => {
                     const groupConfig = getProviderConfig(group.provider);
                     const GroupIcon = groupConfig.icon;
-                    const isProviderSelected = selectedProvider === group.provider;
+                    const isProviderSelected = selectedProvider?.provider === group.provider;
 
                     return (
                       <button
                         key={group.provider}
-                        onClick={() => handleProviderSelect(group.provider)}
+                        onClick={() => handleProviderSelect(group)}
                         className={cn(
                           'w-full flex items-center gap-2.5 px-2.5 py-2 text-left transition-all duration-200 rounded-xl group/provider relative',
                           isProviderSelected
@@ -286,7 +245,7 @@ export const GroupedModelSelector = ({ value = '', onChange }: GroupedModelSelec
                               isProviderSelected && 'text-primary'
                             )}
                           >
-                            {group.provider_label || formatProviderName(group.provider)}
+                            {group.label || formatProviderName(group.provider)}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {group.models.length} {group.models.length === 1 ? 'model' : 'models'}
@@ -321,20 +280,24 @@ export const GroupedModelSelector = ({ value = '', onChange }: GroupedModelSelec
                     <ArrowLeft className="h-4 w-4" />
                   </Button>
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate flex-1">
-                    {selectedProviderGroup.provider_label ||
-                      formatProviderName(selectedProviderGroup.provider)}{' '}
-                    Models ({selectedProviderGroup.models.length})
+                    {selectedProviderGroup.label} Models ({selectedProviderGroup.models.length})
                   </p>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-2 sm:p-3">
                   <div className="flex flex-row flex-wrap gap-2">
                     {selectedProviderGroup.models.map((model) => {
-                      const isSelected = value === model.model_name;
+                      const isSelected = value?.model === model.model;
                       return (
                         <button
-                          key={model.model_name}
-                          onClick={() => handleSelect(model.model_name)}
+                          key={model.model}
+                          onClick={() =>
+                            handleSelect({
+                              isBlocksModels: selectedProviderGroup.isBlocksModels,
+                              provider: selectedProviderGroup.provider,
+                              model: model.model,
+                            })
+                          }
                           className={cn(
                             'group/model flex flex-col gap-2 p-2.5 sm:p-3 rounded-xl text-left transition-all duration-200 border-2 relative overflow-hidden w-fit',
                             isSelected
@@ -352,9 +315,9 @@ export const GroupedModelSelector = ({ value = '', onChange }: GroupedModelSelec
                                 'font-medium text-sm truncate flex-1 transition-colors',
                                 isSelected && 'text-primary'
                               )}
-                              title={model.model_name_label || model.model_name}
+                              title={model.label || model.model}
                             >
-                              {model.model_name_label || model.model_name}
+                              {model.label || model.model}
                             </p>
                             {isSelected && (
                               <Check className="h-4 w-4 text-primary flex-shrink-0 animate-in zoom-in-50 duration-200" />
@@ -371,7 +334,7 @@ export const GroupedModelSelector = ({ value = '', onChange }: GroupedModelSelec
                 <div className="text-center space-y-2">
                   <p className="text-sm font-medium text-muted-foreground">Select a provider</p>
                   <p className="text-xs text-muted-foreground/60">
-                    Choose from the {groupedModels.length} providers available
+                    Choose from the {Object.keys(groupedModels).length} providers available
                   </p>
                 </div>
               </div>

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { onlineManager } from '@tanstack/react-query';
-import { useChatStore } from './use-chat-store';
+import { SelectModelType, useChatStore } from './use-chat-store';
 import { useGetConversationById } from './use-conversation-api';
 
 interface UseChatSSE {
@@ -67,7 +67,7 @@ export const useChatSSE = ({ chatId = '' }: UseChatSSE) => {
   );
 
   const onModelChange = useCallback(
-    (model: string) => setSelectedModel(activeChatId, model),
+    (model: SelectModelType) => setSelectedModel(activeChatId, model),
     [activeChatId, setSelectedModel]
   );
 
