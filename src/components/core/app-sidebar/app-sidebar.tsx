@@ -51,7 +51,7 @@ export const AppSidebar = () => {
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
   const { data } = useGetConversations({
-    limit: 100,
+    limit: 200,
     offset: 0,
     allow_created_by_filter: true,
     call_from: projectSlug,
