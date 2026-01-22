@@ -5,7 +5,7 @@ import { Bot, User, Copy, Check } from 'lucide-react';
 import { GptChatInput } from '../../components/gpt-chat-input/gpt-chat-input';
 import { useChatSSE } from '../../hooks/use-chat-sse';
 import { MarkdownRenderer } from '../../components/markdown-renderer/markdown-renderer';
-import { ChatEventMessage } from '../../utils/chat-event-messages';
+import { ChatEventMessage, SparkleText } from '../../utils/chat-event-messages';
 
 const ThinkingIndicator = () => (
   <div className="flex gap-4 animate-in fade-in duration-300 items-start ml-1">
@@ -14,8 +14,10 @@ const ThinkingIndicator = () => (
     </div>
     <div className="flex-1 py-1">
       <div className="flex items-center gap-2">
-        <span className="text-foreground/60 text-sm italic">Sending</span>
-        <div className="flex items-center gap-1">
+        {/* <span className="text-foreground/60 text-sm italic">Sending</span> */}
+        <SparkleText text={'Sending'} />
+
+        {/* <div className="flex items-center gap-1">
           <div
             className="w-2 h-2 bg-foreground/60 rounded-full animate-bounce"
             style={{ animationDelay: '0ms' }}
@@ -28,7 +30,7 @@ const ThinkingIndicator = () => (
             className="w-2 h-2 bg-foreground/60 rounded-full animate-bounce"
             style={{ animationDelay: '300ms' }}
           />
-        </div>
+        </div> */}
       </div>
     </div>
   </div>

@@ -233,6 +233,41 @@ export const AnimatedDots = () => {
   );
 };
 
+export const SparkleText = ({ text }: { text: string }) => {
+  return (
+    <div className="relative inline-flex items-center gap-2">
+      <p className="text-sm italic text-medium-emphasis">{text}</p>
+      <div className="relative w-4 h-4">
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            className="absolute w-1 h-1 bg-primary rounded-full"
+            style={{
+              animation: 'sparkle 1.5s ease-in-out infinite',
+              animationDelay: `${i * 0.3}s`,
+              left: '50%',
+              top: '50%',
+              transform: 'translate(-50%, -50%)',
+            }}
+          />
+        ))}
+      </div>
+      <style>{`
+        @keyframes sparkle {
+          0%, 100% { 
+            transform: translate(-50%, -50%) scale(0);
+            opacity: 0;
+          }
+          50% { 
+            transform: translate(-50%, -50%) scale(3);
+            opacity: 1;
+          }
+        }
+      `}</style>
+    </div>
+  );
+};
+
 export const ChatEventMessage: React.FC<ChatEventMessageProps> = ({ message }) => {
   const [key, setKey] = useState(0);
 
@@ -245,8 +280,8 @@ export const ChatEventMessage: React.FC<ChatEventMessageProps> = ({ message }) =
       key={key}
       className="flex items-center gap-2 duration-500 animate-in fade-in slide-in-from-left-2"
     >
-      <p className="text-sm italic text-medium-emphasis">{message}</p>
-      <AnimatedDots />
+      {/* <p className="text-sm italic text-medium-emphasis">{message}</p> */}
+      <SparkleText text={message} />
     </div>
   );
 };
