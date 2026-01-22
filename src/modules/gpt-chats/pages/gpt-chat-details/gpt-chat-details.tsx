@@ -189,6 +189,7 @@ export const GptChatPageDetails = () => {
         onModelChange={onModelChange}
         selectedTools={selectedTools}
         onToolsChange={onToolsChange}
+        variant="chat-details"
       />
     </div>
   );
