@@ -46,10 +46,8 @@ export const GptChatInput = ({
       }`}
     >
       <div
-        className={`w-full mx-auto rounded-3xl pb-4 border-x-0 ${
-          variant === 'chat-details'
-            ? 'max-w-3xl bg-background backdrop-blur-3xl'
-            : 'max-w-3xl xl:max-w-5xl'
+        className={`w-full mx-auto rounded-3xl pb-4 border-x-0 max-w-3xl xl:max-w-5xl ${
+          variant === 'chat-details' ? ' bg-background backdrop-blur-3xl' : ''
         }`}
       >
         <div className="bg-card relative rounded-3xl border-2 border-border hover:border-primary focus-within:border-primary transition-all duration-300 ">
