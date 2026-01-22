@@ -139,7 +139,11 @@ const categories = [
 export const GptChatPage = () => {
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<string>('learn');
-  const [selectModel, setSelectedModel] = useState<SelectModelType | null>(null);
+  const [selectModel, setSelectedModel] = useState<SelectModelType>({
+    isBlocksModels: true,
+    provider: 'azure',
+    model: 'gpt-4o-mini',
+  });
   const [selectedTools, setSelectedTools] = useState<string[]>([]);
   const { startChat } = useChatStore();
   const { t } = useTranslation();

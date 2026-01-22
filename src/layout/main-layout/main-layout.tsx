@@ -29,7 +29,7 @@ export const MainLayout = () => {
           marginClass
         } transition-[margin-left] duration-300 ease-in-out`}
       >
-        <div className="sticky bg-card z-20 top-0 border-b py-2 px-4 sm:px-6 md:px-8 flex justify-between items-center w-full">
+        <div className="sticky bg-sidebar  z-20 top-0 border-b py-2 px-4 sm:px-6 md:px-8 flex justify-between items-center w-full">
           <div className="flex items-center">
             {' '}
             {isMobile && <SidebarTrigger className="pl-0" />}

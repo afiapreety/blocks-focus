@@ -111,7 +111,7 @@ export const GptChatPageDetails = () => {
                   className={`group flex-1 relative ${msg.type === 'user' ? 'flex justify-end' : ''}`}
                 >
                   <div
-                    className={`max-w-[90%] px-5 py-1 ${msg.type === 'user' && 'bg-accent rounded '}`}
+                    className={`max-w-[90%] py-1 ${msg.type === 'user' && 'bg-accent rounded px-5'}`}
                   >
                     {msg.type === 'user' ? (
                       <p className="text-[15px] leading-7 whitespace-pre-wrap">{msg.message}</p>

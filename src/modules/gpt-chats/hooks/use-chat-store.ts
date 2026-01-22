@@ -14,7 +14,7 @@ export type SelectModelType = {
   isBlocksModels: boolean;
   provider: string;
   model: string;
-} | null;
+};
 
 interface ChatMessage {
   message: string;
@@ -40,7 +40,7 @@ interface ChatEvent {
   message: string;
 }
 
-const chatDefaultValue = {
+const chatDefaultValue: Chat = {
   id: null,
   conversations: [],
   sessionId: null,
@@ -48,7 +48,7 @@ const chatDefaultValue = {
   isBotThinking: false,
   currentEvent: null as ChatEvent | null,
   lastUpdated: '',
-  selectedModel: null,
+  selectedModel: { isBlocksModels: true, provider: 'azure', model: 'gpt-4o-mini' },
   selectedTools: [],
 };
 
@@ -239,6 +239,9 @@ export const useChatStore = create<ChatStore>()(
               },
             ];
           });
+          if (!chat.selectedModel) {
+            chat.selectedModel = { isBlocksModels: true, provider: 'azure', model: 'gpt-4o-mini' };
+          }
           return {
             chats: {
               ...state.chats,
@@ -520,7 +523,7 @@ export const useChatStore = create<ChatStore>()(
         await state.generateBotMessage(id, message);
       },
 
-      setSelectedModel: (id, modelId) => {
+      setSelectedModel: (id, model) => {
         set((state) => {
           const chat = state.chats[id] || { ...chatDefaultValue, id };
           return {
@@ -528,7 +531,7 @@ export const useChatStore = create<ChatStore>()(
               ...state.chats,
               [id]: {
                 ...chat,
-                selectedModel: modelId,
+                selectedModel: model,
               },
             },
           };

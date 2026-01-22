@@ -8,9 +8,7 @@ import type { Components } from 'react-markdown';
 import { cn } from '@/lib/utils';
 
 export const MarkdownComponentsMap: Partial<Components> = {
-  p: (props) => (
-    <p className="my-1 whitespace-pre-wrap break-words leading-relaxed">{props.children}</p>
-  ),
+  p: (props) => <p className="whitespace-pre-wrap break-words leading-relaxed">{props.children}</p>,
 
   a: (props) => (
     <a className="text-primary" target="_blank" {...props}>
