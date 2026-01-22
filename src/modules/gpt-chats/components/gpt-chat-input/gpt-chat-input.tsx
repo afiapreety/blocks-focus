@@ -17,6 +17,7 @@ interface GptChatInputProps {
   onModelChange: (model: SelectModelType) => void;
   selectedTools: string[];
   onToolsChange: (tools: string[]) => void;
+  variant?: 'default' | 'chat-details';
 }
 
 export const GptChatInput = ({
@@ -27,6 +28,7 @@ export const GptChatInput = ({
   onModelChange,
   selectedTools,
   onToolsChange,
+  variant = 'default',
 }: GptChatInputProps) => {
   const [message, setMessage] = useState('');
   const { state } = useSidebar();
@@ -43,8 +45,14 @@ export const GptChatInput = ({
         state === 'collapsed' ? 'md:ml-16' : 'md:ml-60'
       }`}
     >
-      <div className="w-full max-w-3xl xl:max-w-5xl mx-auto px-4 pb-4  backdrop-blur-3xl">
-        <div className="relative bg-card/80  rounded-3xl border-2 border-border hover:border-primary focus-within:border-primary transition-all duration-300 ">
+      <div
+        className={`w-full mx-auto rounded-3xl pb-4 border-x-0 ${
+          variant === 'chat-details'
+            ? 'max-w-3xl bg-background backdrop-blur-3xl'
+            : 'max-w-3xl xl:max-w-5xl'
+        }`}
+      >
+        <div className="bg-card relative rounded-3xl border-2 border-border hover:border-primary focus-within:border-primary transition-all duration-300 ">
           <Textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
@@ -56,7 +64,7 @@ export const GptChatInput = ({
             }}
             placeholder={placeholder || t('ASK_ME_ANYTHING')}
             disabled={disabled}
-            className="min-h-[80px] max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 pr-16 px-6 py-5 pb-12 sm:pb-5 text-base placeholder:text-muted-foreground/60"
+            className=" min-h-[80px] max-h-[200px] resize-none border-0  focus-visible:ring-0 focus-visible:ring-offset-0 pr-16 px-6 py-5 pb-12 sm:pb-5 text-base placeholder:text-muted-foreground/60"
           />
 
           <div className="absolute  right-4 bottom-[75px] sm:right-4">

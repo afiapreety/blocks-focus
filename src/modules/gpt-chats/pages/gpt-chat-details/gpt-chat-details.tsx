@@ -118,10 +118,10 @@ export const GptChatPageDetails = () => {
   };
 
   return (
-    <div className="flex flex-col h-full w-full bg-background">
+    <div className="flex flex-col h-full w-full bg-background relative">
       <div className="flex-1 overflow-y-auto scrollbar-hide">
         {isReady && (
-          <div className="max-w-3xl mx-auto px-4 py-6 pb-64 space-y-6">
+          <div className="max-w-3xl mx-auto px-4 py-6 pb-[200px] space-y-6">
             {conversations.map((msg, index) => (
               <div
                 key={index}
@@ -189,6 +189,7 @@ export const GptChatPageDetails = () => {
         onModelChange={onModelChange}
         selectedTools={selectedTools}
         onToolsChange={onToolsChange}
+        variant="chat-details"
       />
     </div>
   );
