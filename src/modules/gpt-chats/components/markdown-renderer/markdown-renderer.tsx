@@ -1,122 +1,11 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import Editor, { loader, Monaco } from '@monaco-editor/react';
 import { cn } from '@/lib/utils';
 import { MarkdownComponentsMap } from './markdown-components-map';
-import { useEffect, useState } from 'react';
 
 type MarkdownRendererProps = {
   content: string;
   className?: string;
-};
-
-const defineJsonTheme = (monaco: Monaco) => {
-  monaco.editor.defineTheme('jsonCustomTheme', {
-    base: 'vs',
-    inherit: true,
-    rules: [
-      { token: 'string.key.json', foreground: '0451A5' },
-      { token: 'string.value.json', foreground: 'A31515' },
-      { token: 'number', foreground: '098658' },
-      { token: 'keyword.json', foreground: '0000FF' },
-      { token: 'delimiter', foreground: '000000' },
-    ],
-    colors: {
-      'editor.background': '#F8F9FA',
-      'editor.foreground': '#1F2937',
-      'editor.lineHighlightBackground': '#F3F4F6',
-      'editorLineNumber.foreground': '#9CA3AF',
-      'editorLineNumber.activeForeground': '#4B5563',
-      'editor.selectionBackground': '#E5E7EB',
-      'editor.inactiveSelectionBackground': '#F3F4F6',
-    },
-  });
-
-  monaco.editor.defineTheme('jsonCustomThemeDark', {
-    base: 'vs-dark',
-    inherit: true,
-    rules: [
-      { token: 'string.key.json', foreground: '9CDCFE' },
-      { token: 'string.value.json', foreground: 'CE9178' },
-      { token: 'number', foreground: 'B5CEA8' },
-      { token: 'keyword.json', foreground: '569CD6' },
-      { token: 'delimiter', foreground: 'D4D4D4' },
-    ],
-    colors: {
-      'editor.background': '#1E1E1E',
-      'editor.foreground': '#D4D4D4',
-      'editor.lineHighlightBackground': '#2D2D2D',
-      'editorLineNumber.foreground': '#6B7280',
-      'editorLineNumber.activeForeground': '#9CA3AF',
-      'editor.selectionBackground': '#374151',
-      'editor.inactiveSelectionBackground': '#2D2D2D',
-    },
-  });
-};
-
-const JsonMonacoBlock = ({ content }: { content: string }) => {
-  const [isThemeReady, setIsThemeReady] = useState(false);
-
-  const lineCount = content.split('\n').length;
-  const height = Math.min(Math.max(lineCount * 20 + 16, 80), 400);
-
-  useEffect(() => {
-    loader.init().then((monaco) => {
-      defineJsonTheme(monaco);
-      setIsThemeReady(true);
-    });
-  }, []);
-
-  if (!isThemeReady) {
-    return (
-      <div
-        className="my-2 whitespace-pre-wrap break-words font-mono text-sm bg-gray-50 dark:bg-gray-900 p-3 rounded-md border border-gray-200 dark:border-gray-700"
-        style={{ fontFamily: 'ui-monospace, monospace' }}
-      >
-        {content}
-      </div>
-    );
-  }
-
-  return (
-    <div className="my-2 rounded-md overflow-hidden border border-gray-200 dark:border-gray-700">
-      <Editor
-        height={`${height}px`}
-        language="json"
-        value={content}
-        theme="jsonCustomTheme"
-        options={{
-          readOnly: true,
-          minimap: { enabled: false },
-          scrollBeyondLastLine: false,
-          fontSize: 13,
-          lineNumbers: 'on',
-          folding: false,
-          foldingStrategy: 'indentation',
-          wordWrap: 'on',
-          automaticLayout: true,
-          scrollbar: {
-            vertical: 'auto',
-            horizontal: 'auto',
-            verticalScrollbarSize: 8,
-            horizontalScrollbarSize: 8,
-          },
-          overviewRulerLanes: 0,
-          hideCursorInOverviewRuler: true,
-          overviewRulerBorder: false,
-          contextmenu: false,
-          selectionHighlight: false,
-          renderLineHighlight: 'none',
-          lineDecorationsWidth: 8,
-          lineNumbersMinChars: 3,
-          padding: { top: 8, bottom: 8 },
-          domReadOnly: true,
-          cursorStyle: 'line',
-          cursorBlinking: 'solid',
-        }}
-      />
-    </div>
-  );
 };
 
 const JsonSkeletonBlock = ({ content }: { content: string }) => {
@@ -191,7 +80,7 @@ export const MarkdownRenderer = ({ content, className = '' }: MarkdownRendererPr
     jsonBlockRegex.lastIndex = 0;
 
     while ((match = jsonBlockRegex.exec(content)) !== null) {
-      const blockType = match[1];
+      // const blockType = match[1];
       const blockContent = match[2];
 
       if (match.index > lastIndex) {
@@ -209,11 +98,11 @@ export const MarkdownRenderer = ({ content, className = '' }: MarkdownRendererPr
         }
       }
 
-      if (blockType === 'json-skeleton') {
-        parts.push(<JsonSkeletonBlock key={`skeleton-${match.index}`} content={blockContent} />);
-      } else {
-        parts.push(<JsonMonacoBlock key={`json-${match.index}`} content={blockContent} />);
-      }
+      // if (blockType === 'json-skeleton') {
+      parts.push(<JsonSkeletonBlock key={`skeleton-${match.index}`} content={blockContent} />);
+      // } else {
+      //   parts.push(<JsonMonacoBlock key={`json-${match.index}`} content={blockContent} />);
+      // }
 
       lastIndex = match.index + match[0].length;
     }
@@ -238,8 +127,10 @@ export const MarkdownRenderer = ({ content, className = '' }: MarkdownRendererPr
         className={cn(
           'prose prose-sm max-w-none dark:prose-invert',
           'prose-headings:font-semibold',
-          'prose-p:leading-relaxed',
+          'prose-p:leading-relaxed prose-p:p-0 prose-p:m-0',
           'prose-ol:list-decimal prose-ul:list-disc',
+          'prose-li:p-0 prose-li:m-0',
+
           'prose-pre:bg-transparent prose-pre:p-0',
           className
         )}
@@ -254,8 +145,11 @@ export const MarkdownRenderer = ({ content, className = '' }: MarkdownRendererPr
       className={cn(
         'prose max-w-none dark:prose-invert',
         'prose-headings:font-semibold ',
-        'prose-p:leading-relaxed',
+        'prose-p:leading-relaxed prose-p:p-0 prose-p:m-0',
         'prose-ol:list-decimal prose-ul:list-disc',
+        'prose-pre:p-0 prose-pre:m-0',
+        'prose-li:p-0 prose-li:m-0',
+
         className
       )}
     >
