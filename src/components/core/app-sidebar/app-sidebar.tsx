@@ -48,6 +48,7 @@ export const AppSidebar = () => {
   const { t } = useTranslation();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [chatToDelete, setChatToDelete] = useState<string | null>(null);
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
   const { data } = useGetConversations({
     limit: 100,
@@ -71,8 +72,8 @@ export const AppSidebar = () => {
       id: session.session_id,
       lastEntryDate: session.last_entry_date,
       title:
-        session.conversation?.Title?.slice(0, 30) ||
-        session.conversation?.Response?.slice(0, 30) ||
+        session.conversation?.Title?.slice(0, 35) ||
+        session.conversation?.Response?.slice(0, 35) ||
         session.conversation?.Query ||
         '',
     }));
@@ -150,7 +151,9 @@ export const AppSidebar = () => {
                       .map((chat) => (
                         <div
                           key={chat.id}
-                          className="rounded-lg hover:bg-accent/100 cursor-pointer flex justify-between items-center h-fit group/item px-2 py-1 transition-colors"
+                          className={`rounded-lg hover:bg-accent/100 cursor-pointer flex justify-between items-center h-fit group/item px-2 py-1 transition-colors ${
+                            chatId === chat.id ? 'bg-accent/100' : ''
+                          } ${openDropdownId === chat.id ? 'bg-accent/100' : ''}`}
                           onClick={() => {
                             navigate(`/chat/${chat.id}`);
                             if (isMobile) {
@@ -163,7 +166,9 @@ export const AppSidebar = () => {
                             {chat.title}
                           </span>
 
-                          <DropdownMenu>
+                          <DropdownMenu
+                            onOpenChange={(open) => setOpenDropdownId(open ? chat.id : null)}
+                          >
                             <DropdownMenuTrigger asChild>
                               <Button
                                 variant="ghost"
