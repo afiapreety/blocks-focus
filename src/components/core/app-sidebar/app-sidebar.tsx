@@ -110,13 +110,11 @@ export const AppSidebar = () => {
         />
       )}
       <Sidebar
-        className={`bg-card h-full border-r border-border/50  ${isMobile ? 'mobile-sidebar' : ''}`}
+        className={` h-full border-r border-border/50  ${isMobile ? 'mobile-sidebar' : ''}`}
         collapsible={isMobile ? 'none' : 'icon'}
         style={sidebarStyle}
       >
-        <SidebarHeader
-          className={`${!open && !isMobile ? 'border-b border-border/50' : ''} p-3 bg-card`}
-        >
+        <SidebarHeader className={`${!open && !isMobile ? 'border-b border-border/50' : ''} p-3`}>
           <LogoSection
             theme={theme}
             open={open}
@@ -125,7 +123,7 @@ export const AppSidebar = () => {
           />
         </SidebarHeader>
 
-        <SidebarContent className="text-base px-3 py-4 text-high-emphasis font-normal overflow-x-hidden bg-card">
+        <SidebarContent className="text-base px-3 py-4 text-high-emphasis font-normal overflow-x-hidden">
           <Button
             onClick={handleNewChat}
             variant="outline"
@@ -134,12 +132,12 @@ export const AppSidebar = () => {
             <PenSquare className="h-4 w-4" />
             <span>{t('NEW_CHAT')}</span>
           </Button>
-          <Accordion type="single" collapsible defaultValue="list" className="bg-card">
-            <AccordionItem value="list" className="border-none bg-card">
+          <Accordion type="single" collapsible defaultValue="list">
+            <AccordionItem value="list" className="border-none ">
               <AccordionTrigger className=" hover:no-underline justify-start gap-1 [&[data-state=closed]>svg]:-rotate-90 [&[data-state=open]>svg]:rotate-0">
                 {t('YOUR_CHATS')}
               </AccordionTrigger>
-              <AccordionContent className="bg-card">
+              <AccordionContent>
                 {chatList.length === 0 ? (
                   <p className="text-sm text-muted-foreground mt-2">{t('NO_CHATS_AVAILABLE')}</p>
                 ) : (
