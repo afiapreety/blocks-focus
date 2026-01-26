@@ -95,7 +95,6 @@ html.dark {
 
     --primary: 218 78% 32%;
     --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
 
     --primary-50: 224 38% 11%;
     --primary-100: 220 54% 16%;
@@ -109,17 +108,17 @@ html.dark {
     --primary-900: 209 85% 87%;
     --primary-foreground: 210 40% 98%;
 
-    --secondary-50: 198, 76%, 93%;
-    --secondary-100: 198, 74%, 83%;
-    --secondary-200: 198, 73%, 72%;
-    --secondary-300: 199, 71%, 62%;
-    --secondary-400: 200, 70%, 57%;
-    --secondary-500: 202, 68%, 53%;
-    --secondary-600: 202, 62%, 49%;
-    --secondary-700: 204, 63%, 44%;
-    --secondary-800: 205, 63%, 39%;
-    --secondary-900: 210, 64%, 31%;
-    --secondary-foreground: 240 5.9% 10%;
+    --secondary-50: 166 100% 95%;
+    --secondary-100: 168 80% 81%;
+    --secondary-200: 170 71% 69%;
+    --secondary-300: 172 66% 58%;
+    --secondary-400: 174 67% 49%;
+    --secondary-500: 176 92% 39%;
+    --secondary-600: 178 100% 31%;
+    --secondary-700: 180 100% 23%;
+    --secondary-800: 182 100% 15%;
+    --secondary-900: 184 100% 8%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
 
     --neutral-25: 0, 0%, 98%;
     --neutral-50: 0, 0%, 96%;
@@ -247,7 +246,6 @@ html.dark {
 
     --primary: 218 75% 45%;
     --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
 
     --primary-50: 224 38% 11%;
     --primary-100: 220 54% 16%;
@@ -261,17 +259,17 @@ html.dark {
     --primary-900: 209 85% 87%;
     --primary-foreground: 0 0% 96%;
 
-    --secondary-50: 201, 63%, 17%;
-    --secondary-100: 200, 64%, 22%;
-    --secondary-200: 201, 64%, 28%;
-    --secondary-300: 201, 63%, 36%;
-    --secondary-400: 201, 64%, 40%;
-    --secondary-500: 201, 42%, 52%;
-    --secondary-600: 201, 42%, 60%;
-    --secondary-700: 201, 42%, 72%;
-    --secondary-800: 201, 42%, 81%;
-    --secondary-900: 198, 42%, 94%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary-50: 180 35% 10%;
+    --secondary-100: 178 57% 14%;
+    --secondary-200: 177 64% 17%;
+    --secondary-300: 176 73% 22%;
+    --secondary-400: 176 83% 28%;
+    --secondary-500: 177 89% 35%;
+    --secondary-600: 174 66% 45%;
+    --secondary-700: 172 59% 56%;
+    --secondary-800: 169 65% 67%;
+    --secondary-900: 168 74% 79%;
+    --secondary-foreground: 210 40% 98%;
 
     --neutral-25: 0, 0%, 15%;
     --neutral-50: 0, 0%, 26%;
