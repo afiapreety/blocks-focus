@@ -7,7 +7,7 @@ import { useGetLoginOptions } from '@/modules/auth/hooks/use-auth';
 import { useAuthState } from '@/state/client-middleware';
 import { useTheme } from '@/styles/theme/theme-provider';
 import { LanguageSelector } from '@/components/core';
-import bgAuthArtwork from '@/assets/images/bg_auth_artwork.svg';
+import bgAuthArtwork from '@/assets/images/bg_auth_artwork.png';
 
 export const AuthLayout = () => {
   const { isLoading, error: loginOptionsError } = useGetLoginOptions();
