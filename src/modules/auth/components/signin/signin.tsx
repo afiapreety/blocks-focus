@@ -22,13 +22,8 @@ export const Signin = () => {
 
   const isDivider = passwordGrantAllowed && (socialGrantAllowed || oidcGrantAllowed);
 
-  const isBannerAllowedToVisible = [
-    'construct.seliseblocks.com',
-    'stg-construct.seliseblocks.com',
-    'dev-construct.seliseblocks.com',
-  ].some((domain) => window.location.hostname === domain);
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 w-[456px]">
       <div className="w-40 h-14">
         <img src={theme == 'dark' ? lightlogo : darklogo} className="w-full h-full" alt="logo" />
       </div>
@@ -40,16 +35,8 @@ export const Signin = () => {
           </span>
         </div>
       </div>
-      <div className={'w-full ' + (isBannerAllowedToVisible ? 'visible' : 'invisible h-0')}>
-        <div className="rounded-lg bg-success-background border border-success p-4">
-          <p className="text-xs font-normal text-success-high-emphasis">
-            Log in to explore the complete Demo and Documentation. Use the credentials:{' '}
-            <span className="font-semibold">demo.construct@seliseblocks.com</span> with password:{' '}
-            <span className="font-semibold">H%FE*FYi5oTQ!VyT6TkEy</span>
-          </p>
-        </div>
-      </div>
-      <div className="w-full flex flex-col gap-6">
+
+      <div className="w-full flex flex-col gap-6 mt-2">
         {passwordGrantAllowed && <SigninEmail />}
         {isDivider && <Divider text={t('AUTH_OR')} />}
         {socialGrantAllowed && loginOption && <SsoSignin loginOption={loginOption} />}

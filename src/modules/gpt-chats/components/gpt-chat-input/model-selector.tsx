@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { useGetCustomLlmModels, useGetLlmModels } from '@/modules/gpt-chats/hooks/use-gpt-chat';
 import { formatProviderName, getProviderConfig } from '../../utils/model-selector';
 import { SelectModelType } from '../../hooks/use-chat-store';
+import { useTranslation } from 'react-i18next';
 
 type GroupModel = {
   provider: string;
@@ -23,8 +24,9 @@ interface GroupedModelSelectorProps {
   onChange?: (value: SelectModelType) => void;
 }
 
-export const GroupedModelSelector = ({ value = null, onChange }: GroupedModelSelectorProps) => {
+export const GroupedModelSelector = ({ value, onChange }: GroupedModelSelectorProps) => {
   const [open, setOpen] = useState(false);
+  const { t } = useTranslation();
   const [selectedProvider, setSelectedProvider] = useState<GroupModel | null>(null);
   const [mobileView, setMobileView] = useState<'providers' | 'models'>('providers');
 
@@ -173,7 +175,7 @@ export const GroupedModelSelector = ({ value = null, onChange }: GroupedModelSel
             </div>
             <div className="flex flex-col items-start min-w-0 flex-1">
               <span className="text-sm font-medium truncate w-full text-left">
-                {selectedModel?.label || 'Select Model'}
+                {selectedModel?.label || t('SELECT_MODEL')}
               </span>
               <span className="text-xs text-muted-foreground truncate w-full text-left">
                 {selectedModel?.providerLabel || formatProviderName(selectedModel?.provider || '')}
