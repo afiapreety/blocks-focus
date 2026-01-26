@@ -20,6 +20,7 @@ import { Input } from '@/components/ui-kit/input';
 import { useForgotPassword } from '../../hooks/use-auth';
 import { Button } from '@/components/ui-kit/button';
 import { Captcha, useCaptcha } from '@/components/core';
+import { useToast } from '@/hooks/use-toast';
 
 /**
  * ForgotPasswordForm Component
@@ -41,6 +42,7 @@ import { Captcha, useCaptcha } from '@/components/core';
 export const ForgotpasswordForm = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { toast } = useToast();
 
   const form = useForm<forgotPasswordFormType>({
     defaultValues: forgotPasswordFormDefaultValue,
@@ -84,8 +86,70 @@ export const ForgotpasswordForm = () => {
         captchaCode: captchaToken || '',
         projectKey: import.meta.env.VITE_X_BLOCKS_KEY || '',
       });
-      if (res.isSuccess) navigate('/sent-email');
-    } catch (_error) {
+
+      if (res.isSuccess) {
+        toast({
+          variant: 'default',
+          title: 'Success',
+          description: 'Reset link has been sent to your email!',
+        });
+        navigate('/sent-email');
+      } else {
+        if (res.errors && typeof res.errors === 'object' && Object.keys(res.errors).length > 0) {
+          const errorMessages = Object.values(res.errors)
+            .filter((val) => typeof val === 'string')
+            .join(', ');
+
+          toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: errorMessages || 'Failed to send reset link',
+          });
+        } else {
+          toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Failed to send reset link',
+          });
+        }
+        resetCaptcha();
+      }
+    } catch (error: any) {
+      let errorData = null;
+
+      if (error?.message && typeof error.message === 'string') {
+        try {
+          errorData = JSON.parse(error.message);
+        } catch (parseError) {
+          // If parsing fails, proceed without it
+        }
+      }
+
+      if (!errorData) {
+        errorData = error?.response?.data || error?.data;
+      }
+
+      if (
+        errorData?.errors &&
+        typeof errorData.errors === 'object' &&
+        Object.keys(errorData.errors).length > 0
+      ) {
+        const errorMessages = Object.values(errorData.errors)
+          .filter((val) => typeof val === 'string')
+          .join(', ');
+
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: errorMessages,
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'An error occurred while processing your request',
+        });
+      }
       resetCaptcha();
     }
   };
