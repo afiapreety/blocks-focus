@@ -14,6 +14,30 @@ import { useChatSSE } from '../../hooks/use-chat-sse';
 import { MarkdownRenderer } from '../../components/markdown-renderer/markdown-renderer';
 import { ChatEventMessage, SparkleText } from '../../utils/chat-event-messages';
 
+const formatTimestamp = (timestamp: string) => {
+  if (!timestamp) return '';
+
+  const date = new Date(timestamp);
+  return date.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+};
+
+const getFullTimestamp = (timestamp: string) => {
+  if (!timestamp) return '';
+  const date = new Date(timestamp);
+  return date.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+};
+
 const ThinkingIndicator = () => (
   <div className="flex gap-4 animate-in fade-in duration-300 items-start ml-1">
     <div className=" w-8 h-8 rounded-full bg-gradient-to-br from-primary-300 to-primary-600 flex items-center justify-center flex-shrink-0">
@@ -153,9 +177,29 @@ export const GptChatPageDetails = () => {
                     )}
                   </div>
 
-                  {msg.type === 'bot' && !msg.streaming && (
-                    <div className="absolute -bottom-8 left-0 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <TooltipProvider>
+                  {!msg.streaming && (
+                    <div
+                      className={cn(
+                        'absolute -bottom-8 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity',
+                        msg.type === 'user' ? 'right-0' : 'left-0'
+                      )}
+                    >
+                      {msg.timestamp && (
+                        <TooltipProvider delayDuration={0}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="text-xs text-gray-400 cursor-default px-1">
+                                {formatTimestamp(msg.timestamp)}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent className="bg-popover text-popover-foreground border border-border">
+                              <p>{getFullTimestamp(msg.timestamp)}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+
+                      <TooltipProvider delayDuration={0}>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
@@ -171,14 +215,14 @@ export const GptChatPageDetails = () => {
                               )}
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent>
+                          <TooltipContent className="bg-popover text-popover-foreground border border-border">
                             <p>{copiedId === index ? 'Copied!' : 'Copy'}</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
 
-                      {msg.metadata?.tool_calls_made !== undefined && (
-                        <TooltipProvider>
+                      {msg.type === 'bot' && msg.metadata?.tool_calls_made !== undefined && (
+                        <TooltipProvider delayDuration={0}>
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <div
@@ -193,7 +237,7 @@ export const GptChatPageDetails = () => {
                                 <span>{msg.metadata.tool_calls_made}</span>
                               </div>
                             </TooltipTrigger>
-                            <TooltipContent>
+                            <TooltipContent className="bg-popover text-popover-foreground">
                               <p>
                                 {msg.metadata.tool_calls_made === 0
                                   ? 'No tools used'
