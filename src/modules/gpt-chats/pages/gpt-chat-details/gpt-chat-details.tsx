@@ -192,7 +192,7 @@ export const GptChatPageDetails = () => {
                                 {formatTimestamp(msg.timestamp)}
                               </span>
                             </TooltipTrigger>
-                            <TooltipContent className="bg-popover text-popover-foreground border border-border">
+                            <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 border-slate-700 dark:border-slate-300">
                               <p>{getFullTimestamp(msg.timestamp)}</p>
                             </TooltipContent>
                           </Tooltip>
@@ -215,7 +215,7 @@ export const GptChatPageDetails = () => {
                               )}
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent className="bg-popover text-popover-foreground border border-border">
+                          <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 border-slate-700 dark:border-slate-300">
                             <p>{copiedId === index ? 'Copied!' : 'Copy'}</p>
                           </TooltipContent>
                         </Tooltip>
@@ -237,7 +237,7 @@ export const GptChatPageDetails = () => {
                                 <span>{msg.metadata.tool_calls_made}</span>
                               </div>
                             </TooltipTrigger>
-                            <TooltipContent className="bg-popover text-popover-foreground">
+                            <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 border-slate-700 dark:border-slate-300">
                               <p>
                                 {msg.metadata.tool_calls_made === 0
                                   ? 'No tools used'
