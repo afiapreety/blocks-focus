@@ -6,6 +6,8 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import dark from 'react-syntax-highlighter/dist/esm/styles/prism/atom-dark';
 import type { Components } from 'react-markdown';
 import { cn } from '@/lib/utils';
+import { Check, Clipboard } from 'lucide-react';
+import { useState } from 'react';
 
 export const MarkdownComponentsMap: Partial<Components> = {
   p: (props) => <p className="whitespace-pre-wrap break-words leading-relaxed">{props.children}</p>,
@@ -50,6 +52,13 @@ export const MarkdownComponentsMap: Partial<Components> = {
   code: ({ inline, className, children, ...props }) => {
     const match = /language-(\w+)/.exec(className || '');
     const code = String(children).replace(/\n$/, '');
+    const [copied, setCopied] = useState(false);
+
+    const handleCopy = async () => {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    };
 
     if (!inline && match) {
       const language = match[1];
@@ -57,6 +66,23 @@ export const MarkdownComponentsMap: Partial<Components> = {
         <div className="max-w-full overflow-auto rounded-md bg-gray-900">
           <div className="flex w-full items-center justify-between bg-gray-700 p-2.5 text-xs text-gray-300">
             <span className="text-sm uppercase">{language}</span>
+            <button
+              onClick={handleCopy}
+              className="flex items-center gap-1.5 rounded px-2 py-1 text-xs hover:bg-gray-600 transition-colors"
+              title="Copy code"
+            >
+              {copied ? (
+                <>
+                  <Check className="h-4 w-4" />
+                  <span>Copied</span>
+                </>
+              ) : (
+                <>
+                  <Clipboard className="h-4 w-4" />
+                  <span>Copy</span>
+                </>
+              )}
+            </button>
           </div>
           <SyntaxHighlighter
             showLineNumbers

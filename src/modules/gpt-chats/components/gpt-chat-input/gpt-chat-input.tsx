@@ -8,6 +8,7 @@ import { Tooltip, TooltipTrigger } from '@/components/ui-kit/tooltip';
 import { useSidebar } from '@/components/ui-kit/sidebar';
 import { useTranslation } from 'react-i18next';
 import { SelectModelType } from '../../hooks/use-chat-store';
+import { cn } from '@/lib/utils';
 
 interface GptChatInputProps {
   onSendMessage: (message: string) => void;
@@ -17,6 +18,7 @@ interface GptChatInputProps {
   onModelChange: (model: SelectModelType) => void;
   selectedTools: string[];
   onToolsChange: (tools: string[]) => void;
+  className?: string;
   variant?: 'default' | 'chat-details';
 }
 
@@ -28,6 +30,7 @@ export const GptChatInput = ({
   onModelChange,
   selectedTools,
   onToolsChange,
+  className,
   variant = 'default',
 }: GptChatInputProps) => {
   const [message, setMessage] = useState('');
@@ -41,12 +44,14 @@ export const GptChatInput = ({
 
   return (
     <div
-      className={`fixed bottom-0 left-0 right-0 z-10 transition-all duration-300 ${
-        state === 'collapsed' ? 'md:ml-16' : 'md:ml-60'
-      }`}
+      className={cn(
+        'fixed bottom-0 left-0 right-0 z-10 transition-all duration-300',
+        state === 'collapsed' ? 'md:ml-16' : 'md:ml-60',
+        className
+      )}
     >
       <div
-        className={`w-full mx-auto rounded-3xl pb-4 border-x-0 max-w-3xl xl:max-w-5xl ${
+        className={`w-full mx-auto rounded-3xl pb-4 border-x-0 max-w-4xl xl:max-w-5xl ${
           variant === 'chat-details' ? ' bg-background backdrop-blur-3xl' : ''
         }`}
       >
@@ -70,7 +75,7 @@ export const GptChatInput = ({
               size="icon"
               className={`h-10 w-10 rounded-2xl transition-all duration-300 ${
                 message.trim() && !disabled
-                  ? 'bg-primary hover:bg-primary/90 text-gray-200  hover:scale-110'
+                  ? 'bg-primary hover:bg-primary/90 text-white  hover:scale-110'
                   : 'bg-muted text-muted-foreground cursor-not-allowed'
               }`}
               onClick={onMessageHandler}

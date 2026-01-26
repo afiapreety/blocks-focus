@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui-kit/button';
-import seliseSmallLogo from '@/assets/images/selise_logo_small.svg';
+import seliseSmallLogo from '@/assets/images/selise_ai_small.png';
 
 const blocksOIdCClientId = import.meta.env.VITE_BLOCKS_OIDC_CLIENT_ID;
 const oidcRedirectUri = import.meta.env.VITE_BLOCKS_OIDC_REDIRECT_URI;

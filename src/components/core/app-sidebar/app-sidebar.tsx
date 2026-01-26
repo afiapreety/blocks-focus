@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Sidebar, SidebarContent, SidebarHeader, useSidebar } from '@/components/ui-kit/sidebar';
 import { useTheme } from '@/styles/theme/theme-provider';
+import { useToast } from '@/hooks/use-toast';
 import { getSidebarStyle } from '@/lib/utils/sidebar-utils';
 import { LogoSection } from '@/components/core';
 import { ConfirmationModal } from '@/components/core/confirmation-modal/confirmation-modal';
@@ -19,7 +20,6 @@ import {
   Share2,
   Trash2,
   Download,
-  Bookmark,
   Copy,
   Archive,
 } from 'lucide-react';
@@ -46,6 +46,7 @@ export const AppSidebar = () => {
   const { mutateAsync: deleteMutateAsync } = useDeleteConversationById();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { toast } = useToast();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [chatToDelete, setChatToDelete] = useState<string | null>(null);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
@@ -92,13 +93,29 @@ export const AppSidebar = () => {
     setShowDeleteModal(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (chatToDelete) {
-      if (chatId === chatToDelete) {
-        navigate('/chat/new');
+      try {
+        const shouldNavigate = chatId === chatToDelete;
+        await deleteMutateAsync({ session_id: chatToDelete, project_key: projectKey });
+
+        if (shouldNavigate) {
+          navigate('/chat');
+        }
+
+        setChatToDelete(null);
+        setShowDeleteModal(false);
+        toast({
+          title: t('SUCCESS'),
+          description: t('CHAT_DELETED_SUCCESSFULLY'),
+        });
+      } catch (error) {
+        toast({
+          title: t('ERROR'),
+          description: t('FAILED_TO_DELETE_CHAT'),
+          variant: 'destructive',
+        });
       }
-      deleteMutateAsync({ session_id: chatToDelete, project_key: projectKey });
-      setChatToDelete(null);
     }
   };
 
@@ -219,7 +236,7 @@ export const AppSidebar = () => {
                                 <span className="text-sm font-medium">{t('RENAME')}</span>
                               </DropdownMenuItem>
 
-                              <DropdownMenuItem
+                              {/* <DropdownMenuItem
                                 disabled
                                 className="cursor-not-allowed opacity-50 px-3 py-1.5 rounded-md"
                                 onClick={(e) => {
@@ -228,7 +245,7 @@ export const AppSidebar = () => {
                               >
                                 <Bookmark className="w-4 h-4 mr-3" />
                                 <span className="text-sm font-medium">{t('PIN')}</span>
-                              </DropdownMenuItem>
+                              </DropdownMenuItem> */}
 
                               <DropdownMenuItem
                                 disabled

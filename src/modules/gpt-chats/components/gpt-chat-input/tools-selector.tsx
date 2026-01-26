@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, Loader2, Wrench } from 'lucide-react';
+import { Check, Loader2, Zap } from 'lucide-react';
 import { Button } from '@/components/ui-kit/button';
 import { Badge } from '@/components/ui-kit/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui-kit/popover';
@@ -58,14 +58,14 @@ export const ToolsSelector = ({ value = [], onChange, tenantId }: ToolsSelectorP
           variant="ghost"
           role="combobox"
           aria-expanded={open}
-          className="w-11 h-11 justify-center bg-gradient-to-br from-card/80 to-card/50 hover:from-card hover:to-card/80 border border-border  transition-all duration-300 rounded-xl p-0 group relative  backdrop-blur-sm"
+          className="w-11 h-11 justify-center bg-gradient-to-br from-card/80 to-card/50 hover:from-card hover:to-card/80   transition-all duration-300 rounded-xl p-0 group relative  backdrop-blur-sm"
         >
-          <div className="p-1.5 rounded-lg flex-shrink-0 transition-all duration-300 bg-gradient-to-br from-primary/15 to-primary/5 group-hover:from-primary/20 group-hover:to-primary/10 group-hover:scale-110 group-hover:rotate-12">
-            <Wrench className="h-5 w-5 text-primary transition-transform duration-300 group-hover:rotate-12" />
+          <div className="p-1.5 rounded-lg flex-shrink-0 transition-all duration-300 bg-gradient-to-br from-primary/15 to-primary/5 group-hover:from-primary/20 group-hover:to-primary/10 group-hover:scale-110">
+            <Zap className="h-5 w-5 text-primary transition-transform duration-300" />
           </div>
 
           {selectedCount > 0 && (
-            <Badge className="absolute -top-1.5 -right-1.5 h-5 min-w-[1.25rem] px-1.5 flex items-center justify-center text-[10px] font-semibold bg-gradient-to-br from-primary via-primary to-primary/90 text-white border-2 border-background shadow-lg shadow-primary/50 hover:shadow-primary/70 hover:scale-110 transition-all duration-200 animate-in zoom-in">
+            <Badge className="absolute -top-1.5 -right-1.5 h-5 min-w-[1.25rem] px-1.5 flex items-center justify-center text-[10px] font-semibold bg-gradient-to-br from-primary via-primary to-primary/90 text-white border-2 border-background  hover:scale-110 transition-all duration-200 animate-in zoom-in">
               {selectedCount}
               <span className="absolute inset-0 rounded-full bg-primary/30 animate-ping" />
             </Badge>
@@ -143,7 +143,7 @@ export const ToolsSelector = ({ value = [], onChange, tenantId }: ToolsSelectorP
                                   : 'bg-muted/50 group-hover/tool:bg-primary/10'
                               )}
                             >
-                              <Wrench
+                              <Zap
                                 className={cn(
                                   'h-3.5 w-3.5 transition-colors',
                                   isSelected
@@ -193,7 +193,7 @@ export const ToolsSelector = ({ value = [], onChange, tenantId }: ToolsSelectorP
             ) : (
               <div className="flex flex-col items-center justify-center h-full gap-2">
                 <div className="p-3 rounded-full bg-muted/50">
-                  <Wrench className="h-6 w-6 text-muted-foreground/50" />
+                  <Zap className="h-6 w-6 text-muted-foreground/50" />
                 </div>
                 <p className="text-sm text-muted-foreground">No tools available</p>
                 <p className="text-xs text-muted-foreground/60">

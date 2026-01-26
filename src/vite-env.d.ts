@@ -8,6 +8,7 @@ interface ImportMetaEnv {
   readonly VITE_PROJECT_SLUG: string;
   readonly VITE_BLOCKS_OIDC_CLIENT_ID: string;
   readonly VITE_BLOCKS_OIDC_REDIRECT_URI: string;
+  readonly VITE_LLM_BASE_PROMPT: string;
 }
 
 interface ImportMeta {

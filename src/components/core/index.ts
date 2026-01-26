@@ -28,5 +28,3 @@ export { SidebarMenuItemComponent } from './sidebar-menu-item/sidebar-menu-Item'
 export { Captcha } from './captcha/components/captcha/captcha';
 export { useCaptcha } from './captcha/hooks/use-captcha';
 export type { CaptchaRef, CaptchaProps } from './captcha/types/captcha.type';
-
-export { ExtensionBanner } from './extension-banner/extension-banner';
