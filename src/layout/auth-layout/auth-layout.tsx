@@ -6,7 +6,7 @@ import bgAuthDark from '@/assets/images/bg_auth_dark.svg';
 import { useGetLoginOptions } from '@/modules/auth/hooks/use-auth';
 import { useAuthState } from '@/state/client-middleware';
 import { useTheme } from '@/styles/theme/theme-provider';
-import { ExtensionBanner, LanguageSelector } from '@/components/core';
+import { LanguageSelector } from '@/components/core';
 
 export const AuthLayout = () => {
   const { isLoading, error: loginOptionsError } = useGetLoginOptions();
@@ -145,7 +145,6 @@ export const AuthLayout = () => {
 
   return (
     <div className="flex w-full flex-col h-screen">
-      <ExtensionBanner />
       <div className="flex w-full min-h-screen relative">
         <div className="hidden md:block w-[36%] relative bg-primary-50">
           <img

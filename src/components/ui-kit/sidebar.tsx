@@ -30,7 +30,7 @@ import { DynamicBreadcrumb } from '../core/dynamic-breadcrumb/dynamic-breadcrumb
 const SIDEBAR_COOKIE_NAME = 'sidebar:state';
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 const SIDEBAR_WIDTH = '16rem';
-const SIDEBAR_WIDTH_MOBILE = '18rem';
+const SIDEBAR_WIDTH_MOBILE = '100vw';
 const SIDEBAR_WIDTH_ICON = '3rem';
 const SIDEBAR_KEYBOARD_SHORTCUT = 'b';
 
@@ -165,7 +165,7 @@ const Sidebar = forwardRef<
       return (
         <div
           className={cn(
-            'flex h-full w-[--sidebar-width] flex-col bg-sidebar text-sidebar-foreground',
+            'flex h-full md:w-[--sidebar-width] w-full flex-col bg-sidebar text-sidebar-foreground',
             className
           )}
           ref={ref}

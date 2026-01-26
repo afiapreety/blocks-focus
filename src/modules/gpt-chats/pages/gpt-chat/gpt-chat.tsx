@@ -1,144 +1,144 @@
 import { useState } from 'react';
-import { Button } from '@/components/ui-kit/button';
+// import { Button } from '@/components/ui-kit/button';
 import { SelectModelType, useChatStore } from '@/modules/gpt-chats/hooks/use-chat-store';
-import {
-  Sparkles,
-  Compass,
-  Code,
-  GraduationCap,
-  Zap,
-  Lightbulb,
-  Database,
-  BookOpen,
-  LucideIcon,
-  Paintbrush,
-  MapPin,
-  Globe,
-} from 'lucide-react';
+// import {
+//   Sparkles,
+//   Compass,
+//   Code,
+//   GraduationCap,
+//   Zap,
+//   Lightbulb,
+//   Database,
+//   BookOpen,
+//   LucideIcon,
+//   Paintbrush,
+//   MapPin,
+//   Globe,
+// } from 'lucide-react';
 import { GptChatInput } from '@/modules/gpt-chats/components/gpt-chat-input/gpt-chat-input';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
-const categoryPrompts: Record<
-  string,
-  Array<{ icon: LucideIcon; title: string; description: string; id: string }>
-> = {
-  create: [
-    {
-      id: '1',
-      icon: Paintbrush,
-      title: 'Design a landing page',
-      description: 'for a sustainable fashion brand',
-    },
-    {
-      id: '2',
-      icon: Sparkles,
-      title: 'Write a creative story',
-      description: 'about time travel and friendship',
-    },
-    {
-      id: '3',
-      icon: Zap,
-      title: 'Generate marketing copy',
-      description: 'for a new AI productivity tool',
-    },
-    {
-      id: '4',
-      icon: Lightbulb,
-      title: 'Brainstorm startup ideas',
-      description: 'in the climate tech space',
-    },
-  ],
-  explore: [
-    {
-      id: '5',
-      icon: MapPin,
-      title: 'Plan a 2-week trip',
-      description: 'to Japan with cultural highlights',
-    },
-    {
-      id: '6',
-      icon: Compass,
-      title: 'Discover hidden gems',
-      description: 'in European architecture',
-    },
-    {
-      id: '7',
-      icon: Globe,
-      title: 'Compare different cultures',
-      description: 'approach to work-life balance',
-    },
-    {
-      id: '8',
-      icon: Sparkles,
-      title: 'Explore future trends',
-      description: 'in renewable energy',
-    },
-  ],
-  code: [
-    {
-      id: '9',
-      icon: Code,
-      title: 'Build a REST API',
-      description: 'with Node.js and Express',
-    },
-    {
-      id: '10',
-      icon: Database,
-      title: 'Optimize SQL queries',
-      description: 'for better performance',
-    },
-    {
-      id: '11',
-      icon: Zap,
-      title: 'Debug React component',
-      description: 'with rendering issues',
-    },
-    {
-      id: '12',
-      icon: Code,
-      title: 'Implement authentication',
-      description: 'using JWT and refresh tokens',
-    },
-  ],
-  learn: [
-    {
-      id: '13',
-      icon: GraduationCap,
-      title: "Beginner's guide to TypeScript",
-      description: 'with practical examples',
-    },
-    {
-      id: '14',
-      icon: BookOpen,
-      title: 'Explain the CAP theorem',
-      description: 'in distributed systems',
-    },
-    {
-      id: '15',
-      icon: Lightbulb,
-      title: 'Why is AI so expensive?',
-      description: 'Break down the costs',
-    },
-    {
-      id: '16',
-      icon: Sparkles,
-      title: 'Are black holes real?',
-      description: 'Explore the science behind them',
-    },
-  ],
-};
+// const categoryPrompts: Record<
+//   string,
+//   Array<{ icon: LucideIcon; title: string; description: string; id: string }>
+// > = {
+//   create: [
+//     {
+//       id: '1',
+//       icon: Paintbrush,
+//       title: 'Design a landing page',
+//       description: 'for a sustainable fashion brand',
+//     },
+//     {
+//       id: '2',
+//       icon: Sparkles,
+//       title: 'Write a creative story',
+//       description: 'about time travel and friendship',
+//     },
+//     {
+//       id: '3',
+//       icon: Zap,
+//       title: 'Generate marketing copy',
+//       description: 'for a new AI productivity tool',
+//     },
+//     {
+//       id: '4',
+//       icon: Lightbulb,
+//       title: 'Brainstorm startup ideas',
+//       description: 'in the climate tech space',
+//     },
+//   ],
+//   explore: [
+//     {
+//       id: '5',
+//       icon: MapPin,
+//       title: 'Plan a 2-week trip',
+//       description: 'to Japan with cultural highlights',
+//     },
+//     {
+//       id: '6',
+//       icon: Compass,
+//       title: 'Discover hidden gems',
+//       description: 'in European architecture',
+//     },
+//     {
+//       id: '7',
+//       icon: Globe,
+//       title: 'Compare different cultures',
+//       description: 'approach to work-life balance',
+//     },
+//     {
+//       id: '8',
+//       icon: Sparkles,
+//       title: 'Explore future trends',
+//       description: 'in renewable energy',
+//     },
+//   ],
+//   code: [
+//     {
+//       id: '9',
+//       icon: Code,
+//       title: 'Build a REST API',
+//       description: 'with Node.js and Express',
+//     },
+//     {
+//       id: '10',
+//       icon: Database,
+//       title: 'Optimize SQL queries',
+//       description: 'for better performance',
+//     },
+//     {
+//       id: '11',
+//       icon: Zap,
+//       title: 'Debug React component',
+//       description: 'with rendering issues',
+//     },
+//     {
+//       id: '12',
+//       icon: Code,
+//       title: 'Implement authentication',
+//       description: 'using JWT and refresh tokens',
+//     },
+//   ],
+//   learn: [
+//     {
+//       id: '13',
+//       icon: GraduationCap,
+//       title: "Beginner's guide to TypeScript",
+//       description: 'with practical examples',
+//     },
+//     {
+//       id: '14',
+//       icon: BookOpen,
+//       title: 'Explain the CAP theorem',
+//       description: 'in distributed systems',
+//     },
+//     {
+//       id: '15',
+//       icon: Lightbulb,
+//       title: 'Why is AI so expensive?',
+//       description: 'Break down the costs',
+//     },
+//     {
+//       id: '16',
+//       icon: Sparkles,
+//       title: 'Are black holes real?',
+//       description: 'Explore the science behind them',
+//     },
+//   ],
+// };
 
-const categories = [
-  { id: 'create', label: 'Create', icon: Sparkles },
-  { id: 'explore', label: 'Explore', icon: Compass },
-  { id: 'code', label: 'Code', icon: Code },
-  { id: 'learn', label: 'Learn', icon: GraduationCap },
-];
+// const categories = [
+//   { id: 'create', label: 'Create', icon: Sparkles },
+//   { id: 'explore', label: 'Explore', icon: Compass },
+//   { id: 'code', label: 'Code', icon: Code },
+//   { id: 'learn', label: 'Learn', icon: GraduationCap },
+// ];
 
 export const GptChatPage = () => {
   const navigate = useNavigate();
-  const [selectedCategory, setSelectedCategory] = useState<string>('learn');
+  // const [selectedCategory, setSelectedCategory] = useState<string>('learn');
   const [selectModel, setSelectedModel] = useState<SelectModelType>({
     isBlocksModels: true,
     provider: 'azure',
@@ -154,24 +154,28 @@ export const GptChatPage = () => {
     }
   };
 
-  const handlePromptClick = (prompt: { title: string; description: string }) => {
-    handleSendMessage(`${prompt.title} ${prompt.description}`);
-  };
+  // const handlePromptClick = (prompt: { title: string; description: string }) => {
+  //   handleSendMessage(`${prompt.title} ${prompt.description}`);
+  // };
+  // random id from 1 to 10
+  const randomId = Math.floor(Math.random() * 10) + 1;
+  const NEW_CHAT_PAGE_HEADER = t(`NEW_CHAT_PAGE_HEADER_${randomId}`);
 
   return (
     <div className="flex flex-col h-full w-full bg-gradient-to-b from-background to-muted/20 overflow-y-auto pb-[220px] sm:pb-[200px] md:pb-[180px]">
       <div className="flex-1 flex flex-col items-center justify-center px-4 max-w-5xl mx-auto w-full py-4">
         <div className="text-center mb-6 sm:mb-8 md:mb-10 space-y-1 sm:space-y-2">
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-            {t('NEW_CHAT_PAGE_HEADER')}
+            {NEW_CHAT_PAGE_HEADER}
           </h1>
-          <p className="text-muted-foreground text-sm sm:text-base">
+
+          {/* <p className="text-muted-foreground text-sm sm:text-base">
             {t('NEW_CHAT_PAGE_SUBHEADER')}
-          </p>
+          </p> */}
         </div>
 
         {/* Category Tabs */}
-        <div className="flex items-center justify-center gap-2 sm:gap-3 mb-6 sm:mb-8 md:mb-10 flex-wrap">
+        {/* <div className="flex items-center justify-center gap-2 sm:gap-3 mb-6 sm:mb-8 md:mb-10 flex-wrap">
           {categories.map((category) => {
             const Icon = category.icon;
             const isActive = selectedCategory === category.id;
@@ -192,9 +196,9 @@ export const GptChatPage = () => {
               </Button>
             );
           })}
-        </div>
+        </div> */}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 w-full max-w-4xl mb-4 sm:mb-6">
+        {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 w-full max-w-4xl mb-4 sm:mb-6">
           {categoryPrompts[selectedCategory].map((prompt) => {
             const PromptIcon = prompt.icon;
             return (
@@ -220,16 +224,16 @@ export const GptChatPage = () => {
               </button>
             );
           })}
-        </div>
+        </div> */}
+        <GptChatInput
+          onSendMessage={handleSendMessage}
+          selectedModel={selectModel}
+          onModelChange={setSelectedModel}
+          selectedTools={selectedTools}
+          onToolsChange={setSelectedTools}
+          className=" static w-full md:m-0"
+        />
       </div>
-
-      <GptChatInput
-        onSendMessage={handleSendMessage}
-        selectedModel={selectModel}
-        onModelChange={setSelectedModel}
-        selectedTools={selectedTools}
-        onToolsChange={setSelectedTools}
-      />
     </div>
   );
 };

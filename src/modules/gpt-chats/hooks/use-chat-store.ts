@@ -6,6 +6,9 @@ import { parseSSEBuffer } from '../utils/parse-sse';
 import { handleSSEMessage } from '../utils/sse-message-handler';
 import { NavigateFunction } from 'react-router-dom';
 
+const projectSlug = import.meta.env.VITE_PROJECT_SLUG || '';
+const llmBasePrompt = import.meta.env.VITE_LLM_BASE_PROMPT || 'You are a helpful AI assistant.';
+
 const generateUniqueId = (): string => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
 type MessageType = 'user' | 'bot';
@@ -88,7 +91,6 @@ interface ChatStore {
 }
 
 // const projectKey = import.meta.env.VITE_X_BLOCKS_KEY || '';
-const projectSlug = import.meta.env.VITE_PROJECT_SLUG || '';
 
 const getBotSSE = async (
   query: string,
@@ -120,7 +122,7 @@ const getBotSSE = async (
     const reader = await conversationService.query({
       query: query,
       session_id: (chat.sessionId as string) || undefined,
-      base_prompt: 'You are helpful',
+      base_prompt: llmBasePrompt,
       model_id: modelId,
       model_name: modelName,
       model_provider: modelProvider,

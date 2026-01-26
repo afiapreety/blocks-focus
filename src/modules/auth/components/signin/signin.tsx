@@ -4,8 +4,8 @@ import { Divider } from '@/components/core';
 import { SsoSignin } from '../signin-sso';
 import { SigninEmail } from '../signin-email';
 import { useTheme } from '@/styles/theme/theme-provider';
-import darklogo from '@/assets/images/construct_logo_dark.svg';
-import lightlogo from '@/assets/images/construct_logo_light.svg';
+import darklogo from '@/assets/images/selise_ai_v4.svg';
+import lightlogo from '@/assets/images/selise_ai_v4.svg';
 import { useGetLoginOptions } from '../../hooks/use-auth';
 import { SigninOidc } from '../signin-oidc';
 
@@ -29,7 +29,7 @@ export const Signin = () => {
   ].some((domain) => window.location.hostname === domain);
   return (
     <div className="flex flex-col gap-6">
-      <div className="w-32 h-14 mb-2">
+      <div className="w-40 h-14">
         <img src={theme == 'dark' ? lightlogo : darklogo} className="w-full h-full" alt="logo" />
       </div>
       <div>

@@ -1,8 +1,8 @@
 import { X } from 'lucide-react';
-import darkLogo from '@/assets/images/construct_logo_dark.svg';
-import lightLogo from '@/assets/images/construct_logo_light.svg';
-import darksmallLogo from '@/assets/images/construct_logo_small_dark.svg';
-import lightsmallLogo from '@/assets/images/construct_logo_small_light.svg';
+import darkLogo from '@/assets/images/selise_ai_v4.svg';
+import lightLogo from '@/assets/images/selise_ai_v4.svg';
+import darksmallLogo from '@/assets/images/selise_ai_small.png';
+import lightsmallLogo from '@/assets/images/selise_ai_small.png';
 
 interface LogoSectionProps {
   theme: string;
@@ -17,7 +17,7 @@ export const LogoSection = ({ theme, open, isMobile, onClose }: Readonly<LogoSec
       <img
         src={theme === 'dark' ? lightLogo : darkLogo}
         alt="logo"
-        className={`absolute left-4 top-1 h-10 w-auto max-w-full transition-all duration-300 ${
+        className={`absolute left-4 top-1 h-8 w-auto max-w-full transition-all duration-300 ${
           open || isMobile ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
       />
