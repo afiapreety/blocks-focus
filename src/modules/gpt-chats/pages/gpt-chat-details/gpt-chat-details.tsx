@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Button } from '@/components/ui-kit/button';
-import { Bot, User, Clipboard, Check, Workflow } from 'lucide-react';
+import { Bot, User, Clipboard, Check, Zap } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -189,7 +189,7 @@ export const GptChatPageDetails = () => {
                                     : 'hover:bg-muted'
                                 )}
                               >
-                                <Workflow className="h-3.5 w-3.5" />
+                                <Zap className="h-3.5 w-3.5" />
                                 <span>{msg.metadata.tool_calls_made}</span>
                               </div>
                             </TooltipTrigger>
