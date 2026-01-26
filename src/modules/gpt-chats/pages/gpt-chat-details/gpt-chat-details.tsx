@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Button } from '@/components/ui-kit/button';
-import { Bot, Clipboard, Check, Zap } from 'lucide-react';
+import { Clipboard, Check, Zap } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -15,6 +15,7 @@ import { MarkdownRenderer } from '../../components/markdown-renderer/markdown-re
 import { ChatEventMessage, SparkleText } from '../../utils/chat-event-messages';
 import DummyProfile from '@/assets/images/dummy_profile.png';
 import { useGetAccount } from '@/modules/profile/hooks/use-account';
+import botLogoSELISEAI from '@/assets/images/selise_ai_small.png';
 
 const formatTimestamp = (timestamp: string) => {
   if (!timestamp) return '';
@@ -42,8 +43,8 @@ const getFullTimestamp = (timestamp: string) => {
 
 const ThinkingIndicator = () => (
   <div className="flex gap-4 animate-in fade-in duration-300 items-start ml-1">
-    <div className=" w-8 h-8 rounded-full bg-gradient-to-br from-primary-300 to-primary-600 flex items-center justify-center flex-shrink-0">
-      <Bot className="h-4 w-4 text-white" />
+    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+      <img src={botLogoSELISEAI} alt="bot" className="h-5 w-5" />
     </div>
     <div className="flex-1 py-1">
       <div className="flex items-center gap-2">
@@ -71,8 +72,8 @@ const ThinkingIndicator = () => (
 
 const ChatEventMessageIndicator = ({ message }: { message: string }) => (
   <div className="flex gap-4 animate-in fade-in duration-300 items-start ml-1">
-    <div className=" w-8 h-8 rounded-full bg-gradient-to-br from-primary-300 to-primary-600 flex items-center justify-center flex-shrink-0">
-      <Bot className="h-4 w-4 text-white" />
+    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+      <img src={botLogoSELISEAI} alt="bot" className="h-5 w-5" />
     </div>
     <div className="flex-1 py-1">
       <ChatEventMessage message={message} />
@@ -162,8 +163,8 @@ export const GptChatPageDetails = () => {
                 className={`flex gap-4 ${msg.type === 'user' ? 'justify-end' : 'justify-start'} ${msg.type === 'bot' ? 'items-start' : ''}`}
               >
                 {msg.type === 'bot' && (
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full  flex items-center justify-center border">
-                    <Bot className="h-4 w-4 text-primary" />
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                    <img src={botLogoSELISEAI} alt="bot" className="h-5 w-5" />
                   </div>
                 )}
 
