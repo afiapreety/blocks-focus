@@ -51,7 +51,7 @@ export const GptChatInput = ({
       )}
     >
       <div
-        className={`w-full mx-auto rounded-3xl pb-4 border-x-0 max-w-3xl xl:max-w-5xl ${
+        className={`w-full mx-auto rounded-3xl pb-4 border-x-0 max-w-4xl xl:max-w-5xl ${
           variant === 'chat-details' ? ' bg-background backdrop-blur-3xl' : ''
         }`}
       >
@@ -75,7 +75,7 @@ export const GptChatInput = ({
               size="icon"
               className={`h-10 w-10 rounded-2xl transition-all duration-300 ${
                 message.trim() && !disabled
-                  ? 'bg-primary hover:bg-primary/90 text-gray-200  hover:scale-110'
+                  ? 'bg-primary hover:bg-primary/90 text-white  hover:scale-110'
                   : 'bg-muted text-muted-foreground cursor-not-allowed'
               }`}
               onClick={onMessageHandler}

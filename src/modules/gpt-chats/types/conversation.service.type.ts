@@ -336,6 +336,13 @@ export interface Conversation {
   QueryTimestamp: string;
   ResponseTimestamp: string;
   CallFrom: string;
+  Metadata?: {
+    duration?: number;
+    tool_calls_made?: number;
+    had_errors?: boolean;
+    consecutive_errors?: number;
+    retrievals_made?: number;
+  };
 }
 
 export interface ConversationSessionSummary {

@@ -24,6 +24,9 @@ interface ChatMessage {
   type: MessageType;
   streaming: boolean;
   timestamp: string;
+  metadata?: {
+    tool_calls_made?: number;
+  };
 }
 
 interface Chat {
@@ -238,6 +241,11 @@ export const useChatStore = create<ChatStore>()(
                 type: 'bot',
                 streaming: false,
                 timestamp: conversation.ResponseTimestamp,
+                metadata: conversation.Metadata
+                  ? {
+                      tool_calls_made: conversation.Metadata.tool_calls_made,
+                    }
+                  : undefined,
               },
             ];
           });

@@ -1,11 +1,11 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { getThemeColors, type HSLColor } from './utils/utils';
 
 /**
  * ThemeProvider Component
  *
  * A context provider that manages theme state for your application,
  * supporting light, dark, and system themes with localStorage persistence.
+ * Colors are sourced from globals.css and tailwind.config.js only.
  *
  * Features:
  * - Theme state management (light, dark, system)
@@ -47,23 +47,11 @@ type ThemeProviderProps = {
 
 type ThemeProviderState = {
   theme: Theme;
-  colors: {
-    primary: string;
-    secondary: string;
-  };
   setTheme: (theme: Theme) => void;
-};
-
-type ColorPalette = {
-  [key: string]: HSLColor;
 };
 
 const initialState: ThemeProviderState = {
   theme: 'light',
-  colors: {
-    primary: import.meta.env.VITE_PRIMARY_COLOR || '',
-    secondary: import.meta.env.VITE_SECONDARY_COLOR || '',
-  },
   setTheme: () => null,
 };
 
@@ -77,81 +65,6 @@ export function ThemeProvider({
   const [theme, setTheme] = useState<Theme>(
     () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
   );
-
-  const [colors, setColors] = useState(() => {
-    const themeColors = getThemeColors();
-    const currentTheme = theme === 'dark' ? themeColors.dark : themeColors.light;
-    const defaultPrimary = import.meta.env.VITE_PRIMARY_COLOR || '#15969B';
-    const defaultSecondary = import.meta.env.VITE_SECONDARY_COLOR || '#5194B8';
-
-    // Helper function to resolve color value
-    const resolveColor = (
-      color: string | HSLColor | ColorPalette | null | undefined,
-      defaultValue: string
-    ): string => {
-      if (!color) return defaultValue;
-      if (typeof color === 'string') return color;
-
-      const hslColor = color as HSLColor;
-      if (
-        hslColor &&
-        typeof hslColor === 'object' &&
-        'h' in hslColor &&
-        's' in hslColor &&
-        'l' in hslColor
-      ) {
-        return `hsl(${hslColor.h}, ${hslColor.s}%, ${hslColor.l}%)`;
-      }
-
-      const colorPalette = color as ColorPalette;
-      const firstColor = Object.values(colorPalette)[0];
-      if (firstColor && 'h' in firstColor && 's' in firstColor && 'l' in firstColor) {
-        return `hsl(${firstColor.h}, ${firstColor.s}%, ${firstColor.l}%)`;
-      }
-
-      return defaultValue;
-    };
-
-    const primaryColor = resolveColor(currentTheme.primary, defaultPrimary);
-    const secondaryColor = resolveColor(currentTheme.secondary, defaultSecondary);
-
-    return {
-      primary: primaryColor,
-      secondary: secondaryColor,
-    };
-  });
-
-  useEffect(() => {
-    const { light, dark } = getThemeColors();
-    const isDark =
-      theme === 'dark' ||
-      (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-
-    const colorSet = isDark ? dark : light;
-
-    const style = document.documentElement.style;
-
-    const setColorVariables = (prefix: string, palette: ColorPalette) => {
-      Object.entries(palette).forEach(([key, value]) => {
-        if (value) {
-          style.setProperty(`--${prefix}-${key}`, `${value.h}, ${value.s}%, ${value.l}%`);
-        }
-      });
-    };
-
-    if (colorSet.primary) {
-      setColorVariables('primary', colorSet.primary);
-    }
-
-    if (colorSet.secondary) {
-      setColorVariables('secondary', colorSet.secondary);
-    }
-
-    setColors({
-      primary: import.meta.env.VITE_PRIMARY_COLOR || '#15969B',
-      secondary: import.meta.env.VITE_SECONDARY_COLOR || '#5194B8',
-    });
-  }, [theme]);
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -171,13 +84,12 @@ export function ThemeProvider({
   const value = useMemo(
     () => ({
       theme,
-      colors,
       setTheme: (newTheme: Theme) => {
         localStorage.setItem(storageKey, newTheme);
         setTheme(newTheme);
       },
     }),
-    [theme, colors, storageKey]
+    [theme, storageKey]
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

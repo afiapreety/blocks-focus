@@ -1,12 +1,13 @@
 import { useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { AlertTriangle } from 'lucide-react';
-import bgAuthLight from '@/assets/images/bg_auth_light.svg';
-import bgAuthDark from '@/assets/images/bg_auth_dark.svg';
+// import bgAuthLight from '@/assets/images/bg_auth_light.svg';
+// import bgAuthDark from '@/assets/images/bg_auth_dark.svg';
 import { useGetLoginOptions } from '@/modules/auth/hooks/use-auth';
 import { useAuthState } from '@/state/client-middleware';
 import { useTheme } from '@/styles/theme/theme-provider';
 import { LanguageSelector } from '@/components/core';
+import bgAuthArtwork from '@/assets/images/bg_auth_artwork.svg';
 
 export const AuthLayout = () => {
   const { isLoading, error: loginOptionsError } = useGetLoginOptions();
@@ -25,9 +26,11 @@ export const AuthLayout = () => {
 
   const getBackgroundImage = () => {
     if (theme === 'system') {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? bgAuthDark : bgAuthLight;
+      return window.matchMedia('(prefers-color-scheme: dark)').matches
+        ? bgAuthArtwork
+        : bgAuthArtwork;
     }
-    return theme === 'dark' ? bgAuthDark : bgAuthLight;
+    return theme === 'dark' ? bgAuthArtwork : bgAuthArtwork;
   };
 
   const is404Error = (error: any) => {
