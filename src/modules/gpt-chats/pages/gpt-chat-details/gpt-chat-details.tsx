@@ -102,14 +102,24 @@ export const GptChatPageDetails = () => {
     chatId,
   });
 
+  // useEffect(() => {
+  //   const timeoutId = setTimeout(() => {
+  //     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  //   }, 100);
+
+  //   return () => clearTimeout(timeoutId);
+  // }, [conversations]);
+
   useEffect(() => {
-    // Add a slight delay to allow the fade animation to start before scrolling
+    const behavior = isBotStreaming ? 'auto' : 'smooth';
+    const delay = isBotStreaming ? 10 : 100;
+
     const timeoutId = setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
+      messagesEndRef.current?.scrollIntoView({ behavior });
+    }, delay);
 
     return () => clearTimeout(timeoutId);
-  }, [conversations]);
+  }, [conversations, isBotStreaming]);
 
   const handleSendMessage = (message: string) => {
     if (!message.trim()) return;

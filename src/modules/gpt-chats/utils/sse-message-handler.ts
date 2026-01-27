@@ -194,7 +194,7 @@ export const handleSSEMessage = (
         streamBotMessage(chatId, streamContent);
         if (setSuggestions) setSuggestions(suggestions);
         endBotMessage(chatId);
-      }, 1000);
+      }, 2000);
 
       return () => clearTimeout(timeoutId);
     }
@@ -226,7 +226,7 @@ export const handleSSEMessage = (
 
       streamBotMessage(chatId, chunk);
       index += chunk.length;
-      timeoutId = setTimeout(sendNextChunk, 20);
+      timeoutId = setTimeout(sendNextChunk, 50);
     };
 
     sendNextChunk();
