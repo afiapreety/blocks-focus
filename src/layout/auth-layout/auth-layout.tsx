@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
-import { AlertTriangle } from 'lucide-react';
-// import bgAuthLight from '@/assets/images/bg_auth_light.svg';
+import { AlertTriangle, Moon, Sun } from 'lucide-react';
+import { useTranslation } from 'react-i18next'; // import bgAuthLight from '@/assets/images/bg_auth_light.svg';
 // import bgAuthDark from '@/assets/images/bg_auth_dark.svg';
 import { useGetLoginOptions } from '@/modules/auth/hooks/use-auth';
 import { useAuthState } from '@/state/client-middleware';
@@ -13,7 +13,8 @@ export const AuthLayout = () => {
   const { isLoading, error: loginOptionsError } = useGetLoginOptions();
   const navigate = useNavigate();
   const { isMounted, isAuthenticated } = useAuthState();
-  const { theme } = useTheme();
+  const { theme, setTheme } = useTheme();
+  const { t } = useTranslation();
 
   useEffect(() => {
     // Don't redirect if we're on the MFA verification page
@@ -158,7 +159,14 @@ export const AuthLayout = () => {
           />
         </div>
         <div className="flex items-center justify-center w-full px-6 sm:px-20 md:w-[64%] md:px-[14%] lg:px-[16%] 2xl:px-[20%]">
-          <div className="absolute top-2 right-4">
+          <div className="absolute top-2 right-4 flex items-center gap-2">
+            <button
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              className="p-2 rounded-full transition-colors hover:bg-accent"
+              aria-label={t('THEME')}
+            >
+              {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </button>
             <LanguageSelector />
           </div>
           {renderAuthContent()}
