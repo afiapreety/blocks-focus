@@ -24,8 +24,10 @@ import {
   Archive,
 } from 'lucide-react';
 import {
-  useDeleteConversationById,
-  useGetConversations,
+  // useDeleteConversationById,
+  useDeleteLLMConversationById,
+  // useGetConversations,
+  useGetSessions,
 } from '@/modules/gpt-chats/hooks/use-conversation-api';
 import { useTranslation } from 'react-i18next';
 import {
@@ -34,30 +36,35 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui-kit/dropdown-menu';
+import { useAuthStore } from '@/state/store/auth';
 
-const projectKey = import.meta.env.VITE_X_BLOCKS_KEY || '';
-const projectSlug = import.meta.env.VITE_PROJECT_SLUG || '';
+// const projectKey = import.meta.env.VITE_X_BLOCKS_KEY || '';
+// const projectSlug = import.meta.env.VITE_PROJECT_SLUG || '';
 
 export const AppSidebar = () => {
   const { chatId } = useParams();
   const { theme } = useTheme();
   const { pathname } = useLocation();
   const { setOpenMobile, open, isMobile, openMobile } = useSidebar();
-  const { mutateAsync: deleteMutateAsync } = useDeleteConversationById();
+  // const { mutateAsync: deleteMutateAsync } = useDeleteConversationById();
+  const { mutateAsync: deleteLLMMutateAsync } = useDeleteLLMConversationById();
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { toast } = useToast();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [chatToDelete, setChatToDelete] = useState<string | null>(null);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const { user } = useAuthStore();
 
-  const { data } = useGetConversations({
-    limit: 100,
-    offset: 0,
-    allow_created_by_filter: true,
-    call_from: projectSlug,
-    project_key: projectKey,
-  });
+  // const { data } = useGetConversations({
+  //   limit: 100,
+  //   offset: 0,
+  //   allow_created_by_filter: true,
+  //   call_from: projectSlug,
+  //   project_key: projectKey,
+  // });
+
+  const { data: sessionsData } = useGetSessions({ userId: user?.itemId || '' });
 
   useEffect(() => {
     if (!isMobile) {
@@ -67,18 +74,14 @@ export const AppSidebar = () => {
 
   const sidebarStyle = getSidebarStyle(isMobile, open, openMobile);
   const chatList = useMemo(() => {
-    if (!data || data.total_count === 0) return [];
-
-    return data.sessions.map((session) => ({
-      id: session.session_id,
-      lastEntryDate: session.last_entry_date,
-      title:
-        session.conversation?.Title?.slice(0, 35) ||
-        session.conversation?.Response?.slice(0, 35) ||
-        session.conversation?.Query ||
-        '',
+    if (!sessionsData || sessionsData?.getsessions.totalCount === 0) return [];
+    return sessionsData.getsessions.items.map((session) => ({
+      id: session.ItemId,
+      lastEntryDate: session.LastUpdatedDate,
+      title: session.title || 'Untitled Chat',
+      sessionId: session.sessionId,
     }));
-  }, [data]);
+  }, [sessionsData]);
 
   if (isMobile && !openMobile) {
     return null;
@@ -96,8 +99,10 @@ export const AppSidebar = () => {
   const confirmDelete = async () => {
     if (chatToDelete) {
       try {
-        const shouldNavigate = chatId === chatToDelete;
-        await deleteMutateAsync({ session_id: chatToDelete, project_key: projectKey });
+        const currentChatId = window.location.pathname.split('/chat/')[1];
+        const shouldNavigate = currentChatId === chatToDelete;
+        if (!currentChatId) return;
+        await deleteLLMMutateAsync({ filter: { ItemId: currentChatId } });
 
         if (shouldNavigate) {
           navigate('/chat');

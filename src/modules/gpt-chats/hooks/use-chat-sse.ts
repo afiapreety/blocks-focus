@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { onlineManager } from '@tanstack/react-query';
 import { SelectModelType, useChatStore } from './use-chat-store';
-import { useGetConversationById } from './use-conversation-api';
+import { useGetLLMConversationById } from './use-conversation-api';
 
 interface UseChatSSE {
   chatId?: string;
 }
 
-const projectKey = import.meta.env.VITE_X_BLOCKS_KEY || '';
-const projectSlug = import.meta.env.VITE_PROJECT_SLUG || '';
+// const projectKey = import.meta.env.VITE_X_BLOCKS_KEY || '';
+// const projectSlug = import.meta.env.VITE_PROJECT_SLUG || '';
 
 export const useChatSSE = ({ chatId = '' }: UseChatSSE) => {
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -34,13 +34,17 @@ export const useChatSSE = ({ chatId = '' }: UseChatSSE) => {
   const isBotThinking = chat.isBotThinking || false;
   const currentEvent = chat?.currentEvent || null;
 
-  const { data, isFetching } = useGetConversationById({
-    allow_created_by_filter: true,
-    call_from: projectSlug,
-    project_key: projectKey,
-    session_id: activeChatId,
-    limit: 100,
-    offset: 0,
+  // const { data, isFetching } = useGetConversationById({
+  //   allow_created_by_filter: true,
+  //   call_from: projectSlug,
+  //   project_key: projectKey,
+  //   session_id: activeChatId,
+  //   limit: 100,
+  //   offset: 0,
+  // });
+
+  const { data, isFetching } = useGetLLMConversationById({
+    chatId: activeChatId,
   });
 
   useEffect(() => {

@@ -5,9 +5,11 @@ import { conversationService } from '../services/conversation.service';
 import { parseSSEBuffer } from '../utils/parse-sse';
 import { handleSSEMessage } from '../utils/sse-message-handler';
 import { NavigateFunction } from 'react-router-dom';
+import { useAuthStore } from '@/state/store/auth';
 
 const projectSlug = import.meta.env.VITE_PROJECT_SLUG || '';
 const llmBasePrompt = import.meta.env.VITE_LLM_BASE_PROMPT || 'You are a helpful AI assistant.';
+const projectKey = import.meta.env.VITE_X_BLOCKS_KEY || '';
 
 const generateUniqueId = (): string => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -93,19 +95,13 @@ interface ChatStore {
   reset: () => void;
 }
 
-// const projectKey = import.meta.env.VITE_X_BLOCKS_KEY || '';
-
 const getBotSSE = async (
   query: string,
-  chat: Chat,
-  cb: (
-    event: {
-      eventType: string;
-      eventData: { session_id?: string; query?: string; message?: string };
-    },
-    done: boolean
-  ) => void
-) => {
+  chat: Chat
+): Promise<{
+  reader: ReadableStreamDefaultReader<Uint8Array>;
+  sessionId: string;
+}> => {
   const modelId = chat?.selectedModel
     ? chat?.selectedModel.isBlocksModels
       ? ''
@@ -121,27 +117,71 @@ const getBotSSE = async (
       ? chat?.selectedModel.provider
       : ''
     : '';
-  try {
-    const reader = await conversationService.query({
-      query: query,
-      session_id: (chat.sessionId as string) || undefined,
-      base_prompt: llmBasePrompt,
-      model_id: modelId,
-      model_name: modelName,
-      model_provider: modelProvider,
-      tool_ids: chat.selectedTools,
-      last_n_turn: 5,
-      enable_summary: false,
-      enable_next_suggestion: false,
-      response_type: 'text',
-      response_format: 'string',
-      call_from: projectSlug,
-    });
 
+  const reader = await conversationService.query({
+    query: query,
+    session_id: (chat.sessionId as string) || undefined,
+    base_prompt: llmBasePrompt,
+    model_id: modelId,
+    model_name: modelName,
+    model_provider: modelProvider,
+    tool_ids: chat.selectedTools,
+    last_n_turn: 5,
+    enable_summary: false,
+    enable_next_suggestion: false,
+    response_type: 'text',
+    response_format: 'string',
+    call_from: projectSlug,
+  });
+  return { reader, sessionId: chat.sessionId || '' };
+};
+
+const getAgentSSE = async (
+  query: string,
+  chat: Chat
+): Promise<{
+  reader: ReadableStreamDefaultReader<Uint8Array>;
+  sessionId: string;
+}> => {
+  const initiateResponse = await conversationService.initiate({
+    widget_id: chat.selectedModel.model,
+    project_key: projectSlug,
+    session_id: chat.sessionId || undefined,
+  });
+
+  const reader = await conversationService.agentSSEQuery({
+    message: query,
+    projectKey: projectKey,
+    sessionId: initiateResponse.session_id,
+    token: initiateResponse.token,
+  });
+
+  return {
+    reader,
+    sessionId: initiateResponse.session_id,
+  };
+};
+
+const getSSE = async (
+  query: string,
+  chat: Chat,
+  cb: (
+    event: {
+      eventType: string;
+      eventData: { session_id?: string; query?: string; message?: string };
+    },
+    sessionId: string,
+    done: boolean
+  ) => void
+) => {
+  try {
+    const { provider } = chat.selectedModel;
+    const { reader, sessionId } =
+      provider === 'agent' ? await getAgentSSE(query, chat) : await getBotSSE(query, chat);
     const decoder = new TextDecoder();
     let buffer = '';
     let isDone = false;
-
+    let session_id = sessionId;
     while (!isDone) {
       const { done, value } = await reader.read();
       isDone = done;
@@ -152,8 +192,21 @@ const getBotSSE = async (
         buffer = remaining;
 
         events.forEach((event) => {
-          cb(event, isDone);
+          if (event.eventData.session_id) {
+            session_id = event.eventData.session_id as string;
+          }
+          cb(event, session_id, isDone);
         });
+      }
+      if (isDone) {
+        cb(
+          {
+            eventType: 'done',
+            eventData: {},
+          },
+          session_id,
+          isDone
+        );
       }
     }
   } catch (error) {
@@ -175,7 +228,7 @@ export const useChatStore = create<ChatStore>()(
         return chatId;
       },
 
-      startChat: (message, model, tools, navigate) => {
+      startChat: async (message, model, tools, navigate) => {
         const chatMessage: ChatMessage = {
           message,
           type: 'user',
@@ -201,29 +254,58 @@ export const useChatStore = create<ChatStore>()(
           activeChatId: chatId,
         }));
         navigate(`/chat/new`);
-
-        getBotSSE(message, chat, (event, done) => {
-          if (event.eventData.session_id && !get().chats[event.eventData.session_id]) {
-            const newChatId = event.eventData.session_id;
-            delete get().chats[chatId];
+        const { itemId } = useAuthStore.getState().user || {};
+        const res = await conversationService.insertSession({
+          userId: itemId || '',
+          title: message.slice(0, 20),
+        });
+        const newChatId = res.insertsession.itemId || chatId;
+        delete get().chats[chatId];
+        window.history.replaceState(window.history.state, '', `/chat/${newChatId}`);
+        set((state) => ({
+          chats: {
+            ...state.chats,
+            [newChatId]: {
+              ...chat,
+              id: newChatId,
+              sessionId: newChatId,
+              isBotThinking: true,
+            },
+          },
+          activeChatId: newChatId,
+        }));
+        let botMessage = '';
+        return getSSE(message, chat, (event, sessionId, done) => {
+          handleSSEMessage(newChatId || '', event, undefined);
+          if (event.eventType === 'chat_response') {
+            botMessage = event.eventData.message || '';
+          }
+          if (done) {
+            const chat = get().chats[newChatId];
             set((state) => ({
               chats: {
                 ...state.chats,
                 [newChatId]: {
                   ...chat,
-                  id: newChatId,
-                  sessionId: newChatId,
-                  isBotThinking: !done,
+                  sessionId: sessionId,
                 },
               },
               activeChatId: newChatId,
             }));
-            window.history.replaceState(window.history.state, '', `/chat/${newChatId}`);
+            conversationService.updateSession({
+              filter: { ItemId: newChatId || '' },
+              payload: { sessionId: sessionId },
+            });
+            conversationService.insertConversation({
+              query: message,
+              // queryTimestamp: chatMessage.timestamp,
+              response: botMessage,
+              // responseTimestamp: new Date().toISOString(),
+              chatId: newChatId,
+              sessionId,
+            });
           }
-          handleSSEMessage(event.eventData.session_id || '', event, undefined);
         });
-
-        return {};
       },
       loadChat: (id, conversations) =>
         set((state) => {
@@ -515,12 +597,42 @@ export const useChatStore = create<ChatStore>()(
         const chat = state.chats[id];
 
         state.setBotThinking(id, true);
+
         if (setSuggestions) setSuggestions([]);
 
         try {
-          getBotSSE(message, chat, (event) =>
-            handleSSEMessage(event.eventData.session_id || '', event, undefined)
-          );
+          let botMessage = '';
+          getSSE(message, chat, (event, sessionId, isDone) => {
+            handleSSEMessage(id, event, setSuggestions);
+            if (event.eventType === 'chat_response') {
+              botMessage = event.eventData.message || '';
+            }
+            if (isDone) {
+              const chat = get().chats[id];
+              set((state) => ({
+                chats: {
+                  ...state.chats,
+                  [id]: {
+                    ...chat,
+                    sessionId: sessionId,
+                  },
+                },
+                activeChatId: id,
+              }));
+              conversationService.updateSession({
+                filter: { ItemId: id || '' },
+                payload: { sessionId: sessionId },
+              });
+              conversationService.insertConversation({
+                query: message,
+                // queryTimestamp: chatMessage.timestamp,
+                response: botMessage,
+                // responseTimestamp: new Date().toISOString(),
+                chatId: id,
+                sessionId: sessionId,
+              });
+            }
+          });
         } catch (error) {
           state.setBotThinking(id, false);
           state.setCurrentEvent(id, null, '');
