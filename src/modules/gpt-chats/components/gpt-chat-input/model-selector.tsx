@@ -3,7 +3,11 @@ import { Check, ChevronDown, Loader2, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui-kit/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui-kit/popover';
 import { cn } from '@/lib/utils';
-import { useGetCustomLlmModels, useGetLlmModels } from '@/modules/gpt-chats/hooks/use-gpt-chat';
+import {
+  useGetAgents,
+  useGetCustomLlmModels,
+  useGetLlmModels,
+} from '@/modules/gpt-chats/hooks/use-gpt-chat';
 import { formatProviderName, getProviderConfig } from '../../utils/model-selector';
 import { SelectModelType } from '../../hooks/use-chat-store';
 import { useTranslation } from 'react-i18next';
@@ -24,6 +28,8 @@ interface GroupedModelSelectorProps {
   onChange?: (value: SelectModelType) => void;
 }
 
+const Projectkey = import.meta.env.VITE_X_BLOCKS_KEY || 'default';
+
 export const GroupedModelSelector = ({ value, onChange }: GroupedModelSelectorProps) => {
   const [open, setOpen] = useState(false);
   const { t } = useTranslation();
@@ -36,6 +42,8 @@ export const GroupedModelSelector = ({ value, onChange }: GroupedModelSelectorPr
     error: customError,
   } = useGetCustomLlmModels();
   const { data: blocksModels, isLoading: isLoadingBlocks, error: blocksError } = useGetLlmModels();
+
+  const { data: agentsData } = useGetAgents({ limit: 100, offset: 0, project_key: Projectkey });
 
   const isLoading = isLoadingCustom || isLoadingBlocks;
   const hasError = customError && blocksError;
@@ -53,6 +61,7 @@ export const GroupedModelSelector = ({ value, onChange }: GroupedModelSelectorPr
           provider: provider,
           label: formatProviderName(model.provider_label || model.provider),
           isBlocksModels: true,
+
           models: [],
         };
       }
@@ -80,8 +89,25 @@ export const GroupedModelSelector = ({ value, onChange }: GroupedModelSelectorPr
       });
     });
 
+    agentsData?.agents.forEach((agent) => {
+      const provider = 'agent'.toLowerCase();
+      if (!allModels[provider]) {
+        allModels[provider] = {
+          provider: 'agent',
+          label: 'Agent',
+          isBlocksModels: false,
+          models: [],
+        };
+      }
+      allModels[provider].models.push({
+        model: agent.widget_id,
+        label: agent.name,
+        type: 'chat',
+      });
+    });
+
     return allModels;
-  }, [customModels, blocksModels]);
+  }, [customModels, blocksModels, agentsData]);
 
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen);

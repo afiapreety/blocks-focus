@@ -133,12 +133,14 @@ export const handleSSEMessage = (
     'execution_long_running',
     'partial_failure',
     'execution_failed',
+    'message_start',
   ];
 
   const normalizedType = data.type.toLowerCase().replace(/_/g, '_');
 
   if (eventTypes.includes(normalizedType) || normalizedType.startsWith('node_start')) {
     const eventMessage = getRandomEventMessage(data.type);
+    console.log('Setting current event:', chatId, data.type, eventMessage);
     setCurrentEvent(chatId, data.type, eventMessage);
     setBotThinking(chatId, true);
     return;
@@ -240,8 +242,8 @@ export const handleSSEMessage = (
     case 'typing':
       break;
 
-    case 'message_start':
-      break;
+    // case 'message_start':
+    //   break;
 
     case 'chat_response':
       setCurrentEvent(chatId, null, '');
