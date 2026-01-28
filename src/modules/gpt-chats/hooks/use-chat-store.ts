@@ -93,8 +93,6 @@ interface ChatStore {
   reset: () => void;
 }
 
-// const projectKey = import.meta.env.VITE_X_BLOCKS_KEY || '';
-
 const getBotSSE = async (
   query: string,
   chat: Chat,
@@ -156,6 +154,10 @@ const getBotSSE = async (
         });
       }
     }
+
+    if (isDone) {
+      cb({ eventType: 'stream_complete', eventData: {} }, true);
+    }
   } catch (error) {
     //
   }
@@ -193,6 +195,7 @@ export const useChatStore = create<ChatStore>()(
           selectedModel: model,
           selectedTools: tools,
         };
+
         set((state) => ({
           chats: {
             ...state.chats,
@@ -200,31 +203,83 @@ export const useChatStore = create<ChatStore>()(
           },
           activeChatId: chatId,
         }));
+
         navigate(`/chat/new`);
 
+        let receivedSessionId: string | null = null;
+        let migrationScheduled = false;
+
         getBotSSE(message, chat, (event, done) => {
-          if (event.eventData.session_id && !get().chats[event.eventData.session_id]) {
-            const newChatId = event.eventData.session_id;
-            delete get().chats[chatId];
+          if (event.eventData.session_id && !receivedSessionId) {
+            receivedSessionId = event.eventData.session_id;
             set((state) => ({
               chats: {
                 ...state.chats,
-                [newChatId]: {
-                  ...chat,
-                  id: newChatId,
-                  sessionId: newChatId,
-                  isBotThinking: !done,
+                [chatId]: {
+                  ...state.chats[chatId],
+                  sessionId: receivedSessionId,
                 },
               },
-              activeChatId: newChatId,
             }));
-            window.history.replaceState(window.history.state, '', `/chat/${newChatId}`);
           }
-          handleSSEMessage(event.eventData.session_id || '', event, undefined);
+
+          handleSSEMessage(chatId, event, undefined);
+
+          if (done && !migrationScheduled && receivedSessionId) {
+            migrationScheduled = true;
+
+            const checkAndMigrate = () => {
+              const currentChat = get().chats[chatId];
+
+              if (!currentChat) {
+                return;
+              }
+
+              if (!currentChat.isBotStreaming && !currentChat.isBotThinking) {
+                performMigration();
+              } else {
+                setTimeout(checkAndMigrate, 50);
+              }
+            };
+
+            setTimeout(checkAndMigrate, 50);
+          }
         });
+
+        const performMigration = () => {
+          if (!receivedSessionId) {
+            return;
+          }
+
+          const currentChat = get().chats[chatId];
+
+          if (!currentChat) {
+            return;
+          }
+
+          set((state) => ({
+            chats: {
+              ...state.chats,
+              [receivedSessionId as string]: {
+                ...currentChat,
+                id: receivedSessionId,
+                sessionId: receivedSessionId,
+              },
+            },
+            activeChatId: receivedSessionId,
+          }));
+
+          const updatedChats = { ...get().chats };
+          delete updatedChats[chatId];
+          set({ chats: updatedChats });
+
+          const newUrl = `/chat/${receivedSessionId}`;
+          window.history.replaceState(null, '', newUrl);
+        };
 
         return {};
       },
+
       loadChat: (id, conversations) =>
         set((state) => {
           const chat = state.chats[id] || { ...chatDefaultValue, id };
@@ -501,6 +556,7 @@ export const useChatStore = create<ChatStore>()(
             },
           };
         }),
+
       deleteChat: (id) =>
         set((state) => {
           const updatedChats = { ...state.chats };
@@ -518,9 +574,9 @@ export const useChatStore = create<ChatStore>()(
         if (setSuggestions) setSuggestions([]);
 
         try {
-          getBotSSE(message, chat, (event) =>
-            handleSSEMessage(event.eventData.session_id || '', event, undefined)
-          );
+          getBotSSE(message, chat, (event) => {
+            handleSSEMessage(id, event, undefined);
+          });
         } catch (error) {
           state.setBotThinking(id, false);
           state.setCurrentEvent(id, null, '');
@@ -547,6 +603,7 @@ export const useChatStore = create<ChatStore>()(
           };
         });
       },
+
       setSelectedTools: (id, toolIds) => {
         set((state) => {
           const chat = state.chats[id] || { ...chatDefaultValue, id };
