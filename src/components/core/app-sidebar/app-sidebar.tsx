@@ -53,6 +53,7 @@ export const AppSidebar = () => {
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const accordionContentRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const chatListContainerRef = useRef<HTMLDivElement>(null);
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useGetConversations({
     allow_created_by_filter: true,
@@ -144,121 +145,112 @@ export const AppSidebar = () => {
   }, [chatList]);
 
   useEffect(() => {
-    const currentLoadMoreRef = loadMoreRef.current;
-    if (!currentLoadMoreRef) return;
+    if (isMobile && !openMobile) {
+      return;
+    }
 
-    const findScrollableParent = (element: HTMLElement): HTMLElement | null => {
-      let parent = element.parentElement;
+    const setupObserver = () => {
+      const currentLoadMoreRef = loadMoreRef.current;
+      const scrollContainer = chatListContainerRef.current;
 
-      while (parent) {
-        const { overflow, overflowY } = window.getComputedStyle(parent);
-        const isScrollable =
-          (overflow === 'auto' ||
-            overflow === 'scroll' ||
-            overflowY === 'auto' ||
-            overflowY === 'scroll') &&
-          parent.scrollHeight > parent.clientHeight;
+      if (!currentLoadMoreRef || !scrollContainer) {
+        return null;
+      }
 
-        if (isScrollable) {
-          return parent;
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) {
+              fetchNextPage();
+            }
+          });
+        },
+        {
+          root: scrollContainer,
+          rootMargin: '200px',
+          threshold: 0.1,
         }
-        parent = parent.parentElement;
-      }
-      return null;
+      );
+
+      observer.observe(currentLoadMoreRef);
+      return observer;
     };
 
-    const scrollContainer = findScrollableParent(currentLoadMoreRef);
+    let observer = setupObserver();
+    const timeouts: NodeJS.Timeout[] = [];
 
-    // On mobile, if no container found, use viewport (null root)
-    // On desktop, we need a scroll container
-    if (!scrollContainer && !isMobile) {
-      return;
-    }
-
-    // Use IntersectionObserver with the correct root
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) {
-            fetchNextPage();
+    if (!observer) {
+      const delays = isMobile ? [100, 300, 500, 1000] : [100, 300];
+      delays.forEach((delay) => {
+        const timeout = setTimeout(() => {
+          if (!observer) {
+            observer = setupObserver();
           }
-        });
-      },
-      {
-        root: isMobile ? null : scrollContainer, // Use viewport on mobile, container on desktop
-        rootMargin: '200px',
-        threshold: 0.1,
-      }
-    );
-
-    observer.observe(currentLoadMoreRef);
+        }, delay);
+        timeouts.push(timeout);
+      });
+    }
 
     return () => {
-      observer.disconnect();
-    };
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage, isMobile, chatList.length]);
-
-  // IMPROVED: Scroll event listener with mobile viewport support
-  useEffect(() => {
-    const currentAccordionContent = accordionContentRef.current;
-    if (!currentAccordionContent) return;
-
-    const findScrollableParent = (element: HTMLElement): HTMLElement | null => {
-      let parent = element.parentElement;
-
-      while (parent) {
-        const { overflow, overflowY } = window.getComputedStyle(parent);
-        const isScrollable =
-          (overflow === 'auto' ||
-            overflow === 'scroll' ||
-            overflowY === 'auto' ||
-            overflowY === 'scroll') &&
-          parent.scrollHeight > parent.clientHeight;
-
-        if (isScrollable) return parent;
-        parent = parent.parentElement;
+      if (observer) {
+        observer.disconnect();
       }
-      return null;
+      timeouts.forEach(clearTimeout);
     };
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, chatList.length, isMobile, openMobile]);
 
-    const scrollContainer = findScrollableParent(currentAccordionContent);
-
-    // On mobile, if no container found, try using window as fallback
-    const scrollTarget = scrollContainer || (isMobile ? window : null);
-
-    if (!scrollTarget) {
+  useEffect(() => {
+    if (isMobile && !openMobile) {
       return;
     }
 
-    const handleScroll = () => {
-      let scrollTop: number;
-      let scrollHeight: number;
-      let clientHeight: number;
+    const setupScrollListener = () => {
+      const scrollContainer = chatListContainerRef.current;
 
-      if (scrollTarget === window) {
-        scrollTop = window.scrollY || document.documentElement.scrollTop;
-        scrollHeight = document.documentElement.scrollHeight;
-        clientHeight = window.innerHeight;
-      } else {
-        const container = scrollTarget as HTMLElement;
-        scrollTop = container.scrollTop;
-        scrollHeight = container.scrollHeight;
-        clientHeight = container.clientHeight;
+      if (!scrollContainer) {
+        return null;
       }
 
-      const scrollPercentage = (scrollTop + clientHeight) / scrollHeight;
+      const handleScroll = () => {
+        const scrollTop = scrollContainer.scrollTop;
+        const scrollHeight = scrollContainer.scrollHeight;
+        const clientHeight = scrollContainer.clientHeight;
+        const scrollPercentage = (scrollTop + clientHeight) / scrollHeight;
 
-      if (scrollPercentage > 0.75 && hasNextPage && !isFetchingNextPage) {
-        fetchNextPage();
-      }
+        if (scrollPercentage > 0.75 && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      };
+
+      scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
+
+      return () => {
+        scrollContainer.removeEventListener('scroll', handleScroll);
+      };
     };
 
-    scrollTarget.addEventListener('scroll', handleScroll, { passive: true });
+    let cleanup = setupScrollListener();
+    const timeouts: NodeJS.Timeout[] = [];
+
+    if (!cleanup) {
+      const delays = isMobile ? [100, 300, 500, 1000] : [100, 300];
+      delays.forEach((delay) => {
+        const timeout = setTimeout(() => {
+          if (!cleanup) {
+            cleanup = setupScrollListener();
+          }
+        }, delay);
+        timeouts.push(timeout);
+      });
+    }
 
     return () => {
-      scrollTarget.removeEventListener('scroll', handleScroll);
+      if (cleanup) {
+        cleanup();
+      }
+      timeouts.forEach(clearTimeout);
     };
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage, isMobile]);
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, isMobile, openMobile]);
 
   const handleNewChat = () => {
     navigate('/chat');
@@ -453,10 +445,11 @@ export const AppSidebar = () => {
                 ) : (
                   <>
                     <div
+                      ref={chatListContainerRef}
                       className="overflow-y-auto overflow-x-visible pr-1 space-y-6 mt-2"
                       style={{ maxHeight: 'calc(100vh - 280px)' }}
                     >
-                      {/* TODAY */}
+                      
                       {categorizedChats.today.length > 0 && (
                         <div>
                           <h3 className="text-xs font-semibold text-muted-foreground mb-2 px-2">
@@ -468,7 +461,7 @@ export const AppSidebar = () => {
                         </div>
                       )}
 
-                      {/* YESTERDAY */}
+                      
                       {categorizedChats.yesterday.length > 0 && (
                         <div>
                           <h3 className="text-xs font-semibold text-muted-foreground mb-2 px-2">
@@ -480,7 +473,7 @@ export const AppSidebar = () => {
                         </div>
                       )}
 
-                      {/* PREVIOUS 7 DAYS */}
+                      
                       {categorizedChats.previous7Days.length > 0 && (
                         <div>
                           <h3 className="text-xs font-semibold text-muted-foreground mb-2 px-2">
@@ -492,7 +485,7 @@ export const AppSidebar = () => {
                         </div>
                       )}
 
-                      {/* PREVIOUS 30 DAYS */}
+                      
                       {categorizedChats.previous30Days.length > 0 && (
                         <div>
                           <h3 className="text-xs font-semibold text-muted-foreground mb-2 px-2">
@@ -504,7 +497,7 @@ export const AppSidebar = () => {
                         </div>
                       )}
 
-                      {/* OLDER */}
+                      
                       {categorizedChats.older.length > 0 && (
                         <div>
                           <h3 className="text-xs font-semibold text-muted-foreground mb-2 px-2">
@@ -516,19 +509,11 @@ export const AppSidebar = () => {
                         </div>
                       )}
 
-                      {/* Load More Trigger */}
-                      {hasNextPage && (
-                        <div
-                          ref={loadMoreRef}
-                          className="h-32 w-full flex items-center justify-center"
-                        >
-                          <span className="text-xs text-muted-foreground">
-                            Loading more chats...
-                          </span>
-                        </div>
-                      )}
+                      
+                      {hasNextPage && <div ref={loadMoreRef} className="h-20 w-full" />}
                     </div>
 
+                    
                     {isFetchingNextPage && (
                       <div className="flex items-center justify-center py-4 mt-2">
                         <Loader className="w-5 h-5 text-muted-foreground animate-spin" />
