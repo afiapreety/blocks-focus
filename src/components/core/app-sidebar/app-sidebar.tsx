@@ -51,7 +51,7 @@ export const AppSidebar = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [chatToDelete, setChatToDelete] = useState<string | null>(null);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const accordionContentRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useGetConversations({
@@ -145,12 +145,37 @@ export const AppSidebar = () => {
 
   useEffect(() => {
     const currentLoadMoreRef = loadMoreRef.current;
-    const currentScrollRef = scrollRef.current;
+    if (!currentLoadMoreRef) return;
 
-    if (!currentLoadMoreRef || !currentScrollRef) {
+    const findScrollableParent = (element: HTMLElement): HTMLElement | null => {
+      let parent = element.parentElement;
+
+      while (parent) {
+        const { overflow, overflowY } = window.getComputedStyle(parent);
+        const isScrollable =
+          (overflow === 'auto' ||
+            overflow === 'scroll' ||
+            overflowY === 'auto' ||
+            overflowY === 'scroll') &&
+          parent.scrollHeight > parent.clientHeight;
+
+        if (isScrollable) {
+          return parent;
+        }
+        parent = parent.parentElement;
+      }
+      return null;
+    };
+
+    const scrollContainer = findScrollableParent(currentLoadMoreRef);
+
+    // On mobile, if no container found, use viewport (null root)
+    // On desktop, we need a scroll container
+    if (!scrollContainer && !isMobile) {
       return;
     }
 
+    // Use IntersectionObserver with the correct root
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -160,8 +185,8 @@ export const AppSidebar = () => {
         });
       },
       {
-        root: currentScrollRef,
-        rootMargin: '50px',
+        root: isMobile ? null : scrollContainer, // Use viewport on mobile, container on desktop
+        rootMargin: '200px',
         threshold: 0.1,
       }
     );
@@ -171,7 +196,69 @@ export const AppSidebar = () => {
     return () => {
       observer.disconnect();
     };
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage, chatList.length]);
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, isMobile, chatList.length]);
+
+  // IMPROVED: Scroll event listener with mobile viewport support
+  useEffect(() => {
+    const currentAccordionContent = accordionContentRef.current;
+    if (!currentAccordionContent) return;
+
+    const findScrollableParent = (element: HTMLElement): HTMLElement | null => {
+      let parent = element.parentElement;
+
+      while (parent) {
+        const { overflow, overflowY } = window.getComputedStyle(parent);
+        const isScrollable =
+          (overflow === 'auto' ||
+            overflow === 'scroll' ||
+            overflowY === 'auto' ||
+            overflowY === 'scroll') &&
+          parent.scrollHeight > parent.clientHeight;
+
+        if (isScrollable) return parent;
+        parent = parent.parentElement;
+      }
+      return null;
+    };
+
+    const scrollContainer = findScrollableParent(currentAccordionContent);
+
+    // On mobile, if no container found, try using window as fallback
+    const scrollTarget = scrollContainer || (isMobile ? window : null);
+
+    if (!scrollTarget) {
+      return;
+    }
+
+    const handleScroll = () => {
+      let scrollTop: number;
+      let scrollHeight: number;
+      let clientHeight: number;
+
+      if (scrollTarget === window) {
+        scrollTop = window.scrollY || document.documentElement.scrollTop;
+        scrollHeight = document.documentElement.scrollHeight;
+        clientHeight = window.innerHeight;
+      } else {
+        const container = scrollTarget as HTMLElement;
+        scrollTop = container.scrollTop;
+        scrollHeight = container.scrollHeight;
+        clientHeight = container.clientHeight;
+      }
+
+      const scrollPercentage = (scrollTop + clientHeight) / scrollHeight;
+
+      if (scrollPercentage > 0.75 && hasNextPage && !isFetchingNextPage) {
+        fetchNextPage();
+      }
+    };
+
+    scrollTarget.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      scrollTarget.removeEventListener('scroll', handleScroll);
+    };
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, isMobile]);
 
   const handleNewChat = () => {
     navigate('/chat');
@@ -358,7 +445,7 @@ export const AppSidebar = () => {
                   </span>
                 </div>
               </AccordionTrigger>
-              <AccordionContent className="overflow-visible">
+              <AccordionContent className="overflow-visible" ref={accordionContentRef}>
                 {chatList.length === 0 ? (
                   <p className="text-sm text-muted-foreground mt-2 px-2">
                     {t('NO_CHATS_AVAILABLE')}
@@ -366,7 +453,6 @@ export const AppSidebar = () => {
                 ) : (
                   <>
                     <div
-                      ref={scrollRef}
                       className="overflow-y-auto overflow-x-visible pr-1 space-y-6 mt-2"
                       style={{ maxHeight: 'calc(100vh - 280px)' }}
                     >
@@ -430,7 +516,17 @@ export const AppSidebar = () => {
                         </div>
                       )}
 
-                      {hasNextPage && <div ref={loadMoreRef} className="h-4 w-full" />}
+                      {/* Load More Trigger */}
+                      {hasNextPage && (
+                        <div
+                          ref={loadMoreRef}
+                          className="h-32 w-full flex items-center justify-center"
+                        >
+                          <span className="text-xs text-muted-foreground">
+                            Loading more chats...
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     {isFetchingNextPage && (
