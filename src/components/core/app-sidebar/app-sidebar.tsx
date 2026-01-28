@@ -453,7 +453,7 @@ export const AppSidebar = () => {
                       {categorizedChats.today.length > 0 && (
                         <div>
                           <h3 className="text-xs font-semibold text-muted-foreground mb-2 px-2">
-                            {t('TODAY')}
+                            {t('TODAY').toUpperCase()}
                           </h3>
                           <div className="space-y-1">
                             {categorizedChats.today.map((chat) => renderChatItem(chat))}
@@ -465,7 +465,7 @@ export const AppSidebar = () => {
                       {categorizedChats.yesterday.length > 0 && (
                         <div>
                           <h3 className="text-xs font-semibold text-muted-foreground mb-2 px-2">
-                            {t('YESTERDAY')}
+                            {t('YESTERDAY').toUpperCase()}
                           </h3>
                           <div className="space-y-1">
                             {categorizedChats.yesterday.map((chat) => renderChatItem(chat))}
@@ -477,7 +477,7 @@ export const AppSidebar = () => {
                       {categorizedChats.previous7Days.length > 0 && (
                         <div>
                           <h3 className="text-xs font-semibold text-muted-foreground mb-2 px-2">
-                            {t('PREVIOUS_7_DAYS')}
+                            {t('PREVIOUS_7_DAYS').toUpperCase()}
                           </h3>
                           <div className="space-y-1">
                             {categorizedChats.previous7Days.map((chat) => renderChatItem(chat))}
@@ -489,7 +489,7 @@ export const AppSidebar = () => {
                       {categorizedChats.previous30Days.length > 0 && (
                         <div>
                           <h3 className="text-xs font-semibold text-muted-foreground mb-2 px-2">
-                            {t('PREVIOUS_30_DAYS')}
+                            {t('PREVIOUS_30_DAYS').toUpperCase()}
                           </h3>
                           <div className="space-y-1">
                             {categorizedChats.previous30Days.map((chat) => renderChatItem(chat))}
@@ -501,7 +501,7 @@ export const AppSidebar = () => {
                       {categorizedChats.older.length > 0 && (
                         <div>
                           <h3 className="text-xs font-semibold text-muted-foreground mb-2 px-2">
-                            {t('OLDER')}
+                            {t('OLDER').toUpperCase()}
                           </h3>
                           <div className="space-y-1">
                             {categorizedChats.older.map((chat) => renderChatItem(chat))}
