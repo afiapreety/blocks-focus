@@ -168,6 +168,52 @@ export const AppSidebar = () => {
     return categorized;
   }, [chatList]);
 
+  const categorizedAgentChats = useMemo(() => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const thirtyDaysAgo = new Date(today);
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const categorized = {
+      today: [] as typeof agentChatList,
+      yesterday: [] as typeof agentChatList,
+      previous7Days: [] as typeof agentChatList,
+      previous30Days: [] as typeof agentChatList,
+      older: [] as typeof agentChatList,
+    };
+
+    const sorted = [...agentChatList].sort(
+      (a, b) => new Date(b.lastEntryDate).getTime() - new Date(a.lastEntryDate).getTime()
+    );
+
+    sorted.forEach((chat) => {
+      const chatDate = new Date(chat.lastEntryDate);
+      const chatDateOnly = new Date(
+        chatDate.getFullYear(),
+        chatDate.getMonth(),
+        chatDate.getDate()
+      );
+
+      if (chatDateOnly.getTime() === today.getTime()) {
+        categorized.today.push(chat);
+      } else if (chatDateOnly.getTime() === yesterday.getTime()) {
+        categorized.yesterday.push(chat);
+      } else if (chatDate >= sevenDaysAgo) {
+        categorized.previous7Days.push(chat);
+      } else if (chatDate >= thirtyDaysAgo) {
+        categorized.previous30Days.push(chat);
+      } else {
+        categorized.older.push(chat);
+      }
+    });
+
+    return categorized;
+  }, [agentChatList]);
+
   useEffect(() => {
     if (isMobile && !openMobile) {
       return;
@@ -559,10 +605,63 @@ export const AppSidebar = () => {
                   </p>
                 ) : (
                   <div
-                    className="overflow-y-auto overflow-x-visible pr-1 space-y-1 mt-2"
+                    className="overflow-y-auto overflow-x-visible pr-1 space-y-6 mt-2"
                     style={{ maxHeight: 'calc(100vh - 280px)' }}
                   >
-                    {agentChatList.map((chat) => renderChatItem(chat))}
+                    {categorizedAgentChats.today.length > 0 && (
+                      <div>
+                        <h3 className="text-xs font-semibold text-muted-foreground mb-2 px-2">
+                          {t('TODAY').toUpperCase()}
+                        </h3>
+                        <div className="space-y-1">
+                          {categorizedAgentChats.today.map((chat) => renderChatItem(chat))}
+                        </div>
+                      </div>
+                    )}
+
+                    {categorizedAgentChats.yesterday.length > 0 && (
+                      <div>
+                        <h3 className="text-xs font-semibold text-muted-foreground mb-2 px-2">
+                          {t('YESTERDAY').toUpperCase()}
+                        </h3>
+                        <div className="space-y-1">
+                          {categorizedAgentChats.yesterday.map((chat) => renderChatItem(chat))}
+                        </div>
+                      </div>
+                    )}
+
+                    {categorizedAgentChats.previous7Days.length > 0 && (
+                      <div>
+                        <h3 className="text-xs font-semibold text-muted-foreground mb-2 px-2">
+                          {t('PREVIOUS_7_DAYS').toUpperCase()}
+                        </h3>
+                        <div className="space-y-1">
+                          {categorizedAgentChats.previous7Days.map((chat) => renderChatItem(chat))}
+                        </div>
+                      </div>
+                    )}
+
+                    {categorizedAgentChats.previous30Days.length > 0 && (
+                      <div>
+                        <h3 className="text-xs font-semibold text-muted-foreground mb-2 px-2">
+                          {t('PREVIOUS_30_DAYS').toUpperCase()}
+                        </h3>
+                        <div className="space-y-1">
+                          {categorizedAgentChats.previous30Days.map((chat) => renderChatItem(chat))}
+                        </div>
+                      </div>
+                    )}
+
+                    {categorizedAgentChats.older.length > 0 && (
+                      <div>
+                        <h3 className="text-xs font-semibold text-muted-foreground mb-2 px-2">
+                          {t('OLDER').toUpperCase()}
+                        </h3>
+                        <div className="space-y-1">
+                          {categorizedAgentChats.older.map((chat) => renderChatItem(chat))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </AccordionContent>
