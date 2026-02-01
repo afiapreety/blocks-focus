@@ -132,7 +132,7 @@ export const ProfileMenu = () => {
   return (
     <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="h-9 px-2 gap-2 border-none">
+        <Button variant="ghost" className="h-9 px-2 gap-2 border-none focus-visible:ring-0">
           <div className="relative h-7 w-7 rounded-full overflow-hidden">
             {isLoading ? (
               <Skeleton className="h-7 w-7 rounded-full" />

@@ -129,7 +129,7 @@ export const OrgSwitcher = () => {
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="h-auto py-1.5 px-3 gap-2.5"
+          className="h-auto py-1.5 px-3 gap-2.5 focus-visible:ring-0"
           disabled={isComponentLoading}
         >
           {isComponentLoading ? (
