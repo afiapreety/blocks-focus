@@ -5,6 +5,7 @@ import { conversationService } from '../services/conversation.service';
 import { parseSSEBuffer } from '../utils/parse-sse';
 import { handleSSEMessage } from '../utils/sse-message-handler';
 import { NavigateFunction } from 'react-router-dom';
+import { agentService } from '../services/agent.service';
 
 const projectSlug = import.meta.env.VITE_PROJECT_SLUG || '';
 const llmBasePrompt = import.meta.env.VITE_LLM_BASE_PROMPT || 'You are a helpful AI assistant.';
@@ -17,6 +18,7 @@ export type SelectModelType = {
   isBlocksModels: boolean;
   provider: string;
   model: string;
+  widget_id?: string;
 };
 
 interface ChatMessage {
@@ -122,22 +124,31 @@ const getBotSSE = async (
       ? chat?.selectedModel.provider
       : ''
     : '';
+
+  const isAgent = chat?.selectedModel?.provider === 'agents' && chat?.selectedModel?.widget_id;
+
   try {
-    const reader = await conversationService.query({
-      query: query,
-      session_id: (chat.sessionId as string) || undefined,
-      base_prompt: llmBasePrompt,
-      model_id: modelId,
-      model_name: modelName,
-      model_provider: modelProvider,
-      tool_ids: chat.selectedTools,
-      last_n_turn: 5,
-      enable_summary: false,
-      enable_next_suggestion: false,
-      response_type: 'text',
-      response_format: 'string',
-      call_from: projectSlug,
-    });
+    const reader = isAgent
+      ? await agentService.agentChatStream(chat.selectedModel.widget_id as string, {
+          message: query,
+          session_id: (chat.sessionId as string) || undefined,
+          message_type: 'text',
+        })
+      : await conversationService.query({
+          query: query,
+          session_id: (chat.sessionId as string) || undefined,
+          base_prompt: llmBasePrompt,
+          model_id: modelId,
+          model_name: modelName,
+          model_provider: modelProvider,
+          tool_ids: chat.selectedTools,
+          last_n_turn: 5,
+          enable_summary: false,
+          enable_next_suggestion: false,
+          response_type: 'text',
+          response_format: 'string',
+          call_from: projectSlug,
+        });
 
     const decoder = new TextDecoder();
     let buffer = '';

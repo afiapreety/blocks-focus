@@ -18,6 +18,7 @@ type GroupModel = {
     model: string;
     label: string;
     type: string;
+    widget_id?: string;
   }[];
 };
 
@@ -100,6 +101,7 @@ export const GroupedModelSelector = ({ value, onChange }: GroupedModelSelectorPr
           model: agent.agent_key || agent.id,
           label: agent.agent_name || agent.name,
           type: 'agent',
+          widget_id: agent.widget_id,
         })),
       };
     }
@@ -324,6 +326,7 @@ export const GroupedModelSelector = ({ value, onChange }: GroupedModelSelectorPr
                               isBlocksModels: selectedProviderGroup.isBlocksModels,
                               provider: selectedProviderGroup.provider,
                               model: model.model,
+                              widget_id: model.widget_id,
                             })
                           }
                           className={cn(

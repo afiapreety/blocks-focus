@@ -16,6 +16,11 @@ export class AgentService {
       `/blocksai-api/v1/agents/query/${payload.id}?project_key=${payload.projectKey}`
     );
   }
+
+  agentChatStream(widgetId: string, body: Record<string, any>) {
+    const url = `/blocksai-api/v1/ai-agent/chat/${widgetId}`;
+    return clients.stream(url, JSON.stringify(body));
+  }
 }
 
 export const agentService = new AgentService();
