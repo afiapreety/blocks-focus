@@ -30,14 +30,15 @@ export const OrgSwitcher = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSwitching, setIsSwitching] = useState(false);
   const { t } = useTranslation();
-  const { setTokens, accessToken } = useAuthStore();
+  const { setTokens, accessToken, setSelectedOrgId, selectedOrgId } = useAuthStore();
   const { toast } = useToast();
 
   const currentOrgId = useMemo(() => {
+    if (selectedOrgId) return selectedOrgId;
     if (!accessToken) return null;
     const decoded = decodeJWT(accessToken);
     return decoded?.org_id ?? null;
-  }, [accessToken]);
+  }, [accessToken, selectedOrgId]);
 
   const { data, isLoading } = useGetAccount();
   const { data: orgsData, isLoading: isLoadingOrgs } = useGetMultiOrgs({
@@ -88,7 +89,7 @@ export const OrgSwitcher = () => {
         refreshToken: (response.refresh_token || useAuthStore.getState().refreshToken) ?? '',
       });
 
-      localStorage.setItem('selected-org-id', orgId);
+      setSelectedOrgId(orgId);
 
       window.location.reload();
     } catch (error) {

@@ -9,6 +9,7 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       accessToken: null,
       refreshToken: null,
+      selectedOrgId: null,
       tokens: null,
       login: (accessToken, refreshToken) => {
         return set((state) => ({
@@ -30,6 +31,7 @@ export const useAuthStore = create<AuthState>()(
           refreshToken: null,
           tokens: null,
           user: null,
+          selectedOrgId: null,
         }),
       setTokens: (tokens) =>
         set((state) => ({
@@ -40,6 +42,11 @@ export const useAuthStore = create<AuthState>()(
         set((state) => ({
           ...state,
           user,
+        })),
+      setSelectedOrgId: (orgId) =>
+        set((state) => ({
+          ...state,
+          selectedOrgId: orgId,
         })),
     }),
     {
