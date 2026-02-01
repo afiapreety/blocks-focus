@@ -15,6 +15,7 @@ export type User = {
   email: string;
   userName: string;
   phoneNumber: string | null;
+  memberships: Membership[];
   roles: string[];
   permissions: string[];
   active: boolean;

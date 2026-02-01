@@ -2,6 +2,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { SidebarTrigger, useSidebar } from '@/components/ui-kit/sidebar';
 import { Menubar, MenubarMenu } from '@/components/ui-kit/menubar';
 import { LanguageSelector, ProfileMenu, AppSidebar } from '@/components/core';
+import { OrgSwitcher } from '@/components/core/org-switcher/org-switcher';
 
 export const MainLayout = () => {
   const { open, isMobile } = useSidebar();
@@ -40,6 +41,7 @@ export const MainLayout = () => {
               <MenubarMenu></MenubarMenu>
             </Menubar>
             <LanguageSelector />
+            <OrgSwitcher />
             <ProfileMenu />
           </div>
         </div>
