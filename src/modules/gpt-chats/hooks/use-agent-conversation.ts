@@ -1,5 +1,8 @@
-import { useInfiniteQuery } from '@tanstack/react-query';
-import { IAgentConversationListPayload } from '../types/agent-conversation.type';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import {
+  IAgentConversationByIdPayload,
+  IAgentConversationListPayload,
+} from '../types/agent-conversation.type';
 import { agentConversationService } from '../services/agent-conversation.service';
 
 export const useGetAgentConversationList = (
@@ -28,5 +31,16 @@ export const useGetAgentConversationList = (
     refetchOnReconnect: false,
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
+  });
+};
+
+export const useGetConversationSessionById = (
+  p0: { agent_id: string; session_id: string; project_key: string },
+  p1: { enabled: boolean },
+  payload: IAgentConversationByIdPayload
+) => {
+  return useQuery({
+    queryKey: ['agent-conversation', payload],
+    queryFn: () => agentConversationService.getAgentConversationSessionById(payload),
   });
 };
