@@ -6,6 +6,9 @@ import { useToast } from '@/hooks/use-toast';
 import { getSidebarStyle } from '@/lib/utils/sidebar-utils';
 import { LogoSection } from '@/components/core';
 import { ConfirmationModal } from '@/components/core/confirmation-modal/confirmation-modal';
+import { menuItems } from '@/constant/sidebar-menu';
+import { MenuIcon } from '@/components/core/menu-icon/menu-icon';
+import { useFilteredMenu } from '@/hooks/use-filtered-menu';
 import {
   Accordion,
   AccordionContent,
@@ -55,6 +58,7 @@ export const AppSidebar = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [chatToDelete, setChatToDelete] = useState<string | null>(null);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const filteredMenuItems = useFilteredMenu(menuItems);
 
   // Refs for model chats
   const accordionContentRef = useRef<HTMLDivElement>(null);
@@ -169,7 +173,6 @@ export const AppSidebar = () => {
     };
   }, [hasNextPage, isFetchingNextPage, fetchNextPage, chatList.length, isMobile, openMobile]);
 
-  // Scroll listener for model chats (keep existing logic)
   useEffect(() => {
     if (isMobile && !openMobile) {
       return;
@@ -391,14 +394,34 @@ export const AppSidebar = () => {
           />
         </SidebarHeader>
 
-        <SidebarContent className="text-base px-3 py-4 text-high-emphasis font-normal overflow-x-hidden">
+        <SidebarContent className="text-base px-3 py-2 text-high-emphasis font-normal overflow-x-hidden">
+          <div>
+            {filteredMenuItems.map((item) => (
+              <Button
+                key={item.id}
+                onClick={() => {
+                  navigate(item.path);
+                  if (isMobile) {
+                    setOpenMobile(false);
+                  }
+                }}
+                variant="ghost"
+                className={`gap-3 justify-start hover:bg-accent/50 mb-0 mt-4 px-3 w-full ${
+                  pathname === item.path ? 'bg-accent/50' : ''
+                }`}
+              >
+                {item.icon && <MenuIcon name={item.icon} className="h-5 w-5" />}
+                <span className="font-normal">{t(item.name)}</span>
+              </Button>
+            ))}
+          </div>
           <Button
             onClick={handleNewChat}
-            variant="outline"
-            className="mt-2 mb-4 gap-2 justify-start bg-card"
+            variant="ghost"
+            className="mb-10 gap-3 justify-start hover:bg-accent/50 px-3"
           >
-            <PenSquare className="h-4 w-4" />
-            <span>{t('NEW_CHAT')}</span>
+            <PenSquare className="h-5 w-5" />
+            <span className="font-normal">{t('NEW_CHAT')}</span>
           </Button>
 
           <Accordion type="multiple" defaultValue={['agent-chats', 'model-chats']}>
