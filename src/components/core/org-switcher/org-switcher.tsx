@@ -95,7 +95,6 @@ export const OrgSwitcher = () => {
         description: t('SUCCESSFULLY_SWITCHED_ORGANIZATION'),
       });
     } catch (error) {
-      console.error('Failed to switch organization:', error);
       setIsSwitching(false);
 
       let errorTitle = t('FAILED_TO_SWITCH_ORGANIZATION');

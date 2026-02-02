@@ -304,26 +304,13 @@ export const signinByEmail = (payload: SigninEmailPayload): Promise<SigninEmailR
 };
 
 export const switchOrganization = async (orgId: string): Promise<MFASigninResponse> => {
-  const url = getApiUrl('/idp/v1/Authentication/Token');
+  const url = '/idp/v1/Authentication/Token';
   const formData = new URLSearchParams();
   formData.append('grant_type', 'switch_organization');
   formData.append('refresh_token', useAuthStore.getState().refreshToken ?? '');
   formData.append('org_id', orgId);
 
-  const response = await fetch(url, {
-    method: 'POST',
-    body: formData,
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'x-blocks-key': projectKey,
-    },
-    credentials: 'include',
+  return clients.post(url, formData, {
+    'Content-Type': 'application/x-www-form-urlencoded',
   });
-
-  if (!response.ok) {
-    const err = await response.json();
-    throw new HttpError(response.status, err);
-  }
-
-  return response.json();
 };
