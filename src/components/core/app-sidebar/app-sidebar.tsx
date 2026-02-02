@@ -394,35 +394,37 @@ export const AppSidebar = () => {
           />
         </SidebarHeader>
 
-        <SidebarContent className="text-base px-3 py-2 text-high-emphasis font-normal overflow-x-hidden">
+        <SidebarContent className="text-base px-3 py-2 text-high-emphasis font-normal overflow-x-hidden ">
           <div>
-            {filteredMenuItems.map((item) => (
-              <Button
-                key={item.id}
-                onClick={() => {
-                  navigate(item.path);
-                  if (isMobile) {
-                    setOpenMobile(false);
-                  }
-                }}
-                variant="ghost"
-                className={`gap-3 justify-start hover:bg-accent/50 mb-0 mt-4 px-3 w-full ${
-                  pathname === item.path ? 'bg-accent/50' : ''
-                }`}
-              >
-                {item.icon && <MenuIcon name={item.icon} className="h-5 w-5" />}
-                <span className="font-normal">{t(item.name)}</span>
-              </Button>
-            ))}
+            <div>
+              {filteredMenuItems.map((item) => (
+                <Button
+                  key={item.id}
+                  onClick={() => {
+                    navigate(item.path);
+                    if (isMobile) {
+                      setOpenMobile(false);
+                    }
+                  }}
+                  variant="ghost"
+                  className={`gap-3 justify-start hover:bg-accent/50 mb-0 mt-4 px-3 w-full ${
+                    pathname === item.path ? 'bg-accent/50' : ''
+                  }`}
+                >
+                  {item.icon && <MenuIcon name={item.icon} className="h-5 w-5" />}
+                  <span className="font-normal">{t(item.name)}</span>
+                </Button>
+              ))}
+            </div>
+            <Button
+              onClick={handleNewChat}
+              variant="ghost"
+              className="mb-10 gap-3 justify-start hover:bg-accent/50 px-3 w-full"
+            >
+              <PenSquare className="h-5 w-5" />
+              <span className="font-normal">{t('NEW_CHAT')}</span>
+            </Button>
           </div>
-          <Button
-            onClick={handleNewChat}
-            variant="ghost"
-            className="mb-10 gap-3 justify-start hover:bg-accent/50 px-3"
-          >
-            <PenSquare className="h-5 w-5" />
-            <span className="font-normal">{t('NEW_CHAT')}</span>
-          </Button>
 
           <Accordion type="multiple" defaultValue={['agent-chats', 'model-chats']}>
             {/* Chat with AI Agents - Now at the top */}
