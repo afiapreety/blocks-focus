@@ -133,23 +133,23 @@ export const MarkdownComponentsMap: Partial<Components> = {
     };
 
     return (
-      <div className="max-w-full rounded-lg border border-gray-200 overflow-hidden ">
-        <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-200">
-          <span className="text-sm text-gray-700 font-medium truncate">{alt || 'Image'}</span>
+      <div className="max-w-full rounded-lg border  overflow-hidden ">
+        <div className="flex items-center justify-between px-4 py-2 bg-card border-b border-gray-200">
+          <span className="text-sm text-high-emphasis font-medium truncate">{alt || 'Image'}</span>
           <button
             onClick={handleDownload}
-            className="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs bg-white hover:bg-gray-100 border border-gray-300 transition-colors ml-2 flex-shrink-0"
+            className="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs bg-white hover:cursor-pointer border border-gray-300 transition-colors ml-2 flex-shrink-0"
             title="Download image"
           >
             {downloaded ? (
               <>
                 <Check className="h-3.5 w-3.5 text-green-600" />
-                <span className="text-gray-700">Downloaded</span>
+                <span className="text-high-emphasis">Downloaded</span>
               </>
             ) : (
               <>
-                <Download className="h-3.5 w-3.5 text-gray-700" />
-                <span className="text-gray-700">Download</span>
+                <Download className="h-3.5 w-3.5 text-high-emphasis" />
+                <span className="text-high-emphasis">Download</span>
               </>
             )}
           </button>
