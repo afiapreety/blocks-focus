@@ -90,7 +90,6 @@ export const GroupedModelSelector = ({ value, onChange }: GroupedModelSelectorPr
       });
     });
 
-    // Add agents as a provider
     if (agentsData?.agents && agentsData.agents.length > 0) {
       allModels['agents'] = {
         provider: 'agents',
