@@ -56,11 +56,6 @@ export const useAuthStore = create<AuthState>()(
           ...state,
           user,
         })),
-      setSelectedOrgId: (orgId) =>
-        set((state) => ({
-          ...state,
-          selectedOrgId: orgId,
-        })),
       reset: () => set(initialState),
     }),
     {
