@@ -25,9 +25,14 @@ type GroupModel = {
 interface GroupedModelSelectorProps {
   value?: SelectModelType;
   onChange?: (value: SelectModelType) => void;
+  locked?: boolean;
 }
 
-export const GroupedModelSelector = ({ value, onChange }: GroupedModelSelectorProps) => {
+export const GroupedModelSelector = ({
+  value,
+  onChange,
+  locked = false,
+}: GroupedModelSelectorProps) => {
   const [open, setOpen] = useState(false);
   const { t } = useTranslation();
   const [selectedProvider, setSelectedProvider] = useState<GroupModel | null>(null);
@@ -109,6 +114,7 @@ export const GroupedModelSelector = ({ value, onChange }: GroupedModelSelectorPr
   }, [customModels, blocksModels, agentsData]);
 
   const handleOpenChange = (newOpen: boolean) => {
+    if (locked) return;
     setOpen(newOpen);
     if (newOpen && !selectedProvider && Object.keys(groupedModels).length > 0) {
       setSelectedProvider(groupedModels[Object.keys(groupedModels)[0]]);
@@ -186,7 +192,12 @@ export const GroupedModelSelector = ({ value, onChange }: GroupedModelSelectorPr
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-[220px] h-11 justify-between bg-card/50 hover:bg-card border-border transition-all duration-200 rounded-xl px-3 group"
+          disabled={locked}
+          className={cn(
+            'w-[220px] h-11 justify-between bg-card/50 border-border transition-all duration-200 rounded-xl px-3 group',
+            !locked && 'hover:bg-card',
+            locked && 'cursor-not-allowed opacity-70'
+          )}
         >
           <div className="flex items-center gap-2.5 flex-1 min-w-0">
             <div

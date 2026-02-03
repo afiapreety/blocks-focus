@@ -36,6 +36,7 @@ export const GptChatInput = ({
   const [message, setMessage] = useState('');
   const { state } = useSidebar();
   const { t } = useTranslation();
+  const isAgentChat = selectedModel?.provider === 'agents';
 
   const onMessageHandler = () => {
     onSendMessage(message);
@@ -90,18 +91,24 @@ export const GptChatInput = ({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div>
-                    <GroupedModelSelector value={selectedModel} onChange={onModelChange} />
+                    <GroupedModelSelector
+                      value={selectedModel}
+                      onChange={onModelChange}
+                      locked={isAgentChat}
+                    />
                   </div>
                 </TooltipTrigger>
               </Tooltip>
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <ToolsSelector value={selectedTools} onChange={onToolsChange} />
-                  </div>
-                </TooltipTrigger>
-              </Tooltip>
+              {!isAgentChat && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <ToolsSelector value={selectedTools} onChange={onToolsChange} />
+                    </div>
+                  </TooltipTrigger>
+                </Tooltip>
+              )}
             </div>
           </div>
         </div>
