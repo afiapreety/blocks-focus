@@ -42,6 +42,7 @@ import {
 import { useCategorizedChatHistories } from '@/modules/gpt-chats/hooks/use-chat-history-categories';
 import { useGetAgents } from '@/modules/gpt-chats/hooks/use-agents';
 import { AgentChatAccordion } from '@/modules/gpt-chats/components/agent-chat/agent-chat-accordion';
+import { cn } from '@/lib/utils';
 
 const projectKey = import.meta.env.VITE_X_BLOCKS_KEY || '';
 const projectSlug = import.meta.env.VITE_PROJECT_SLUG || '';
@@ -391,8 +392,8 @@ export const AppSidebar = () => {
           />
         </SidebarHeader>
 
-        <SidebarContent className="text-base px-3 py-2 text-high-emphasis font-normal overflow-x-hidden ">
-          <div>
+        <SidebarContent className="text-base px-3 py-2 text-high-emphasis font-normal overflow-x-hidden">
+          <div className="mb-4 pb-4 border-b border-border/50">
             <div>
               {filteredMenuItems.map((item) => (
                 <Button
@@ -404,7 +405,7 @@ export const AppSidebar = () => {
                     }
                   }}
                   variant="ghost"
-                  className={`gap-3 justify-start hover:bg-accent/50 mb-0 mt-4 px-3 w-full ${
+                  className={` justify-start hover:bg-accent/50 mb-0 mt-4 px-3 w-full ${
                     pathname === item.path ? 'bg-accent/50' : ''
                   }`}
                 >
@@ -413,38 +414,43 @@ export const AppSidebar = () => {
                 </Button>
               ))}
             </div>
-            <Button
-              onClick={handleNewChat}
-              variant="ghost"
-              className="mb-10  gap-3 justify-start hover:bg-accent/50 px-3 w-full"
-            >
-              <PenSquare className="h-5 w-5" />
-              <span className="font-normal">{t('NEW_CHAT')}</span>
-            </Button>
+            <div>
+              <Button
+                onClick={handleNewChat}
+                variant="outline"
+                className={cn('w-full justify-center  px-4  h-auto mt-4')}
+              >
+                <PenSquare className="h-4 w-4 flex-shrink-0" />
+                <span>{t('NEW_CHAT')}</span>
+              </Button>
+            </div>
           </div>
 
-          <Accordion type="multiple" defaultValue={['agent-chats', 'model-chats']}>
-            {/* Chat with AI Agents */}
-            <AccordionItem value="agent-chats" className="border-none">
-              <AccordionTrigger className="hover:no-underline justify-start gap-1 px-2 [&[data-state=closed]>svg]:-rotate-90 [&[data-state=open]>svg]:rotate-0">
-                <div className="flex items-center justify-between w-full pr-2">
-                  <span className="font-semibold">{t('CHATS_WITH_AGENTS')}</span>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="overflow-visible  pb-2">
-                {!agentsData?.agents || agentsData.agents.length === 0 ? (
-                  <div className="text-center py-4 px-4">
-                    <Bot className="h-10 w-10 text-muted-foreground/50 mx-auto mb-3" />
-                    <p className="text-sm text-muted-foreground font-medium">
-                      {t('NO_AGENTS_AVAILABLE')}
-                    </p>
-                    <p className="text-xs text-muted-foreground/70 mt-1">
-                      Create an agent to get started
-                    </p>
+          <div className="flex-1 overflow-hidden">
+            <Accordion
+              type="multiple"
+              defaultValue={['agent-chats', 'model-chats']}
+              className="space-y-2"
+            >
+              <AccordionItem value="agent-chats" className="border-none">
+                <AccordionTrigger className="hover:no-underline justify-start gap-1 px-2 py-2 [&[data-state=closed]>svg]:-rotate-90 [&[data-state=open]>svg]:rotate-0 hover:bg-accent/30 rounded-md">
+                  <div className="flex items-center justify-between w-full pr-2">
+                    <span className="font-semibold text-sm">{t('CHATS_WITH_AGENTS')}</span>
                   </div>
-                ) : (
-                  <div className="space-y-0.5 mt-2">
-                    <Accordion type="multiple" className="space-y-0.5">
+                </AccordionTrigger>
+                <AccordionContent className="overflow-visible pb-1 pt-1">
+                  {!agentsData?.agents || agentsData.agents.length === 0 ? (
+                    <div className="text-center py-6 px-4">
+                      <Bot className="h-8 w-8 text-muted-foreground/50 mx-auto mb-2" />
+                      <p className="text-xs text-muted-foreground font-medium">
+                        {t('NO_AGENTS_AVAILABLE')}
+                      </p>
+                      <p className="text-xs text-muted-foreground/70 mt-1">
+                        Create an agent to get started
+                      </p>
+                    </div>
+                  ) : (
+                    <Accordion type="multiple" className="space-y-1">
                       {agentsData.agents.map((agent: any) => (
                         <AgentChatAccordion
                           key={agent.id}
@@ -455,50 +461,50 @@ export const AppSidebar = () => {
                         />
                       ))}
                     </Accordion>
+                  )}
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* Chat with AI Models */}
+              <AccordionItem value="model-chats" className="border-none">
+                <AccordionTrigger className="hover:no-underline justify-start gap-1 px-2 py-2 [&[data-state=closed]>svg]:-rotate-90 [&[data-state=open]>svg]:rotate-0 hover:bg-accent/30 rounded-md">
+                  <div className="flex items-center justify-between w-full pr-2">
+                    <span className="font-semibold text-sm">{t('YOUR_CHATS')}</span>
+                    <span className="text-xs text-muted-foreground font-normal">
+                      {chatList.length}
+                    </span>
                   </div>
-                )}
-              </AccordionContent>
-            </AccordionItem>
+                </AccordionTrigger>
+                <AccordionContent className="overflow-visible pb-1 pt-1" ref={accordionContentRef}>
+                  {chatList.length === 0 ? (
+                    <p className="text-xs text-muted-foreground py-2 px-2">
+                      {t('NO_CHATS_AVAILABLE')}
+                    </p>
+                  ) : (
+                    <div
+                      ref={chatListContainerRef}
+                      className="overflow-y-auto overflow-x-visible pr-1 space-y-4"
+                      style={{ maxHeight: 'calc(100vh - 340px)' }}
+                    >
+                      {renderChatCategory(categorizedChats.today, 'TODAY')}
+                      {renderChatCategory(categorizedChats.yesterday, 'YESTERDAY')}
+                      {renderChatCategory(categorizedChats.previous7Days, 'PREVIOUS_7_DAYS')}
+                      {renderChatCategory(categorizedChats.previous30Days, 'PREVIOUS_30_DAYS')}
+                      {renderChatCategory(categorizedChats.older, 'OLDER')}
 
-            {/* Chat with AI Models */}
-            <AccordionItem value="model-chats" className="border-none mt-2">
-              <AccordionTrigger className="hover:no-underline justify-start gap-1 px-2 [&[data-state=closed]>svg]:-rotate-90 [&[data-state=open]>svg]:rotate-0">
-                <div className="flex items-center justify-between w-full pr-2">
-                  <span className="font-semibold">{t('YOUR_CHATS')}</span>
-                  <span className="text-xs text-muted-foreground font-normal">
-                    {chatList.length}
-                  </span>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="overflow-visible" ref={accordionContentRef}>
-                {chatList.length === 0 ? (
-                  <p className="text-sm text-muted-foreground mt-2 px-2">
-                    {t('NO_CHATS_AVAILABLE')}
-                  </p>
-                ) : (
-                  <div
-                    ref={chatListContainerRef}
-                    className="overflow-y-auto overflow-x-visible pr-1 space-y-6 mt-2"
-                    style={{ maxHeight: 'calc(100vh - 280px)' }}
-                  >
-                    {renderChatCategory(categorizedChats.today, 'TODAY')}
-                    {renderChatCategory(categorizedChats.yesterday, 'YESTERDAY')}
-                    {renderChatCategory(categorizedChats.previous7Days, 'PREVIOUS_7_DAYS')}
-                    {renderChatCategory(categorizedChats.previous30Days, 'PREVIOUS_30_DAYS')}
-                    {renderChatCategory(categorizedChats.older, 'OLDER')}
+                      {hasNextPage && <div ref={loadMoreRef} className="h-20 w-full" />}
 
-                    {hasNextPage && <div ref={loadMoreRef} className="h-20 w-full" />}
-
-                    {isFetchingNextPage && (
-                      <div className="flex items-center justify-center py-4">
-                        <Loader className="w-5 h-5 text-muted-foreground animate-spin" />
-                      </div>
-                    )}
-                  </div>
-                )}
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
+                      {isFetchingNextPage && (
+                        <div className="flex items-center justify-center py-4">
+                          <Loader className="w-5 h-5 text-muted-foreground animate-spin" />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </div>
         </SidebarContent>
       </Sidebar>
 
