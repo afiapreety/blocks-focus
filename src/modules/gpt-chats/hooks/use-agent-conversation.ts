@@ -14,6 +14,7 @@ export const useGetAgentConversationList = (
       return agentConversationService.getAgentConversationList({
         ...payload,
         // is_minimal: false,
+        allow_created_by_filter: true,
         limit: 20,
         offset: pageParam * 1,
       });
