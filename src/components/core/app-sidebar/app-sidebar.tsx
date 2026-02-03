@@ -60,19 +60,16 @@ export const AppSidebar = () => {
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const filteredMenuItems = useFilteredMenu(menuItems);
 
-  // Refs for model chats
   const accordionContentRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const chatListContainerRef = useRef<HTMLDivElement>(null);
 
-  // Get model conversations
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useGetConversations({
     allow_created_by_filter: true,
     call_from: projectSlug,
     project_key: projectKey,
   });
 
-  // Get list of agents
   const { data: agentsData } = useGetAgents({
     limit: 100,
     offset: 0,
@@ -419,7 +416,7 @@ export const AppSidebar = () => {
             <Button
               onClick={handleNewChat}
               variant="ghost"
-              className="mb-10 gap-3 justify-start hover:bg-accent/50 px-3 w-full"
+              className="mb-10  gap-3 justify-start hover:bg-accent/50 px-3 w-full"
             >
               <PenSquare className="h-5 w-5" />
               <span className="font-normal">{t('NEW_CHAT')}</span>
@@ -427,19 +424,16 @@ export const AppSidebar = () => {
           </div>
 
           <Accordion type="multiple" defaultValue={['agent-chats', 'model-chats']}>
-            {/* Chat with AI Agents - Now at the top */}
+            {/* Chat with AI Agents */}
             <AccordionItem value="agent-chats" className="border-none">
               <AccordionTrigger className="hover:no-underline justify-start gap-1 px-2 [&[data-state=closed]>svg]:-rotate-90 [&[data-state=open]>svg]:rotate-0">
                 <div className="flex items-center justify-between w-full pr-2">
                   <span className="font-semibold">{t('CHATS_WITH_AGENTS')}</span>
-                  <span className="text-xs text-muted-foreground font-normal tabular-nums">
-                    {agentsData?.agents?.length || 0}
-                  </span>
                 </div>
               </AccordionTrigger>
-              <AccordionContent className="overflow-visible pb-2">
+              <AccordionContent className="overflow-visible  pb-2">
                 {!agentsData?.agents || agentsData.agents.length === 0 ? (
-                  <div className="text-center py-8 px-4">
+                  <div className="text-center py-4 px-4">
                     <Bot className="h-10 w-10 text-muted-foreground/50 mx-auto mb-3" />
                     <p className="text-sm text-muted-foreground font-medium">
                       {t('NO_AGENTS_AVAILABLE')}
@@ -453,11 +447,9 @@ export const AppSidebar = () => {
                     <Accordion type="multiple" className="space-y-0.5">
                       {agentsData.agents.map((agent: any) => (
                         <AgentChatAccordion
-                          key={agent.agent_key || agent.id}
+                          key={agent.id}
                           agent={agent}
                           chatId={chatId}
-                          renderChatItem={renderChatItem}
-                          renderChatCategory={renderChatCategory}
                           isMobile={isMobile}
                           setOpenMobile={setOpenMobile}
                         />
@@ -472,7 +464,7 @@ export const AppSidebar = () => {
             <AccordionItem value="model-chats" className="border-none mt-2">
               <AccordionTrigger className="hover:no-underline justify-start gap-1 px-2 [&[data-state=closed]>svg]:-rotate-90 [&[data-state=open]>svg]:rotate-0">
                 <div className="flex items-center justify-between w-full pr-2">
-                  <span className="font-semibold">{t('CHATS_WITH_MODELS')}</span>
+                  <span className="font-semibold">{t('YOUR_CHATS')}</span>
                   <span className="text-xs text-muted-foreground font-normal">
                     {chatList.length}
                   </span>

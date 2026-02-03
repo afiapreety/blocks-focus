@@ -1,18 +1,18 @@
-import { useRef, useEffect, useMemo } from 'react';
+import { useRef, useEffect, useMemo, useState } from 'react';
 import { Bot, ChevronRight, Loader, Plus } from 'lucide-react';
 import { AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui-kit/accordion';
 import { useGetAgentConversationList } from '../../hooks/use-agent-conversation';
 import { useCategorizedChatHistories } from '../../hooks/use-chat-history-categories';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
+import { Agent } from '../../types/agent.service.type';
+import { useSidebar } from '@/components/ui-kit/sidebar';
 
 const projectKey = import.meta.env.VITE_X_BLOCKS_KEY || '';
 
 interface AgentChatAccordionProps {
-  agent: any;
+  agent: Agent;
   chatId?: string;
-  renderChatItem: (chat: any) => React.ReactNode;
-  renderChatCategory: (chats: any[], categoryKey: string) => React.ReactNode;
   isMobile: boolean;
   setOpenMobile: (open: boolean) => void;
 }
@@ -23,28 +23,14 @@ export const AgentChatAccordion = ({
   isMobile,
   setOpenMobile,
 }: AgentChatAccordionProps) => {
-  const agentId = agent.agent_key || agent.id;
-  const agentName = agent.agent_name || agent.name || 'Unnamed Agent';
+  const agentId = agent.id;
+  const agentName = agent.name || 'Unnamed Agent';
   const widgetId = agent.widget_id;
+  const logo = agent.logo_url;
   const navigate = useNavigate();
+  const { openMobile } = useSidebar();
 
-  const renderAgentChatItem = (chat: any) => (
-    <div
-      key={chat.id}
-      className={`rounded-lg hover:bg-accent/100 cursor-pointer flex justify-between items-center h-fit group/item px-2 py-1 transition-colors ${
-        chatId === chat.id ? 'bg-accent/100' : ''
-      }`}
-      onClick={() => {
-        navigate(`/chat/${chat.id}?agent=${agentId}&widget=${widgetId}`);
-        if (isMobile) {
-          setOpenMobile(false);
-        }
-      }}
-      role="button"
-    >
-      <span className="text-sm text-high-emphasis truncate block flex-1 pr-2">{chat.title}</span>
-    </div>
-  );
+  const [isAccordionOpen, setIsAccordionOpen] = useState(false);
 
   const agentChatListContainerRef = useRef<HTMLDivElement>(null);
   const agentLoadMoreRef = useRef<HTMLDivElement>(null);
@@ -94,6 +80,35 @@ export const AgentChatAccordion = ({
 
   const categorizedAgentChats = useCategorizedChatHistories(agentChatList);
 
+  const renderAgentChatItem = (chat: any) => (
+    <div
+      key={chat.id}
+      className={`rounded-lg hover:bg-accent/100 cursor-pointer flex justify-between items-center h-fit group/item px-2 py-1 transition-colors ${
+        chatId === chat.id ? 'bg-accent/100' : ''
+      }`}
+      onClick={() => {
+        navigate(`/chat/${chat.id}?agent=${agentId}&widget=${widgetId}`);
+        if (isMobile) {
+          setOpenMobile(false);
+        }
+      }}
+      role="button"
+    >
+      <span className="text-sm text-high-emphasis truncate block flex-1 pr-2">{chat.title}</span>
+    </div>
+  );
+
+  const renderAgentChatCategory = (chats: typeof agentChatList, categoryKey: string) => {
+    if (chats.length === 0) return null;
+
+    return (
+      <div>
+        <h3 className="text-xs font-semibold text-muted-foreground mb-2 px-2">{categoryKey}</h3>
+        <div className="space-y-1">{chats.map((chat) => renderAgentChatItem(chat))}</div>
+      </div>
+    );
+  };
+
   const handleNewAgentChat = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
@@ -116,7 +131,15 @@ export const AgentChatAccordion = ({
   };
 
   useEffect(() => {
-    const setupAgentObserver = () => {
+    if (!isAccordionOpen) {
+      return;
+    }
+
+    if (isMobile && !openMobile) {
+      return;
+    }
+
+    const setupObserver = () => {
       const currentLoadMoreRef = agentLoadMoreRef.current;
       const scrollContainer = agentChatListContainerRef.current;
 
@@ -143,7 +166,7 @@ export const AgentChatAccordion = ({
       return observer;
     };
 
-    let observer = setupAgentObserver();
+    let observer = setupObserver();
     const timeouts: NodeJS.Timeout[] = [];
 
     if (!observer) {
@@ -151,7 +174,7 @@ export const AgentChatAccordion = ({
       delays.forEach((delay) => {
         const timeout = setTimeout(() => {
           if (!observer) {
-            observer = setupAgentObserver();
+            observer = setupObserver();
           }
         }, delay);
         timeouts.push(timeout);
@@ -170,10 +193,20 @@ export const AgentChatAccordion = ({
     fetchNextAgentPage,
     agentChatList.length,
     isMobile,
+    openMobile,
+    isAccordionOpen,
   ]);
 
   useEffect(() => {
-    const setupAgentScrollListener = () => {
+    if (!isAccordionOpen) {
+      return;
+    }
+
+    if (isMobile && !openMobile) {
+      return;
+    }
+
+    const setupScrollListener = () => {
       const scrollContainer = agentChatListContainerRef.current;
 
       if (!scrollContainer) {
@@ -198,7 +231,7 @@ export const AgentChatAccordion = ({
       };
     };
 
-    let cleanup = setupAgentScrollListener();
+    let cleanup = setupScrollListener();
     const timeouts: NodeJS.Timeout[] = [];
 
     if (!cleanup) {
@@ -206,7 +239,7 @@ export const AgentChatAccordion = ({
       delays.forEach((delay) => {
         const timeout = setTimeout(() => {
           if (!cleanup) {
-            cleanup = setupAgentScrollListener();
+            cleanup = setupScrollListener();
           }
         }, delay);
         timeouts.push(timeout);
@@ -219,7 +252,14 @@ export const AgentChatAccordion = ({
       }
       timeouts.forEach(clearTimeout);
     };
-  }, [hasNextAgentPage, isFetchingNextAgentPage, fetchNextAgentPage, isMobile]);
+  }, [
+    hasNextAgentPage,
+    isFetchingNextAgentPage,
+    fetchNextAgentPage,
+    isMobile,
+    openMobile,
+    isAccordionOpen,
+  ]);
 
   return (
     <AccordionItem value={agentId} className="border-none">
@@ -231,9 +271,18 @@ export const AgentChatAccordion = ({
           '[&>svg]:hidden',
           'w-full min-w-0'
         )}
+        onClick={() => setIsAccordionOpen(!isAccordionOpen)}
       >
         <div className="flex items-center w-full min-w-0 gap-2">
-          <Bot className="h-4 w-4 text-primary flex-shrink-0" />
+          {logo ? (
+            <img
+              src={logo}
+              alt={agentName}
+              className="h-4 w-4 flex-shrink-0 rounded-sm object-cover"
+            />
+          ) : (
+            <Bot className="h-4 w-4 text-primary flex-shrink-0" />
+          )}
 
           <span className="text-sm font-medium truncate flex-1 min-w-0 text-left" title={agentName}>
             {agentName}
@@ -267,59 +316,20 @@ export const AgentChatAccordion = ({
         ) : (
           <div
             ref={agentChatListContainerRef}
-            className="overflow-y-auto overflow-x-visible space-y-4 pl-1"
+            className="overflow-y-auto overflow-x-visible pr-1 space-y-6 mt-2"
             style={{ maxHeight: 'calc(100vh - 400px)' }}
           >
-            {categorizedAgentChats.today.length > 0 && (
-              <div>
-                <h3 className="text-xs font-semibold text-muted-foreground mb-2 px-2">TODAY</h3>
-                <div className="space-y-1">
-                  {categorizedAgentChats.today.map(renderAgentChatItem)}
-                </div>
-              </div>
-            )}
-            {categorizedAgentChats.yesterday.length > 0 && (
-              <div>
-                <h3 className="text-xs font-semibold text-muted-foreground mb-2 px-2">YESTERDAY</h3>
-                <div className="space-y-1">
-                  {categorizedAgentChats.yesterday.map(renderAgentChatItem)}
-                </div>
-              </div>
-            )}
-            {categorizedAgentChats.previous7Days.length > 0 && (
-              <div>
-                <h3 className="text-xs font-semibold text-muted-foreground mb-2 px-2">
-                  PREVIOUS 7 DAYS
-                </h3>
-                <div className="space-y-1">
-                  {categorizedAgentChats.previous7Days.map(renderAgentChatItem)}
-                </div>
-              </div>
-            )}
-            {categorizedAgentChats.previous30Days.length > 0 && (
-              <div>
-                <h3 className="text-xs font-semibold text-muted-foreground mb-2 px-2">
-                  PREVIOUS 30 DAYS
-                </h3>
-                <div className="space-y-1">
-                  {categorizedAgentChats.previous30Days.map(renderAgentChatItem)}
-                </div>
-              </div>
-            )}
-            {categorizedAgentChats.older.length > 0 && (
-              <div>
-                <h3 className="text-xs font-semibold text-muted-foreground mb-2 px-2">OLDER</h3>
-                <div className="space-y-1">
-                  {categorizedAgentChats.older.map(renderAgentChatItem)}
-                </div>
-              </div>
-            )}
+            {renderAgentChatCategory(categorizedAgentChats.today, 'TODAY')}
+            {renderAgentChatCategory(categorizedAgentChats.yesterday, 'YESTERDAY')}
+            {renderAgentChatCategory(categorizedAgentChats.previous7Days, 'PREVIOUS 7 DAYS')}
+            {renderAgentChatCategory(categorizedAgentChats.previous30Days, 'PREVIOUS 30 DAYS')}
+            {renderAgentChatCategory(categorizedAgentChats.older, 'OLDER')}
 
-            {hasNextAgentPage && <div ref={agentLoadMoreRef} className="h-10 w-full" />}
+            {hasNextAgentPage && <div ref={agentLoadMoreRef} className="h-20 w-full" />}
 
             {isFetchingNextAgentPage && (
-              <div className="flex items-center justify-center py-3">
-                <Loader className="w-4 h-4 text-muted-foreground animate-spin" />
+              <div className="flex items-center justify-center py-4">
+                <Loader className="w-5 h-5 text-muted-foreground animate-spin" />
               </div>
             )}
           </div>
