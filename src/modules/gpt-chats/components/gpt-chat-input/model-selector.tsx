@@ -26,12 +26,14 @@ interface GroupedModelSelectorProps {
   value?: SelectModelType;
   onChange?: (value: SelectModelType) => void;
   locked?: boolean;
+  isAgentChat?: boolean;
 }
 
 export const GroupedModelSelector = ({
   value,
   onChange,
   locked = false,
+  isAgentChat = false,
 }: GroupedModelSelectorProps) => {
   const [open, setOpen] = useState(false);
   const { t } = useTranslation();
@@ -113,11 +115,19 @@ export const GroupedModelSelector = ({
     return allModels;
   }, [customModels, blocksModels, agentsData]);
 
+  const filteredModels = useMemo(() => {
+    if (isAgentChat) return groupedModels;
+
+    const filtered = { ...groupedModels };
+    delete filtered['agents'];
+    return filtered;
+  }, [groupedModels, isAgentChat]);
+
   const handleOpenChange = (newOpen: boolean) => {
     if (locked) return;
     setOpen(newOpen);
-    if (newOpen && !selectedProvider && Object.keys(groupedModels).length > 0) {
-      setSelectedProvider(groupedModels[Object.keys(groupedModels)[0]]);
+    if (newOpen && !selectedProvider && Object.keys(filteredModels).length > 0) {
+      setSelectedProvider(filteredModels[Object.keys(filteredModels)[0]]);
       setMobileView('providers');
     }
   };
@@ -246,12 +256,12 @@ export const GroupedModelSelector = ({
 
             <div className="flex-1 overflow-y-auto">
               <div className="p-2 space-y-1">
-                {Object.values(groupedModels).length === 0 ? (
+                {Object.values(filteredModels).length === 0 ? (
                   <div className="p-4 text-center text-sm text-muted-foreground">
                     No providers available
                   </div>
                 ) : (
-                  Object.values(groupedModels).map((group) => {
+                  Object.values(filteredModels).map((group) => {
                     const groupConfig = getProviderConfig(group.provider);
                     const GroupIcon = groupConfig.icon;
                     const isProviderSelected = selectedProvider?.provider === group.provider;
@@ -375,7 +385,7 @@ export const GroupedModelSelector = ({
                 <div className="text-center space-y-2">
                   <p className="text-sm font-medium text-muted-foreground">Select a provider</p>
                   <p className="text-xs text-muted-foreground/60">
-                    Choose from the {Object.keys(groupedModels).length} providers available
+                    Choose from the {Object.keys(filteredModels).length} providers available
                   </p>
                 </div>
               </div>

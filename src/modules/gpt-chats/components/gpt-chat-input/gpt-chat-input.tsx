@@ -30,7 +30,6 @@ export const GptChatInput = ({
   onModelChange,
   selectedTools,
   onToolsChange,
-  className,
   variant = 'default',
 }: GptChatInputProps) => {
   const [message, setMessage] = useState('');
@@ -47,12 +46,11 @@ export const GptChatInput = ({
     <div
       className={cn(
         'fixed bottom-0 left-0 right-0 z-10 transition-all duration-300',
-        state === 'collapsed' ? 'md:ml-16' : 'md:ml-60',
-        className
+        state === 'collapsed' ? 'md:ml-16 lg:ml-16 xl:ml-16' : 'md:ml-64 lg:ml-64 xl:ml-60'
       )}
     >
       <div
-        className={`w-full mx-auto rounded-3xl pb-4 border-x-0 max-w-4xl xl:max-w-5xl ${
+        className={`w-full mx-auto px-4 rounded-3xl pb-4 border-x-0 max-w-4xl xl:max-w-5xl ${
           variant === 'chat-details' ? ' bg-background backdrop-blur-3xl' : ''
         }`}
       >
@@ -95,6 +93,7 @@ export const GptChatInput = ({
                       value={selectedModel}
                       onChange={onModelChange}
                       locked={isAgentChat}
+                      isAgentChat={isAgentChat}
                     />
                   </div>
                 </TooltipTrigger>
