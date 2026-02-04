@@ -299,6 +299,10 @@ export const handleSSEMessage = (
       const currentChat = useChatStore.getState().chats[chatId];
       const lastConversation = currentChat?.conversations?.[currentChat.conversations.length - 1];
 
+      const hasImageSkeleton =
+        lastConversation?.type === 'bot' &&
+        lastConversation?.message?.includes(':::image-skeleton');
+
       const hasExistingBotMessage =
         currentChat?.conversations?.length > 0 && lastConversation?.type === 'bot';
 
@@ -325,14 +329,22 @@ export const handleSSEMessage = (
           }
         });
 
-        if (!hasExistingBotMessage) {
-          initiateBotMessage(chatId, '');
+        const displayImage = () => {
+          if (!hasExistingBotMessage) {
+            initiateBotMessage(chatId, '');
+          } else {
+            startBotMessage(chatId, '');
+          }
+          streamBotMessage(chatId, contentWithImages);
+          if (setSuggestions) setSuggestions(data.next_step_questions || []);
+          endBotMessage(chatId);
+        };
+
+        if (hasImageSkeleton) {
+          setTimeout(displayImage, 300);
         } else {
-          startBotMessage(chatId, '');
+          displayImage();
         }
-        streamBotMessage(chatId, contentWithImages);
-        if (setSuggestions) setSuggestions(data.next_step_questions || []);
-        endBotMessage(chatId);
       } else {
         if (!hasExistingBotMessage) {
           initiateBotMessage(chatId, '');
