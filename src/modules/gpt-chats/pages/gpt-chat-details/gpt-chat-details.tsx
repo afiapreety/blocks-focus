@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui-kit/button';
 import { Clipboard, Check, Zap } from 'lucide-react';
 import {
@@ -42,7 +42,7 @@ const getFullTimestamp = (timestamp: string) => {
 };
 
 const ThinkingIndicator = () => (
-  <div className="flex gap-4 animate-in fade-in duration-300 items-start ml-1">
+  <div className="flex gap-4 items-start ml-1 min-h-[48px] transition-all duration-500 ease-in-out animate-in fade-in slide-in-from-bottom-2">
     <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
       <img src={botLogoSELISEAI} alt="bot" className="h-5 w-5" />
     </div>
@@ -71,7 +71,7 @@ const ThinkingIndicator = () => (
 );
 
 const ChatEventMessageIndicator = ({ message }: { message: string }) => (
-  <div className="flex gap-4 animate-in fade-in duration-300 items-start ml-1">
+  <div className="flex gap-4 items-start ml-1 min-h-[48px] transition-all duration-500 ease-in-out animate-in fade-in slide-in-from-bottom-2">
     <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
       <img src={botLogoSELISEAI} alt="bot" className="h-5 w-5" />
     </div>
@@ -83,6 +83,9 @@ const ChatEventMessageIndicator = ({ message }: { message: string }) => (
 
 export const GptChatPageDetails = () => {
   const { chatId } = useParams();
+  const [searchParams] = useSearchParams();
+  const agentId = searchParams.get('agent');
+  const widgetId = searchParams.get('widget');
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { data } = useGetAccount();
@@ -100,11 +103,28 @@ export const GptChatPageDetails = () => {
     currentEvent,
   } = useChatSSE({
     chatId,
+    agentId,
+    widgetId,
   });
 
+  // useEffect(() => {
+  //   const timeoutId = setTimeout(() => {
+  //     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  //   }, 100);
+
+  //   return () => clearTimeout(timeoutId);
+  // }, [conversations]);
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [conversations, isBotThinking]);
+    const behavior = isBotStreaming ? 'auto' : 'smooth';
+    const delay = isBotStreaming ? 10 : 100;
+
+    const timeoutId = setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior });
+    }, delay);
+
+    return () => clearTimeout(timeoutId);
+  }, [conversations, isBotStreaming]);
 
   const handleSendMessage = (message: string) => {
     if (!message.trim()) return;
@@ -160,7 +180,7 @@ export const GptChatPageDetails = () => {
             {conversations.map((msg, index) => (
               <div
                 key={index}
-                className={`flex gap-4 ${msg.type === 'user' ? 'justify-end' : 'justify-start'} ${msg.type === 'bot' ? 'items-start' : ''}`}
+                className={`flex gap-4 ${msg.type === 'user' ? 'justify-end' : 'justify-start'} ${msg.type === 'bot' ? 'items-start ml-1' : ''} ${msg.type === 'bot' && !msg.streaming ? 'animate-in fade-in duration-700 ease-in-out' : ''}`}
               >
                 {msg.type === 'bot' && (
                   <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
@@ -169,7 +189,7 @@ export const GptChatPageDetails = () => {
                 )}
 
                 <div
-                  className={`group flex-1 relative ${msg.type === 'user' ? 'flex justify-end' : ''}`}
+                  className={`group flex-1 relative ${msg.type === 'user' ? 'flex justify-end' : ''} ${msg.type === 'bot' ? 'min-h-[48px]' : ''}`}
                 >
                   <div
                     className={`max-w-[90%] py-1 ${msg.type === 'user' && 'bg-accent rounded px-5'}`}
@@ -272,11 +292,28 @@ export const GptChatPageDetails = () => {
               </div>
             ))}
 
-            {isBotThinking && currentEvent && (
-              <ChatEventMessageIndicator message={currentEvent.message} />
-            )}
+            {isBotThinking &&
+              (() => {
+                const lastConversation = conversations[conversations.length - 1];
+                const hasImageSkeleton =
+                  lastConversation?.type === 'bot' &&
+                  lastConversation?.message?.includes(':::image-skeleton');
 
-            {isBotThinking && !currentEvent && <ThinkingIndicator />}
+                if (hasImageSkeleton) return null;
+
+                return (
+                  <div
+                    key="thinking-indicator"
+                    className="animate-in fade-in duration-700 ease-in-out"
+                  >
+                    {currentEvent ? (
+                      <ChatEventMessageIndicator message={currentEvent.message} />
+                    ) : (
+                      <ThinkingIndicator />
+                    )}
+                  </div>
+                );
+              })()}
 
             <div ref={messagesEndRef} />
           </div>

@@ -302,3 +302,15 @@ export const signinByEmail = (payload: SigninEmailPayload): Promise<SigninEmailR
     'Content-Type': 'application/x-www-form-urlencoded',
   });
 };
+
+export const switchOrganization = async (orgId: string): Promise<MFASigninResponse> => {
+  const url = '/idp/v1/Authentication/Token';
+  const formData = new URLSearchParams();
+  formData.append('grant_type', 'switch_organization');
+  formData.append('refresh_token', useAuthStore.getState().refreshToken ?? '');
+  formData.append('org_id', orgId);
+
+  return clients.post(url, formData, {
+    'Content-Type': 'application/x-www-form-urlencoded',
+  });
+};

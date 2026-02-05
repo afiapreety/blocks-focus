@@ -14,6 +14,8 @@ import { useLanguageContext } from '@/i18n/language-context';
 import { LoadingOverlay } from '@/components/core';
 import { GptChatPage } from '@/modules/gpt-chats/pages/gpt-chat/gpt-chat';
 import { GptChatPageDetails } from '@/modules/gpt-chats/pages/gpt-chat-details/gpt-chat-details';
+import { ProtectedRoute } from '@/state/store/auth/protected-route';
+import { UsersTablePage } from '@/modules/iam';
 
 export const AppRoutes = () => {
   const { isLoading } = useLanguageContext();
@@ -35,6 +37,14 @@ export const AppRoutes = () => {
                   </Guard>
                 }
               >
+                <Route
+                  path="/users"
+                  element={
+                    <ProtectedRoute roles={['admin']}>
+                      <UsersTablePage />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route path="/profile" element={<ProfilePage />} />
 
                 <Route path="/chat" element={<GptChatPage />} />

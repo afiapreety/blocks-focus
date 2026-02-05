@@ -1,7 +1,7 @@
-//TODO FE: Changes of roles structure only for the dev environment
 export type Membership = {
   organizationId: string;
   roles: string[];
+  permissions: string[];
 };
 
 export type User = {
@@ -15,6 +15,7 @@ export type User = {
   email: string;
   userName: string;
   phoneNumber: string | null;
+  memberships: Membership[];
   roles: string[];
   permissions: string[];
   active: boolean;

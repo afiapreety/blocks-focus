@@ -7,24 +7,34 @@ import { useGetCustomLlmModels, useGetLlmModels } from '@/modules/gpt-chats/hook
 import { formatProviderName, getProviderConfig } from '../../utils/model-selector';
 import { SelectModelType } from '../../hooks/use-chat-store';
 import { useTranslation } from 'react-i18next';
+import { useGetAgents } from '../../hooks/use-agents';
 
 type GroupModel = {
   provider: string;
   label: string;
   isBlocksModels: boolean;
+  isAgents?: boolean;
   models: {
     model: string;
     label: string;
     type: string;
+    widget_id?: string;
   }[];
 };
 
 interface GroupedModelSelectorProps {
   value?: SelectModelType;
   onChange?: (value: SelectModelType) => void;
+  locked?: boolean;
+  isAgentChat?: boolean;
 }
 
-export const GroupedModelSelector = ({ value, onChange }: GroupedModelSelectorProps) => {
+export const GroupedModelSelector = ({
+  value,
+  onChange,
+  locked = false,
+  isAgentChat = false,
+}: GroupedModelSelectorProps) => {
   const [open, setOpen] = useState(false);
   const { t } = useTranslation();
   const [selectedProvider, setSelectedProvider] = useState<GroupModel | null>(null);
@@ -36,6 +46,11 @@ export const GroupedModelSelector = ({ value, onChange }: GroupedModelSelectorPr
     error: customError,
   } = useGetCustomLlmModels();
   const { data: blocksModels, isLoading: isLoadingBlocks, error: blocksError } = useGetLlmModels();
+  const { data: agentsData } = useGetAgents({
+    limit: 100,
+    offset: 0,
+    project_key: import.meta.env.VITE_X_BLOCKS_KEY,
+  });
 
   const isLoading = isLoadingCustom || isLoadingBlocks;
   const hasError = customError && blocksError;
@@ -53,6 +68,7 @@ export const GroupedModelSelector = ({ value, onChange }: GroupedModelSelectorPr
           provider: provider,
           label: formatProviderName(model.provider_label || model.provider),
           isBlocksModels: true,
+          isAgents: false,
           models: [],
         };
       }
@@ -70,6 +86,7 @@ export const GroupedModelSelector = ({ value, onChange }: GroupedModelSelectorPr
           provider: provider,
           label: formatProviderName(model.Provider),
           isBlocksModels: false,
+          isAgents: false,
           models: [],
         };
       }
@@ -80,13 +97,37 @@ export const GroupedModelSelector = ({ value, onChange }: GroupedModelSelectorPr
       });
     });
 
+    if (agentsData?.agents && agentsData.agents.length > 0) {
+      allModels['agents'] = {
+        provider: 'agents',
+        label: 'Agents',
+        isBlocksModels: false,
+        isAgents: true,
+        models: agentsData.agents.map((agent: any) => ({
+          model: agent.agent_key || agent.id,
+          label: agent.agent_name || agent.name,
+          type: 'agent',
+          widget_id: agent.widget_id,
+        })),
+      };
+    }
+
     return allModels;
-  }, [customModels, blocksModels]);
+  }, [customModels, blocksModels, agentsData]);
+
+  const filteredModels = useMemo(() => {
+    if (isAgentChat) return groupedModels;
+
+    const filtered = { ...groupedModels };
+    delete filtered['agents'];
+    return filtered;
+  }, [groupedModels, isAgentChat]);
 
   const handleOpenChange = (newOpen: boolean) => {
+    if (locked) return;
     setOpen(newOpen);
-    if (newOpen && !selectedProvider && Object.keys(groupedModels).length > 0) {
-      setSelectedProvider(groupedModels[Object.keys(groupedModels)[0]]);
+    if (newOpen && !selectedProvider && Object.keys(filteredModels).length > 0) {
+      setSelectedProvider(filteredModels[Object.keys(filteredModels)[0]]);
       setMobileView('providers');
     }
   };
@@ -161,7 +202,12 @@ export const GroupedModelSelector = ({ value, onChange }: GroupedModelSelectorPr
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-[220px] h-11 justify-between bg-card/50 hover:bg-card border-border transition-all duration-200 rounded-xl px-3 group"
+          disabled={locked}
+          className={cn(
+            'w-[220px] h-11 justify-between bg-card/50 border-border transition-all duration-200 rounded-xl px-3 group',
+            !locked && 'hover:bg-card',
+            locked && 'cursor-not-allowed opacity-70'
+          )}
         >
           <div className="flex items-center gap-2.5 flex-1 min-w-0">
             <div
@@ -210,12 +256,12 @@ export const GroupedModelSelector = ({ value, onChange }: GroupedModelSelectorPr
 
             <div className="flex-1 overflow-y-auto">
               <div className="p-2 space-y-1">
-                {Object.values(groupedModels).length === 0 ? (
+                {Object.values(filteredModels).length === 0 ? (
                   <div className="p-4 text-center text-sm text-muted-foreground">
                     No providers available
                   </div>
                 ) : (
-                  Object.values(groupedModels).map((group) => {
+                  Object.values(filteredModels).map((group) => {
                     const groupConfig = getProviderConfig(group.provider);
                     const GroupIcon = groupConfig.icon;
                     const isProviderSelected = selectedProvider?.provider === group.provider;
@@ -282,7 +328,9 @@ export const GroupedModelSelector = ({ value, onChange }: GroupedModelSelectorPr
                     <ArrowLeft className="h-4 w-4" />
                   </Button>
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate flex-1">
-                    {selectedProviderGroup.label} Models ({selectedProviderGroup.models.length})
+                    {selectedProviderGroup.label}{' '}
+                    {selectedProviderGroup.isAgents ? 'Agents' : 'Models'} (
+                    {selectedProviderGroup.models.length})
                   </p>
                 </div>
 
@@ -298,6 +346,7 @@ export const GroupedModelSelector = ({ value, onChange }: GroupedModelSelectorPr
                               isBlocksModels: selectedProviderGroup.isBlocksModels,
                               provider: selectedProviderGroup.provider,
                               model: model.model,
+                              widget_id: model.widget_id,
                             })
                           }
                           className={cn(
@@ -336,7 +385,7 @@ export const GroupedModelSelector = ({ value, onChange }: GroupedModelSelectorPr
                 <div className="text-center space-y-2">
                   <p className="text-sm font-medium text-muted-foreground">Select a provider</p>
                   <p className="text-xs text-muted-foreground/60">
-                    Choose from the {Object.keys(groupedModels).length} providers available
+                    Choose from the {Object.keys(filteredModels).length} providers available
                   </p>
                 </div>
               </div>

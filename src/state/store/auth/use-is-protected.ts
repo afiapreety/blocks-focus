@@ -38,22 +38,26 @@ export const useIsProtected = ({
   permissions = [],
   opt = 'any',
 }: UseIsProtectedOptions = {}) => {
-  const { user, isAuthenticated } = useAuthStore();
+  const { user, isAuthenticated, selectedOrgId } = useAuthStore();
 
   const isProtected = useMemo(() => {
     if (!isAuthenticated || !user) return false;
     if (roles.length === 0 && permissions.length === 0) return false;
 
+    const membership = user.memberships?.find((m) => m.organizationId === selectedOrgId);
+    const userRoles = membership?.roles || user.roles || [];
+    const userPermissions = membership?.permissions || user.permissions || [];
+
     if (opt === 'all') {
-      const hasAllRoles = checkAllRoles(user.roles, roles);
-      const hasAllPermissions = checkAllPermissions(user.permissions, permissions);
+      const hasAllRoles = checkAllRoles(userRoles, roles);
+      const hasAllPermissions = checkAllPermissions(userPermissions, permissions);
       return hasAllRoles && hasAllPermissions;
     }
 
-    const hasAnyRole = checkAnyRole(user.roles, roles);
-    const hasAnyPermission = checkAnyPermission(user.permissions, permissions);
+    const hasAnyRole = checkAnyRole(userRoles, roles);
+    const hasAnyPermission = checkAnyPermission(userPermissions, permissions);
     return hasAnyRole || hasAnyPermission;
-  }, [isAuthenticated, user, roles, permissions, opt]);
+  }, [isAuthenticated, user, selectedOrgId, roles, permissions, opt]);
 
   return {
     isProtected,

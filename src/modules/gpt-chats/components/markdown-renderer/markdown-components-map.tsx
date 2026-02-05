@@ -2,15 +2,26 @@
 // @ts-nocheck
 /* eslint-disable */
 /* eslint-disable @next/next/no-img-element, react/display-name */
+import React from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import dark from 'react-syntax-highlighter/dist/esm/styles/prism/atom-dark';
 import type { Components } from 'react-markdown';
 import { cn } from '@/lib/utils';
-import { Check, Clipboard } from 'lucide-react';
+import { Check, Clipboard, Download } from 'lucide-react';
 import { useState } from 'react';
 
 export const MarkdownComponentsMap: Partial<Components> = {
-  p: (props) => <p className="whitespace-pre-wrap break-words leading-relaxed">{props.children}</p>,
+  p: (props) => {
+    const hasImage = React.Children.toArray(props.children).some(
+      (child) => React.isValidElement(child) && child.props?.src
+    );
+    if (hasImage) {
+      return (
+        <div className="whitespace-pre-wrap break-words leading-relaxed">{props.children}</div>
+      );
+    }
+    return <p className="whitespace-pre-wrap break-words leading-relaxed">{props.children}</p>;
+  },
 
   a: (props) => (
     <a className="text-primary" target="_blank" {...props}>
@@ -107,5 +118,66 @@ export const MarkdownComponentsMap: Partial<Components> = {
 
   pre: (props) => <pre className="overflow-x-auto whitespace-pre-wrap p-0">{props.children}</pre>,
 
-  img: (props) => <img loading="lazy" alt={props.alt} className="h-auto max-w-full" {...props} />,
+  img: ({ src, alt, ...props }) => {
+    const [downloaded, setDownloaded] = useState(false);
+
+    const handleDownload = async () => {
+      if (!src) return;
+
+      try {
+        const response = await fetch(src);
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+
+        // Always download as .png
+        const filename = alt || 'image';
+        link.download = `${filename}.png`;
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+
+        setDownloaded(true);
+        setTimeout(() => setDownloaded(false), 2000);
+      } catch (error) {
+        console.error('Download failed:', error);
+      }
+    };
+    return (
+      <div className="max-w-lg rounded-lg border overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-2 bg-card ">
+          <span className="text-sm text-high-emphasis font-medium truncate">{alt || 'Image'}</span>
+          <button
+            onClick={handleDownload}
+            className="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs bg-white hover:cursor-pointer border border-gray-300 transition-colors ml-2 flex-shrink-0"
+            title="Download image"
+          >
+            {downloaded ? (
+              <>
+                <Check className="h-3.5 w-3.5 text-green-600" />
+                <span className="text-high-emphasis">Downloaded</span>
+              </>
+            ) : (
+              <>
+                <Download className="h-3.5 w-3.5 text-high-emphasis" />
+                <span className="text-high-emphasis">Download</span>
+              </>
+            )}
+          </button>
+        </div>
+        <div className="bg-white">
+          <img
+            loading="lazy"
+            alt={alt}
+            src={src}
+            className="h-auto max-w-[512px] w-full my-0 object-contain"
+            {...props}
+          />
+        </div>
+      </div>
+    );
+  },
 };

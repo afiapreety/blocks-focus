@@ -1,10 +1,12 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import type { QueryClient } from '@tanstack/react-query';
 import { Conversation } from '../types/conversation.service.type';
 import { conversationService } from '../services/conversation.service';
 import { parseSSEBuffer } from '../utils/parse-sse';
 import { handleSSEMessage } from '../utils/sse-message-handler';
 import { NavigateFunction } from 'react-router-dom';
+import { agentService } from '../services/agent.service';
 
 const projectSlug = import.meta.env.VITE_PROJECT_SLUG || '';
 const llmBasePrompt = import.meta.env.VITE_LLM_BASE_PROMPT || 'You are a helpful AI assistant.';
@@ -17,6 +19,7 @@ export type SelectModelType = {
   isBlocksModels: boolean;
   provider: string;
   model: string;
+  widget_id?: string;
 };
 
 interface ChatMessage {
@@ -26,6 +29,9 @@ interface ChatMessage {
   timestamp: string;
   metadata?: {
     tool_calls_made?: number;
+  };
+  tokenUsage?: {
+    model_name?: string;
   };
 }
 
@@ -68,9 +74,16 @@ interface ChatStore {
     message: string,
     model: SelectModelType,
     tools: string[],
-    navigate: NavigateFunction
+    navigate: NavigateFunction,
+    queryClient?: QueryClient
   ) => void;
   loadChat: (id: string, conversations: Conversation[]) => void;
+  loadAgentChat: (
+    id: string,
+    conversations: Conversation[],
+    agentId: string,
+    widgetId?: string
+  ) => void;
   setSessionId: (id: string, sessionId: string) => void;
   addUserMessage: (id: string, message: string) => void;
   initiateBotMessage: (id: string, chunk: string) => void;
@@ -92,8 +105,6 @@ interface ChatStore {
   sendMessage: (id: string, message: string) => Promise<void>;
   reset: () => void;
 }
-
-// const projectKey = import.meta.env.VITE_X_BLOCKS_KEY || '';
 
 const getBotSSE = async (
   query: string,
@@ -121,22 +132,34 @@ const getBotSSE = async (
       ? chat?.selectedModel.provider
       : ''
     : '';
+
+  const isAgent = chat?.selectedModel?.provider === 'agents' && chat?.selectedModel?.widget_id;
+
   try {
-    const reader = await conversationService.query({
-      query: query,
-      session_id: (chat.sessionId as string) || undefined,
-      base_prompt: llmBasePrompt,
-      model_id: modelId,
-      model_name: modelName,
-      model_provider: modelProvider,
-      tool_ids: chat.selectedTools,
-      last_n_turn: 5,
-      enable_summary: false,
-      enable_next_suggestion: false,
-      response_type: 'text',
-      response_format: 'string',
-      call_from: projectSlug,
-    });
+    const reader = isAgent
+      ? await agentService.agentChatStream(
+          chat.selectedModel.widget_id as string,
+          {
+            message: query,
+            message_type: 'text',
+          },
+          chat.sessionId as string | undefined
+        )
+      : await conversationService.query({
+          query: query,
+          session_id: (chat.sessionId as string) || undefined,
+          base_prompt: llmBasePrompt,
+          model_id: modelId,
+          model_name: modelName,
+          model_provider: modelProvider,
+          tool_ids: chat.selectedTools,
+          last_n_turn: 5,
+          enable_summary: false,
+          enable_next_suggestion: false,
+          response_type: 'text',
+          response_format: 'string',
+          call_from: projectSlug,
+        });
 
     const decoder = new TextDecoder();
     let buffer = '';
@@ -155,6 +178,10 @@ const getBotSSE = async (
           cb(event, isDone);
         });
       }
+    }
+
+    if (isDone) {
+      cb({ eventType: 'stream_complete', eventData: {} }, true);
     }
   } catch (error) {
     //
@@ -175,7 +202,7 @@ export const useChatStore = create<ChatStore>()(
         return chatId;
       },
 
-      startChat: (message, model, tools, navigate) => {
+      startChat: (message, model, tools, navigate, queryClient) => {
         const chatMessage: ChatMessage = {
           message,
           type: 'user',
@@ -193,6 +220,7 @@ export const useChatStore = create<ChatStore>()(
           selectedModel: model,
           selectedTools: tools,
         };
+
         set((state) => ({
           chats: {
             ...state.chats,
@@ -200,35 +228,101 @@ export const useChatStore = create<ChatStore>()(
           },
           activeChatId: chatId,
         }));
+
         navigate(`/chat/new`);
 
+        let receivedSessionId: string | null = null;
+        let migrationScheduled = false;
+
         getBotSSE(message, chat, (event, done) => {
-          if (event.eventData.session_id && !get().chats[event.eventData.session_id]) {
-            const newChatId = event.eventData.session_id;
-            delete get().chats[chatId];
+          if (event.eventData.session_id && !receivedSessionId) {
+            receivedSessionId = event.eventData.session_id;
             set((state) => ({
               chats: {
                 ...state.chats,
-                [newChatId]: {
-                  ...chat,
-                  id: newChatId,
-                  sessionId: newChatId,
-                  isBotThinking: !done,
+                [chatId]: {
+                  ...state.chats[chatId],
+                  sessionId: receivedSessionId,
                 },
               },
-              activeChatId: newChatId,
             }));
-            window.history.replaceState(window.history.state, '', `/chat/${newChatId}`);
           }
-          handleSSEMessage(event.eventData.session_id || '', event, undefined);
+
+          handleSSEMessage(chatId, event, undefined);
+
+          if (done && !migrationScheduled && receivedSessionId) {
+            migrationScheduled = true;
+
+            const checkAndMigrate = () => {
+              const currentChat = get().chats[chatId];
+
+              if (!currentChat) {
+                return;
+              }
+
+              if (!currentChat.isBotStreaming && !currentChat.isBotThinking) {
+                performMigration();
+              } else {
+                setTimeout(checkAndMigrate, 50);
+              }
+            };
+
+            setTimeout(checkAndMigrate, 50);
+          }
         });
+
+        const performMigration = () => {
+          if (!receivedSessionId) {
+            return;
+          }
+
+          const currentChat = get().chats[chatId];
+
+          if (!currentChat) {
+            return;
+          }
+
+          set((state) => ({
+            chats: {
+              ...state.chats,
+              [receivedSessionId as string]: {
+                ...currentChat,
+                id: receivedSessionId,
+                sessionId: receivedSessionId,
+              },
+            },
+            activeChatId: receivedSessionId,
+          }));
+
+          const updatedChats = { ...get().chats };
+          delete updatedChats[chatId];
+          set({ chats: updatedChats });
+
+          const isAgentChat = currentChat.selectedModel?.provider === 'agents';
+          const newUrl = isAgentChat
+            ? `/chat/${receivedSessionId}?agent=${currentChat.selectedModel.model}&widget=${currentChat.selectedModel.widget_id}`
+            : `/chat/${receivedSessionId}`;
+          window.history.replaceState(null, '', newUrl);
+
+          if (queryClient) {
+            if (isAgentChat) {
+              queryClient.refetchQueries({ queryKey: ['agent-conversation-list'] });
+            } else {
+              queryClient.refetchQueries({ queryKey: ['conversations'] });
+            }
+          }
+        };
 
         return {};
       },
+
       loadChat: (id, conversations) =>
         set((state) => {
           const chat = state.chats[id] || { ...chatDefaultValue, id };
-          const chatConversations: ChatMessage[] = conversations.flatMap((conversation) => {
+          const chatConversations: ChatMessage[] = conversations.flatMap((conversation: any) => {
+            const tokenUsage = conversation.conversation?.TokenUsage || conversation.TokenUsage;
+            const metadata = conversation.conversation?.Metadata || conversation.Metadata;
+
             return [
               {
                 message: conversation.Query,
@@ -241,9 +335,14 @@ export const useChatStore = create<ChatStore>()(
                 type: 'bot',
                 streaming: false,
                 timestamp: conversation.ResponseTimestamp,
-                metadata: conversation.Metadata
+                metadata: metadata
                   ? {
-                      tool_calls_made: conversation.Metadata.tool_calls_made,
+                      tool_calls_made: metadata.tool_calls_made,
+                    }
+                  : undefined,
+                tokenUsage: tokenUsage
+                  ? {
+                      model_name: tokenUsage.model_name,
                     }
                   : undefined,
               },
@@ -262,6 +361,65 @@ export const useChatStore = create<ChatStore>()(
                 lastUpdated: new Date().toISOString(),
                 isBotThinking: false,
                 isBotStreaming: false,
+              },
+            },
+            activeChatId: conversations[0].SessionId,
+          };
+        }),
+
+      loadAgentChat: (id, conversations, agentId, widgetId) =>
+        set((state) => {
+          const chat = state.chats[id] || { ...chatDefaultValue, id };
+          const chatConversations: ChatMessage[] = conversations
+            .sort(
+              (a, b) => new Date(a.QueryTimestamp).getTime() - new Date(b.QueryTimestamp).getTime()
+            )
+            .flatMap((conversation: any) => {
+              const tokenUsage = conversation.conversation?.TokenUsage || conversation.TokenUsage;
+              const metadata = conversation.conversation?.Metadata || conversation.Metadata;
+
+              return [
+                {
+                  message: conversation.Query,
+                  type: 'user',
+                  streaming: false,
+                  timestamp: conversation.QueryTimestamp,
+                },
+                {
+                  message: conversation.Response,
+                  type: 'bot',
+                  streaming: false,
+                  timestamp: conversation.ResponseTimestamp,
+                  metadata: metadata
+                    ? {
+                        tool_calls_made: metadata.tool_calls_made,
+                      }
+                    : undefined,
+                  tokenUsage: tokenUsage
+                    ? {
+                        model_name: tokenUsage.model_name,
+                      }
+                    : undefined,
+                },
+              ];
+            });
+
+          return {
+            chats: {
+              ...state.chats,
+              [id]: {
+                ...chat,
+                sessionId: conversations[0].SessionId,
+                conversations: chatConversations,
+                lastUpdated: new Date().toISOString(),
+                isBotThinking: false,
+                isBotStreaming: false,
+                selectedModel: {
+                  isBlocksModels: false,
+                  provider: 'agents',
+                  model: agentId,
+                  widget_id: widgetId,
+                },
               },
             },
             activeChatId: conversations[0].SessionId,
@@ -501,6 +659,7 @@ export const useChatStore = create<ChatStore>()(
             },
           };
         }),
+
       deleteChat: (id) =>
         set((state) => {
           const updatedChats = { ...state.chats };
@@ -518,9 +677,9 @@ export const useChatStore = create<ChatStore>()(
         if (setSuggestions) setSuggestions([]);
 
         try {
-          getBotSSE(message, chat, (event) =>
-            handleSSEMessage(event.eventData.session_id || '', event, undefined)
-          );
+          getBotSSE(message, chat, (event) => {
+            handleSSEMessage(id, event, undefined);
+          });
         } catch (error) {
           state.setBotThinking(id, false);
           state.setCurrentEvent(id, null, '');
@@ -547,6 +706,7 @@ export const useChatStore = create<ChatStore>()(
           };
         });
       },
+
       setSelectedTools: (id, toolIds) => {
         set((state) => {
           const chat = state.chats[id] || { ...chatDefaultValue, id };

@@ -31,11 +31,13 @@ export const GptChatInput = ({
   selectedTools,
   onToolsChange,
   className,
+
   variant = 'default',
 }: GptChatInputProps) => {
   const [message, setMessage] = useState('');
   const { state } = useSidebar();
   const { t } = useTranslation();
+  const isAgentChat = selectedModel?.provider === 'agents';
 
   const onMessageHandler = () => {
     onSendMessage(message);
@@ -46,12 +48,12 @@ export const GptChatInput = ({
     <div
       className={cn(
         'fixed bottom-0 left-0 right-0 z-10 transition-all duration-300',
-        state === 'collapsed' ? 'md:ml-16' : 'md:ml-60',
+        state === 'collapsed' ? 'md:ml-16 lg:ml-16 xl:ml-16' : 'md:ml-64 lg:ml-64 xl:ml-60',
         className
       )}
     >
       <div
-        className={`w-full mx-auto rounded-3xl pb-4 border-x-0 max-w-4xl xl:max-w-5xl ${
+        className={`w-full mx-auto px-4  pb-4  max-w-4xl xl:max-w-5xl ${
           variant === 'chat-details' ? ' bg-background backdrop-blur-3xl' : ''
         }`}
       >
@@ -90,18 +92,25 @@ export const GptChatInput = ({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div>
-                    <GroupedModelSelector value={selectedModel} onChange={onModelChange} />
+                    <GroupedModelSelector
+                      value={selectedModel}
+                      onChange={onModelChange}
+                      locked={isAgentChat}
+                      isAgentChat={isAgentChat}
+                    />
                   </div>
                 </TooltipTrigger>
               </Tooltip>
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <ToolsSelector value={selectedTools} onChange={onToolsChange} />
-                  </div>
-                </TooltipTrigger>
-              </Tooltip>
+              {!isAgentChat && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <ToolsSelector value={selectedTools} onChange={onToolsChange} />
+                    </div>
+                  </TooltipTrigger>
+                </Tooltip>
+              )}
             </div>
           </div>
         </div>

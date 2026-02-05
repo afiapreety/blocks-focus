@@ -343,6 +343,15 @@ export interface Conversation {
     consecutive_errors?: number;
     retrievals_made?: number;
   };
+  TokenUsage?: {
+    input_tokens?: number;
+    output_tokens?: number;
+    total_tokens?: number;
+    llm_calls?: number;
+    duration_seconds?: number;
+    provider?: string;
+    model_name?: string;
+  };
 }
 
 export interface ConversationSessionSummary {
@@ -520,6 +529,7 @@ export interface IConversationConfigPayload {
 }
 
 export interface IConversationListPayload {
+  is_minimal?: boolean;
   allow_created_by_filter: boolean;
   call_from: string;
   project_key: string;

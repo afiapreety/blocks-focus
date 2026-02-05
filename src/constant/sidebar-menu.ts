@@ -15,5 +15,8 @@ const createMenuItem = (
 });
 
 export const menuItems: MenuItem[] = [
-  createMenuItem('chat', 'CHAT', '/chat', 'MessageSquareText', { isIntegrated: true }),
+  createMenuItem('iam', 'Users', '/users', 'Users', {
+    isIntegrated: true,
+    roles: ['admin'],
+  }),
 ];
