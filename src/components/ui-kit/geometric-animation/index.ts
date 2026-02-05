@@ -1,2 +1,1 @@
-export { GeometricAnimation } from './GeometricAnimation';
-export { default } from './GeometricAnimation';
+export { GeometricAnimation, default } from './GeometricAnimation';

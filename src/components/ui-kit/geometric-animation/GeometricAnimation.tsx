@@ -1,22 +1,60 @@
 import { useEffect, useState } from 'react';
 import { useTheme } from '@/styles/theme/theme-provider';
 
+/** Animation configuration constants */
+const ANIMATION_CONFIG = {
+  /** Total number of concentric triangle layers d:26 */
+  numLayers: 26,
+  /** Milliseconds between animation phase updates d:150 */
+  animationDelay: 150,
+  /** Number of layers visible at peak opacity d:14 */
+  visibleWindowSize: 16,
+  /** Rotation degrees per layer d:9 */
+  rotationPerLayer: 6,
+  /** Minimum size ratio for innermost layer d:0.06 */
+  minSizeRatio: 0.16,
+  /** Size growth ratio from inner to outer d:0.94 */
+  sizeGrowthRatio: 1.2,
+  /** Stroke width for triangle paths d:0.9 */
+  strokeWidth: 0.9,
+  /** Transition duration for stroke color changes d:0.4s */
+  transitionDuration: '0.6s',
+} as const;
+
 interface GeometricAnimationProps {
+  /** Additional CSS classes to apply to the container */
   className?: string;
 }
 
 export const GeometricAnimation = ({ className = '' }: GeometricAnimationProps) => {
   const { theme } = useTheme();
   const [animationPhase, setAnimationPhase] = useState(0);
+  const [systemPrefersDark, setSystemPrefersDark] = useState(
+    () => window.matchMedia('(prefers-color-scheme: dark)').matches
+  );
+
+  // Listen for system theme changes when using system theme
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = (e: MediaQueryListEvent) => setSystemPrefersDark(e.matches);
+    
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
 
   // Determine if dark mode based on theme
-  const isDarkMode =
-    theme === 'dark' ||
-    (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const isDarkMode = theme === 'dark' || (theme === 'system' && systemPrefersDark);
 
-  const numLayers = 26; // Fewer layers = more spacing between each
-  const animationDelay = 150; // ms between each phase (slower)
-  const visibleWindowSize = 14; // Smaller window = fewer layers visible at once
+  const {
+    numLayers,
+    animationDelay,
+    visibleWindowSize,
+    rotationPerLayer,
+    minSizeRatio,
+    sizeGrowthRatio,
+    strokeWidth,
+    transitionDuration,
+  } = ANIMATION_CONFIG;
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -24,7 +62,7 @@ export const GeometricAnimation = ({ className = '' }: GeometricAnimationProps) 
     }, animationDelay);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [numLayers, animationDelay]);
 
   // Calculate opacity for each layer based on animation phase
   const getLayerOpacity = (layerIndex: number) => {
@@ -90,8 +128,8 @@ export const GeometricAnimation = ({ className = '' }: GeometricAnimationProps) 
     for (let i = 0; i < numLayers; i++) {
       const progress = i / numLayers;
       // More spacing between layers (smaller inner, larger steps)
-      const size = baseSize * (0.06 + progress * 0.94);
-      const rotation = i * 9; // Slightly more rotation per layer
+      const size = baseSize * (minSizeRatio + progress * sizeGrowthRatio);
+      const rotation = i * rotationPerLayer;
       const opacity = getLayerOpacity(i);
 
       let strokeColor: string;
@@ -111,9 +149,9 @@ export const GeometricAnimation = ({ className = '' }: GeometricAnimationProps) 
           d={generateTwistedTrianglePath(centerX, centerY, size, rotation)}
           fill="none"
           stroke={strokeColor}
-          strokeWidth={0.9}
+          strokeWidth={strokeWidth}
           style={{
-            transition: 'stroke 0.4s ease-out',
+            transition: `stroke ${transitionDuration} ease-out`,
           }}
         />
       );
@@ -124,8 +162,7 @@ export const GeometricAnimation = ({ className = '' }: GeometricAnimationProps) 
 
   return (
     <div
-      className={`relative w-full h-full overflow-hidden ${className}`}
-      style={{ backgroundColor: isDarkMode ? '#3f3f46' : '#e0f2fe' }}
+      className={`relative w-full h-full overflow-hidden ${isDarkMode ? 'bg-zinc-700' : 'bg-sky-100'} ${className}`}
     >
       <svg
         viewBox="0 0 400 900"

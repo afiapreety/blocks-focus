@@ -25,30 +25,45 @@ export const AuthLayout = () => {
 
   if (!isMounted) return null;
 
-  const is404Error = (error: any) => {
-    return (
-      error?.message?.includes('HTTP 404') ||
-      error?.message?.includes('HTTP 403') ||
-      error?.message?.includes('HTTP 406') ||
-      error?.message?.includes('HTTP 424') ||
-      error?.response?.status === 404 ||
-      error?.response?.status === 403 ||
-      error?.response?.status === 406 ||
-      error?.response?.status === 424 ||
-      error?.status === 404 ||
-      error?.status === 403 ||
-      error?.status === 406 ||
-      error?.status === 424
-    );
+  /** HTTP error structure for API responses */
+  interface HttpError {
+    message?: string;
+    status?: number;
+    response?: {
+      status?: number;
+    };
+  }
+
+  /** Checks for client configuration errors (403, 404, 406, 424) */
+  const isClientConfigError = (error: HttpError | null | undefined): boolean => {
+    if (!error) return false;
+    
+    const configErrorStatuses = [403, 404, 406, 424];
+    
+    // Check status from response or direct status
+    const status = error.response?.status ?? error.status;
+    if (status && configErrorStatuses.includes(status)) {
+      return true;
+    }
+
+    // Check for HTTP status in message string
+    if (error.message) {
+      return configErrorStatuses.some((code) => error.message?.includes(`HTTP ${code}`));
+    }
+
+    return false;
   };
 
-  const is500Error = (error: any) => {
-    const status = error?.response?.status || error?.status;
+  /** Checks for server errors (5xx status codes) */
+  const isServerError = (error: HttpError | null | undefined): boolean => {
+    if (!error) return false;
+
+    const status = error.response?.status ?? error.status;
     if (status && status >= 500 && status < 600) {
       return true;
     }
 
-    if (error?.message) {
+    if (error.message) {
       const httpMatch = error.message.match(/HTTP (\d{3})/);
       if (httpMatch) {
         const statusFromMessage = parseInt(httpMatch[1], 10);
@@ -60,7 +75,7 @@ export const AuthLayout = () => {
   };
 
   const renderAuthContent = () => {
-    if (is404Error(loginOptionsError)) {
+    if (isClientConfigError(loginOptionsError)) {
       return (
         <div className="w-full max-w-xl mx-auto">
           <div className="relative overflow-hidden rounded-xl border border-red-200 bg-gradient-to-br from-red-50 to-red-100/50 p-8 shadow-xl">
@@ -103,7 +118,7 @@ export const AuthLayout = () => {
       );
     }
 
-    if (is500Error(loginOptionsError)) {
+    if (isServerError(loginOptionsError)) {
       return (
         <div className="w-full max-w-xl mx-auto">
           <div className="relative overflow-hidden rounded-xl border border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100/50 p-8 shadow-xl">
