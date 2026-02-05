@@ -137,9 +137,10 @@ export const GeometricAnimation = ({ className = '' }: GeometricAnimationProps) 
         const grayValue = Math.round(190 - progress * 90);
         strokeColor = `rgba(${grayValue}, ${grayValue}, ${grayValue}, ${opacity})`;
       } else {
-        const r = Math.round(170 - progress * 133);
-        const g = Math.round(200 - progress * 91);
-        const b = Math.round(225 - progress * 63);
+        // Brand-aligned colors: inner light tint → outer #0066B2
+        const r = Math.round(180 - progress * 180);  // 180 → 0
+        const g = Math.round(195 - progress * 93);   // 195 → 102
+        const b = Math.round(230 - progress * 52);   // 230 → 178
         strokeColor = `rgba(${r}, ${g}, ${b}, ${opacity})`;
       }
 
