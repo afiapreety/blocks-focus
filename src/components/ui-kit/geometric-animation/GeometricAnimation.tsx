@@ -7,34 +7,44 @@ interface GeometricAnimationProps {
 
 export const GeometricAnimation = ({ className = '' }: GeometricAnimationProps) => {
   const { theme } = useTheme();
-  const [visibleLayers, setVisibleLayers] = useState(0);
+  const [animationPhase, setAnimationPhase] = useState(0);
 
   // Determine if dark mode based on theme
   const isDarkMode =
     theme === 'dark' ||
     (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
-  const numLayers = 28;
-  const animationDelay = 80; // ms between each layer appearing
-  const pauseBeforeRestart = 1000; // ms pause before restarting
+  const numLayers = 26; // Fewer layers = more spacing between each
+  const animationDelay = 150; // ms between each phase (slower)
+  const visibleWindowSize = 14; // Smaller window = fewer layers visible at once
 
   useEffect(() => {
-    let timeout: NodeJS.Timeout;
+    const interval = setInterval(() => {
+      setAnimationPhase((prev) => (prev + 1) % (numLayers * 2));
+    }, animationDelay);
 
-    if (visibleLayers < numLayers) {
-      // Add next layer
-      timeout = setTimeout(() => {
-        setVisibleLayers((prev) => prev + 1);
-      }, animationDelay);
-    } else {
-      // All layers visible, pause then restart
-      timeout = setTimeout(() => {
-        setVisibleLayers(0);
-      }, pauseBeforeRestart);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Calculate opacity for each layer based on animation phase
+  const getLayerOpacity = (layerIndex: number) => {
+    const windowCenter = animationPhase % numLayers;
+    
+    let distance = Math.abs(layerIndex - windowCenter);
+    
+    if (distance > numLayers / 2) {
+      distance = numLayers - distance;
     }
-
-    return () => clearTimeout(timeout);
-  }, [visibleLayers]);
+    
+    if (distance <= visibleWindowSize / 2) {
+      // Smoother, more gradual fade
+      const normalizedDistance = distance / (visibleWindowSize / 2);
+      const opacity = 1 - normalizedDistance * normalizedDistance * 0.85;
+      return Math.max(0.1, opacity);
+    }
+    
+    return 0.05; // Almost invisible for layers outside the window
+  };
 
   // Generate the twisted triangle path
   const generateTwistedTrianglePath = (
@@ -68,7 +78,7 @@ export const GeometricAnimation = ({ className = '' }: GeometricAnimationProps) 
     return path;
   };
 
-  // Generate paths for a single pattern with animation
+  // Generate paths for a single pattern
   const generatePattern = (
     centerX: number,
     centerY: number,
@@ -79,21 +89,20 @@ export const GeometricAnimation = ({ className = '' }: GeometricAnimationProps) 
 
     for (let i = 0; i < numLayers; i++) {
       const progress = i / numLayers;
-      const size = baseSize * (0.15 + progress * 0.85);
-      const rotation = i * 8;
-
-      // Only show layers up to visibleLayers
-      const isVisible = i < visibleLayers;
+      // More spacing between layers (smaller inner, larger steps)
+      const size = baseSize * (0.06 + progress * 0.94);
+      const rotation = i * 9; // Slightly more rotation per layer
+      const opacity = getLayerOpacity(i);
 
       let strokeColor: string;
       if (isDarkMode) {
-        const grayValue = Math.round(180 - progress * 80);
-        strokeColor = `rgb(${grayValue}, ${grayValue}, ${grayValue})`;
+        const grayValue = Math.round(190 - progress * 90);
+        strokeColor = `rgba(${grayValue}, ${grayValue}, ${grayValue}, ${opacity})`;
       } else {
-        const r = Math.round(180 - progress * 143);
-        const g = Math.round(210 - progress * 101);
-        const b = Math.round(230 - progress * 68);
-        strokeColor = `rgb(${r}, ${g}, ${b})`;
+        const r = Math.round(170 - progress * 133);
+        const g = Math.round(200 - progress * 91);
+        const b = Math.round(225 - progress * 63);
+        strokeColor = `rgba(${r}, ${g}, ${b}, ${opacity})`;
       }
 
       paths.push(
@@ -102,10 +111,9 @@ export const GeometricAnimation = ({ className = '' }: GeometricAnimationProps) 
           d={generateTwistedTrianglePath(centerX, centerY, size, rotation)}
           fill="none"
           stroke={strokeColor}
-          strokeWidth={1.0}
+          strokeWidth={0.9}
           style={{
-            opacity: isVisible ? 1 : 0,
-            transition: 'opacity 0.15s ease-in',
+            transition: 'stroke 0.4s ease-out',
           }}
         />
       );
@@ -124,11 +132,11 @@ export const GeometricAnimation = ({ className = '' }: GeometricAnimationProps) 
         className="w-full h-full"
         preserveAspectRatio="xMidYMid slice"
       >
-        {/* Top-right corner pattern */}
-        {generatePattern(380, 120, 280, 'top-right')}
+        {/* Top-right pattern - positioned to avoid middle overlap */}
+        {generatePattern(360, 160, 320, 'top-right')}
 
-        {/* Bottom-left corner pattern */}
-        {generatePattern(20, 780, 280, 'bottom-left')}
+        {/* Bottom-left pattern - positioned to avoid middle overlap */}
+        {generatePattern(40, 740, 320, 'bottom-left')}
       </svg>
     </div>
   );
