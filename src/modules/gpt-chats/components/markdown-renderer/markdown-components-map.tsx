@@ -2,6 +2,7 @@
 // @ts-nocheck
 /* eslint-disable */
 /* eslint-disable @next/next/no-img-element, react/display-name */
+import React from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import dark from 'react-syntax-highlighter/dist/esm/styles/prism/atom-dark';
 import type { Components } from 'react-markdown';
@@ -10,7 +11,17 @@ import { Check, Clipboard, Download } from 'lucide-react';
 import { useState } from 'react';
 
 export const MarkdownComponentsMap: Partial<Components> = {
-  p: (props) => <p className="whitespace-pre-wrap break-words leading-relaxed">{props.children}</p>,
+  p: (props) => {
+    const hasImage = React.Children.toArray(props.children).some(
+      (child) => React.isValidElement(child) && child.props?.src
+    );
+    if (hasImage) {
+      return (
+        <div className="whitespace-pre-wrap break-words leading-relaxed">{props.children}</div>
+      );
+    }
+    return <p className="whitespace-pre-wrap break-words leading-relaxed">{props.children}</p>;
+  },
 
   a: (props) => (
     <a className="text-primary" target="_blank" {...props}>
@@ -119,7 +130,11 @@ export const MarkdownComponentsMap: Partial<Components> = {
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = alt || 'image';
+
+        // Always download as .png
+        const filename = alt || 'image';
+        link.download = `${filename}.png`;
+
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -131,7 +146,6 @@ export const MarkdownComponentsMap: Partial<Components> = {
         console.error('Download failed:', error);
       }
     };
-
     return (
       <div className="max-w-lg rounded-lg border overflow-hidden">
         <div className="flex items-center justify-between px-4 py-2 bg-card ">
