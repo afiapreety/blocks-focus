@@ -137,11 +137,14 @@ const getBotSSE = async (
 
   try {
     const reader = isAgent
-      ? await agentService.agentChatStream(chat.selectedModel.widget_id as string, {
-          message: query,
-          session_id: (chat.sessionId as string) || undefined,
-          message_type: 'text',
-        })
+      ? await agentService.agentChatStream(
+          chat.selectedModel.widget_id as string,
+          {
+            message: query,
+            message_type: 'text',
+          },
+          chat.sessionId as string | undefined
+        )
       : await conversationService.query({
           query: query,
           session_id: (chat.sessionId as string) || undefined,
@@ -367,35 +370,39 @@ export const useChatStore = create<ChatStore>()(
       loadAgentChat: (id, conversations, agentId, widgetId) =>
         set((state) => {
           const chat = state.chats[id] || { ...chatDefaultValue, id };
-          const chatConversations: ChatMessage[] = conversations.flatMap((conversation: any) => {
-            const tokenUsage = conversation.conversation?.TokenUsage || conversation.TokenUsage;
-            const metadata = conversation.conversation?.Metadata || conversation.Metadata;
+          const chatConversations: ChatMessage[] = conversations
+            .sort(
+              (a, b) => new Date(a.QueryTimestamp).getTime() - new Date(b.QueryTimestamp).getTime()
+            )
+            .flatMap((conversation: any) => {
+              const tokenUsage = conversation.conversation?.TokenUsage || conversation.TokenUsage;
+              const metadata = conversation.conversation?.Metadata || conversation.Metadata;
 
-            return [
-              {
-                message: conversation.Query,
-                type: 'user',
-                streaming: false,
-                timestamp: conversation.QueryTimestamp,
-              },
-              {
-                message: conversation.Response,
-                type: 'bot',
-                streaming: false,
-                timestamp: conversation.ResponseTimestamp,
-                metadata: metadata
-                  ? {
-                      tool_calls_made: metadata.tool_calls_made,
-                    }
-                  : undefined,
-                tokenUsage: tokenUsage
-                  ? {
-                      model_name: tokenUsage.model_name,
-                    }
-                  : undefined,
-              },
-            ];
-          });
+              return [
+                {
+                  message: conversation.Query,
+                  type: 'user',
+                  streaming: false,
+                  timestamp: conversation.QueryTimestamp,
+                },
+                {
+                  message: conversation.Response,
+                  type: 'bot',
+                  streaming: false,
+                  timestamp: conversation.ResponseTimestamp,
+                  metadata: metadata
+                    ? {
+                        tool_calls_made: metadata.tool_calls_made,
+                      }
+                    : undefined,
+                  tokenUsage: tokenUsage
+                    ? {
+                        model_name: tokenUsage.model_name,
+                      }
+                    : undefined,
+                },
+              ];
+            });
 
           return {
             chats: {

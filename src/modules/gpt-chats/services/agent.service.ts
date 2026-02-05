@@ -17,8 +17,9 @@ export class AgentService {
     );
   }
 
-  agentChatStream(widgetId: string, body: Record<string, any>) {
-    const url = `/blocksai-api/v1/ai-agent/chat/${widgetId}`;
+  agentChatStream(widgetId: string, body: Record<string, any>, sessionId?: string) {
+    const queryParams = sessionId ? `?s_id=${sessionId}` : '';
+    const url = `/blocksai-api/v1/ai-agent/chat/${widgetId}${queryParams}`;
     return clients.stream(url, JSON.stringify(body));
   }
 }
