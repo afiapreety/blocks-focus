@@ -159,8 +159,8 @@ export function NoteDetailPage() {
     : format(new Date(), 'yyyy-MM-dd');
 
   return (
-    <div className="flex flex-col h-[calc(100vh-7rem)] w-full rounded-lg bg-card">
-      <div className="flex items-center justify-between p-4 border-b border-border">
+    <div className="flex flex-col h-full w-full rounded-lg bg-card">
+      <div className="flex items-center justify-between p-4 border-b border-border h-full">
         <Button variant="ghost" size="icon" onClick={() => navigate('/notes')}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
