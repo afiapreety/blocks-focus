@@ -3,6 +3,11 @@
  * Follows the same patterns used in MarkdownRenderer
  */
 export function markdownToHtml(markdown: string): string {
+  console.log('🔄 markdownToHtml input:', {
+    length: markdown.length,
+    preview: markdown.substring(0, 300),
+  });
+
   let html = markdown;
 
   // Handle code blocks first (preserve them)
@@ -19,23 +24,7 @@ export function markdownToHtml(markdown: string): string {
   html = html.replace(/^## (.*?)$/gm, '<h2>$1</h2>');
   html = html.replace(/^# (.*?)$/gm, '<h1>$1</h1>');
 
-  // Bold and italic (order matters)
-  html = html.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
-  html = html.replace(/__(.*?)__/g, '<strong>$1</strong>');
-  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
-  html = html.replace(/_(.*?)_/g, '<em>$1</em>');
-
-  // Strikethrough
-  html = html.replace(/~~(.*?)~~/g, '<del>$1</del>');
-
-  // Inline code
-  html = html.replace(/`(.*?)`/g, '<code>$1</code>');
-
-  // Links
-  html = html.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank">$1</a>');
-
-  // Handle lists - group consecutive list items
+  // Handle lists BEFORE inline formatting to avoid breaking list detection
   // Unordered lists (- or *)
   html = html.replace(/^([-*] .+)(?:\n[-*] .+)*$/gm, (match) => {
     const items = match
@@ -63,6 +52,23 @@ export function markdownToHtml(markdown: string): string {
   // Replace list placeholders with proper tags
   html = html.replace(/__UL_START__([\s\S]*?)__UL_END__/g, '<ul>$1</ul>');
   html = html.replace(/__OL_START__([\s\S]*?)__OL_END__/g, '<ol>$1</ol>');
+
+  // NOW apply inline formatting (bold, italic, etc.) - after lists are wrapped
+  // Bold and italic (order matters)
+  html = html.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
+  html = html.replace(/__(.*?)__/g, '<strong>$1</strong>');
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  html = html.replace(/_(.*?)_/g, '<em>$1</em>');
+
+  // Strikethrough
+  html = html.replace(/~~(.*?)~~/g, '<del>$1</del>');
+
+  // Inline code
+  html = html.replace(/`(.*?)`/g, '<code>$1</code>');
+
+  // Links
+  html = html.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank">$1</a>');
 
   // Blockquotes
   html = html.replace(/^&gt; (.*?)$/gm, '<blockquote>$1</blockquote>');
@@ -99,6 +105,12 @@ export function markdownToHtml(markdown: string): string {
   // Restore code blocks
   codeBlocks.forEach((block, index) => {
     html = html.replace(`<p>__CODE_BLOCK_${index}__</p>`, block);
+  });
+
+  console.log('🔄 markdownToHtml output:', {
+    length: html.length,
+    preview: html.substring(0, 300),
+    fullOutput: html,
   });
 
   return html;

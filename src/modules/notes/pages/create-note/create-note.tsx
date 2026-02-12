@@ -21,7 +21,11 @@ export function CreateNotePage() {
 
   const [content, setContent] = useState('');
   const [isPrivate] = useState(true);
-  const [selectedModel, setSelectedModel] = useState<SelectModelType | undefined>(undefined);
+  const [selectedModel, setSelectedModel] = useState<SelectModelType | undefined>({
+    isBlocksModels: true,
+    provider: 'azure',
+    model: 'gpt-4o-mini',
+  });
 
   const getPlainText = (html: string): string => {
     const tempDiv = document.createElement('div');

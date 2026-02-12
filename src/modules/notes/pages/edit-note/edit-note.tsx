@@ -3,22 +3,16 @@ import { useUndoRedo } from '../../hooks/use-undo-redo';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import {
-  Globe,
-  Undo2,
-  Redo2,
-  MessageCircle,
-  SlidersHorizontal,
-  MoreHorizontal,
-  Calendar,
-  Users,
-} from 'lucide-react';
+import { Globe, Undo2, Redo2, MoreHorizontal, Calendar, Users } from 'lucide-react';
 import { useGetNoteById, useUpdateNote } from '../../hooks/use-notes';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui-kit/button';
 import { Input } from '@/components/ui-kit/input';
 import { Skeleton } from '@/components/ui-kit/skeleton';
 import { NotesEditor } from '../../components/notes-editor/notes-editor';
+import { NoteAIActions } from '../../components/notes-ai/notes-ai-actions/notes-ai-actions';
+import { useNoteAIEnhancement } from '../../hooks/use-notes-ai';
+import { SelectModelType } from '@/modules/gpt-chats/hooks/use-chat-store';
 
 export function EditNotePage() {
   const navigate = useNavigate();
@@ -31,6 +25,23 @@ export function EditNotePage() {
   const { title, content, setTitle, setContent, undo, redo, canUndo, canRedo, resetHistory } =
     useUndoRedo();
   const [isPrivate, setIsPrivate] = useState(true);
+  const [selectedModel, setSelectedModel] = useState<SelectModelType | undefined>({
+    isBlocksModels: true,
+    provider: 'azure',
+    model: 'gpt-4o-mini',
+  });
+
+  const getPlainText = (html: string): string => {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    return tempDiv.textContent || '';
+  };
+
+  const { isEnhancing, handleEnhanceWithAI } = useNoteAIEnhancement({
+    content,
+    setContent,
+    getPlainText,
+  });
 
   useEffect(() => {
     if (note) {
@@ -41,6 +52,10 @@ export function EditNotePage() {
 
   const wordCount = content.trim().split(/\s+/).filter(Boolean).length;
   const characterCount = content.length;
+
+  const handleModelChange = (value: SelectModelType) => {
+    setSelectedModel(value);
+  };
 
   const handleSave = () => {
     if (!title.trim()) {
@@ -157,12 +172,14 @@ export function EditNotePage() {
             >
               <Redo2 className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <MessageCircle className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <SlidersHorizontal className="h-4 w-4" />
-            </Button>
+
+            <NoteAIActions
+              selectedModel={selectedModel}
+              onModelChange={handleModelChange}
+              onEnhance={() => handleEnhanceWithAI(selectedModel)}
+              isEnhancing={isEnhancing}
+            />
+
             <Button variant="ghost" size="icon" className="h-8 w-8">
               <MoreHorizontal className="h-4 w-4" />
             </Button>
