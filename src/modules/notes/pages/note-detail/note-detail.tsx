@@ -160,7 +160,7 @@ export function NoteDetailPage() {
 
   return (
     <div className="flex flex-col h-full w-full rounded-lg bg-card">
-      <div className="flex items-center justify-between p-4 border-b border-border h-full">
+      <div className="flex items-center justify-between p-4 border-b border-border">
         <Button variant="ghost" size="icon" onClick={() => navigate('/notes')}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
@@ -210,7 +210,10 @@ export function NoteDetailPage() {
         <h1 className="text-3xl font-bold mb-6 text-card-foreground">{note.Title}</h1>
 
         <div className="prose prose-sm max-w-none dark:prose-invert">
-          <p className="whitespace-pre-wrap text-foreground/90">{note.Content}</p>
+          <div
+            className="whitespace-pre-wrap text-foreground/90"
+            dangerouslySetInnerHTML={{ __html: note.Content }}
+          />
         </div>
 
         {note.CreatedBy && (
