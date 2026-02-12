@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MoreVertical, Download, Share2, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Download, Share2, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Note } from '../../types/notes.types';
 import {
@@ -36,47 +36,35 @@ export function NoteCard({
   };
 
   const getPreviewText = (content: string) => {
-    const plainText = content.replace(/<[^>]*>/g, '').replace(/[#*_~`]/g, '');
-    return plainText.length > 100 ? plainText.substring(0, 100) + '...' : plainText;
+    const text = content
+      .replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1 ')
+      .replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1 ')
+      .replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1 ')
+      .replace(/<li[^>]*>(.*?)<\/li>/gi, '• $1 ')
+      .replace(/<p[^>]*>(.*?)<\/p>/gi, '$1 ')
+      .replace(/<br\s*\/?>/gi, ' ')
+      .replace(/<[^>]*>/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    return text.length > 100 ? text.substring(0, 100) + '...' : text;
   };
 
-  const extractHashtags = (content: string) => {
-    const hashtagRegex = /#\w+/g;
-    const matches = content.match(hashtagRegex);
-    return matches ? matches.slice(0, 3) : [];
-  };
-
-  const hashtags = extractHashtags(note.Content);
   const createdDate = note.CreatedDate ? new Date(note.CreatedDate) : new Date();
+  const formattedDate = format(createdDate, 'yyyy-MM-dd');
   const timeAgo = getTimeAgo(createdDate);
 
   return (
     <Card
-      className="group relative cursor-pointer hover:shadow-md transition-shadow"
+      className="group relative cursor-pointer hover:shadow-md transition-all duration-200 hover:border-primary/30 h-full"
       onClick={() => onClick(note)}
     >
-      <CardHeader className="pb-3">
+      <CardHeader className="p-4 pb-2">
         <div className="flex items-start justify-between">
-          <div className="flex-1 min-w-0">
-            <h3 className="text-lg font-semibold truncate">{note.Title}</h3>
-            {hashtags.length > 0 && (
-              <div className="flex gap-2 mt-2 flex-wrap">
-                {hashtags.map((tag, index) => (
-                  <span key={index} className="text-sm text-muted-foreground">
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
+          <h3 className="text-base font-bold text-card-foreground">{formattedDate}</h3>
           <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
             <DropdownMenuTrigger asChild onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <MoreVertical className="h-4 w-4" />
+              <Button variant="ghost" size="icon" className="h-6 w-6 -mt-1 -mr-1">
+                <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
@@ -99,9 +87,9 @@ export function NoteCard({
           </DropdownMenu>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-4 pt-0 flex flex-col justify-between flex-1">
         <p className="text-sm text-muted-foreground line-clamp-2">{getPreviewText(note.Content)}</p>
-        <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+        <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
           <span>{timeAgo}</span>
           <span>By {userName || note.CreatedBy || 'Unknown'}</span>
         </div>
