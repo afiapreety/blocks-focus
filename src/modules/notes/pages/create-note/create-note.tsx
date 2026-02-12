@@ -2,13 +2,20 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { ArrowLeft, Lock, Globe, MoreHorizontal } from 'lucide-react';
+import {
+  Globe,
+  Undo2,
+  Redo2,
+  MessageCircle,
+  SlidersHorizontal,
+  MoreHorizontal,
+  Calendar,
+  Users,
+} from 'lucide-react';
 import { useAddNote } from '../../hooks/use-notes';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui-kit/button';
-import { Input } from '@/components/ui-kit/input';
-import { Textarea } from '@/components/ui-kit/textarea';
-import { Badge } from '@/components/ui-kit/badge';
+import { NotesEditor } from '../../components/notes-editor/notes-editor';
 
 export function CreateNotePage() {
   const navigate = useNavigate();
@@ -16,22 +23,40 @@ export function CreateNotePage() {
   const queryClient = useQueryClient();
   const { mutate: addNote, isPending } = useAddNote();
 
-  const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [isPrivate] = useState(true);
 
-  const wordCount = content.trim().split(/\s+/).filter(Boolean).length;
-  const characterCount = content.length;
+  const extractTitle = (html: string): string => {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    const firstElement = tempDiv.querySelector('h1, h2, h3, p');
+    return firstElement?.textContent?.trim() || 'Untitled Note';
+  };
+
+  const getPlainText = (html: string): string => {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    return tempDiv.textContent || '';
+  };
+
+  const plainText = getPlainText(content);
+  const wordCount = plainText.trim().split(/\s+/).filter(Boolean).length;
+  const characterCount = plainText.length;
+
+  const currentDate = format(new Date(), 'yyyy-MM-dd');
+  const currentTime = format(new Date(), "'Today at' h:mm a");
 
   const handleSave = () => {
-    if (!title.trim()) {
+    if (!content.trim() || content === '<p><br></p>') {
       toast({
         variant: 'destructive',
-        title: 'Title required',
-        description: 'Please enter a note title',
+        title: 'Content required',
+        description: 'Please write some content',
       });
       return;
     }
+
+    const title = extractTitle(content);
 
     addNote(
       {
@@ -73,51 +98,53 @@ export function CreateNotePage() {
     );
   };
 
-  const currentDate = format(new Date(), 'yyyy-MM-dd');
-
   return (
     <div className="flex flex-col h-[calc(100vh-7rem)] w-full rounded-lg bg-card">
-      <div className="flex items-center justify-between p-4 border-b border-border">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/notes')}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon">
-            <MoreHorizontal className="h-5 w-5" />
-          </Button>
-        </div>
-      </div>
-
       <div className="flex-1 overflow-y-auto p-6 w-full">
-        <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
-          <span>{currentDate}</span>
-          <Badge variant={isPrivate ? 'secondary' : 'outline'} className="flex items-center gap-1">
-            {isPrivate ? <Lock className="h-3 w-3" /> : <Globe className="h-3 w-3" />}
+        <div className="flex items-start justify-between mb-2">
+          <h1 className="text-2xl font-bold text-card-foreground">{currentDate}</h1>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" className="h-8 w-8" disabled>
+              <Undo2 className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8" disabled>
+              <Redo2 className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <MessageCircle className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <SlidersHorizontal className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        <div className="mb-6 flex items-center gap-3 text-sm text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <Calendar className="h-3.5 w-3.5" />
+            {currentTime}
+          </span>
+          <span className="flex items-center gap-1">
+            {isPrivate ? <Users className="h-3.5 w-3.5" /> : <Globe className="h-3.5 w-3.5" />}
             {isPrivate ? 'Private' : 'Public'}
-          </Badge>
+          </span>
           <span>
             {wordCount} words {characterCount} characters
           </span>
         </div>
 
-        <Input
-          type="text"
-          placeholder="Write something..."
-          value={title}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTitle(e.target.value)}
-          className="text-2xl font-bold border-none shadow-none focus-visible:ring-0 px-0 mb-4 bg-transparent text-card-foreground placeholder:text-muted-foreground"
-        />
-
-        <Textarea
-          placeholder="Write something..."
-          value={content}
-          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setContent(e.target.value)}
-          className="min-h-[400px] border-none shadow-none focus-visible:ring-0 px-0 resize-none text-base bg-transparent text-card-foreground placeholder:text-muted-foreground"
-        />
+        <NotesEditor value={content} onChange={setContent} placeholder="Write something..." />
       </div>
 
       <div className="p-4 border-t border-border flex items-center justify-end">
-        <Button onClick={handleSave} disabled={!title.trim() || isPending} loading={isPending}>
+        <Button
+          onClick={handleSave}
+          disabled={!content.trim() || content === '<p><br></p>' || isPending}
+          loading={isPending}
+        >
           Save Note
         </Button>
       </div>

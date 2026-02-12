@@ -1,15 +1,24 @@
 import { useState, useEffect } from 'react';
+import { useUndoRedo } from '../../hooks/use-undo-redo';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { ArrowLeft, Lock, Globe, MoreHorizontal } from 'lucide-react';
+import {
+  Globe,
+  Undo2,
+  Redo2,
+  MessageCircle,
+  SlidersHorizontal,
+  MoreHorizontal,
+  Calendar,
+  Users,
+} from 'lucide-react';
 import { useGetNoteById, useUpdateNote } from '../../hooks/use-notes';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui-kit/button';
 import { Input } from '@/components/ui-kit/input';
-import { Textarea } from '@/components/ui-kit/textarea';
-import { Badge } from '@/components/ui-kit/badge';
 import { Skeleton } from '@/components/ui-kit/skeleton';
+import { NotesEditor } from '../../components/notes-editor/notes-editor';
 
 export function EditNotePage() {
   const navigate = useNavigate();
@@ -19,17 +28,16 @@ export function EditNotePage() {
   const { data: note, isLoading } = useGetNoteById(noteId || '');
   const { mutate: updateNote, isPending } = useUpdateNote();
 
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
+  const { title, content, setTitle, setContent, undo, redo, canUndo, canRedo, resetHistory } =
+    useUndoRedo();
   const [isPrivate, setIsPrivate] = useState(true);
 
   useEffect(() => {
     if (note) {
-      setTitle(note.Title || '');
-      setContent(note.Content || '');
+      resetHistory({ title: note.Title || '', content: note.Content || '' });
       setIsPrivate(note.IsPrivate ?? true);
     }
-  }, [note]);
+  }, [note, resetHistory]);
 
   const wordCount = content.trim().split(/\s+/).filter(Boolean).length;
   const characterCount = content.length;
@@ -121,27 +129,55 @@ export function EditNotePage() {
   const currentDate = note.CreatedDate
     ? format(new Date(note.CreatedDate), 'yyyy-MM-dd')
     : format(new Date(), 'yyyy-MM-dd');
+  const currentTime = note.CreatedDate
+    ? format(new Date(note.CreatedDate), "'Today at' h:mm a")
+    : format(new Date(), "'Today at' h:mm a");
 
   return (
     <div className="flex flex-col h-[calc(100vh-7rem)] w-full rounded-lg bg-card">
-      <div className="flex items-center justify-between p-4 border-b border-border">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/notes')}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon">
-            <MoreHorizontal className="h-5 w-5" />
-          </Button>
-        </div>
-      </div>
-
       <div className="flex-1 overflow-y-auto p-6 w-full">
-        <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
-          <span>{currentDate}</span>
-          <Badge variant={isPrivate ? 'secondary' : 'outline'} className="flex items-center gap-1">
-            {isPrivate ? <Lock className="h-3 w-3" /> : <Globe className="h-3 w-3" />}
+        <div className="flex items-start justify-between mb-2">
+          <h1 className="text-2xl font-bold text-card-foreground">{currentDate}</h1>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={undo}
+              disabled={!canUndo}
+            >
+              <Undo2 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={redo}
+              disabled={!canRedo}
+            >
+              <Redo2 className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <MessageCircle className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <SlidersHorizontal className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        <div className="mb-6 flex items-center gap-3 text-sm text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <Calendar className="h-3.5 w-3.5" />
+            {currentTime}
+          </span>
+          <span className="flex items-center gap-1">
+            {isPrivate ? <Users className="h-3.5 w-3.5" /> : <Globe className="h-3.5 w-3.5" />}
             {isPrivate ? 'Private' : 'Public'}
-          </Badge>
+          </span>
           <span>
             {wordCount} words {characterCount} characters
           </span>
@@ -149,18 +185,13 @@ export function EditNotePage() {
 
         <Input
           type="text"
-          placeholder="Write something..."
+          placeholder="Note title..."
           value={title}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTitle(e.target.value)}
-          className="text-2xl font-bold border-none shadow-none focus-visible:ring-0 px-0 mb-4 bg-transparent text-card-foreground placeholder:text-muted-foreground"
+          className="text-xl font-semibold border-none shadow-none focus-visible:ring-0 px-0 mb-4 bg-transparent text-card-foreground placeholder:text-muted-foreground h-auto"
         />
 
-        <Textarea
-          placeholder="Write something..."
-          value={content}
-          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setContent(e.target.value)}
-          className="min-h-[400px] border-none shadow-none focus-visible:ring-0 px-0 resize-none text-base bg-transparent text-card-foreground placeholder:text-muted-foreground"
-        />
+        <NotesEditor value={content} onChange={setContent} placeholder="Write something..." />
       </div>
 
       <div className="p-4 border-t border-border flex items-center justify-end">
