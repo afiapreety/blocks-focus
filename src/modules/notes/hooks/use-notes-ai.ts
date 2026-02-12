@@ -120,11 +120,9 @@ export function useNoteAIEnhancement({
           events.forEach((event) => {
             if (event.eventType === 'chat_response' && event.eventData.message) {
               hasReceivedResponse = true;
-              // chat_response contains the full message, don't append
               enhancedContent = String(event.eventData.message);
             } else if (event.eventType === 'message' && event.eventData.message) {
               hasReceivedResponse = true;
-              // Only append message events if we haven't received chat_response yet
               if (!enhancedContent) {
                 enhancedContent = String(event.eventData.message);
               } else {
