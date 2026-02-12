@@ -19,4 +19,7 @@ export const menuItems: MenuItem[] = [
     isIntegrated: true,
     roles: ['admin'],
   }),
+  createMenuItem('notes', 'Notes', '/notes', 'NotebookPen', {
+    isIntegrated: true,
+  }),
 ];

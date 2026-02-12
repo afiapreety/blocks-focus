@@ -131,7 +131,6 @@ export const MarkdownComponentsMap: Partial<Components> = {
         const link = document.createElement('a');
         link.href = url;
 
-        // Always download as .png
         const filename = alt || 'image';
         link.download = `${filename}.png`;
 

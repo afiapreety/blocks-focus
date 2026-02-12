@@ -393,8 +393,8 @@ export const AppSidebar = () => {
         </SidebarHeader>
 
         <SidebarContent className="text-base px-3 py-2 text-high-emphasis font-normal overflow-x-hidden">
-          <div className="mb-4 pb-4 border-b border-border/50">
-            <div>
+          <div className="mb-4 pb-4 border-b border-border/50 ">
+            <div className="mt-4">
               {filteredMenuItems.map((item) => (
                 <Button
                   key={item.id}
@@ -405,7 +405,7 @@ export const AppSidebar = () => {
                     }
                   }}
                   variant="ghost"
-                  className={` justify-start hover:bg-accent/50 mb-0 mt-4 px-3 w-full ${
+                  className={` justify-start hover:bg-accent/50 mb-0  px-3 w-full ${
                     pathname === item.path ? 'bg-accent/50' : ''
                   }`}
                 >
