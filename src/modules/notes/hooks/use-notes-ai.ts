@@ -24,8 +24,8 @@ export function useNoteAIEnhancement({
 
   const fakeStreamNoteContent = (fullMessage: string, onComplete: (content: string) => void) => {
     const isHtmlContent = fullMessage.includes('<');
-    const chunkSize = isHtmlContent ? 30 : 5;
-    const delay = isHtmlContent ? 30 : 20;
+    const chunkSize = isHtmlContent ? 80 : 5;
+    const delay = isHtmlContent ? 25 : 20;
 
     let index = 0;
     let accumulatedContent = '';
@@ -38,13 +38,12 @@ export function useNoteAIEnhancement({
 
       let chunk = fullMessage.slice(index, index + chunkSize);
 
+      // For HTML: try to break at tag boundaries to maintain valid HTML
       if (isHtmlContent && chunk.length === chunkSize && index + chunkSize < fullMessage.length) {
-        const nextChar = fullMessage[index + chunkSize];
-        if (!chunk.endsWith('>') && nextChar !== '<' && nextChar !== '\n') {
-          const nextTagIndex = fullMessage.indexOf('<', index + chunkSize);
-          if (nextTagIndex !== -1 && nextTagIndex - (index + chunkSize) < 30) {
-            chunk = fullMessage.slice(index, nextTagIndex);
-          }
+        // Look for the nearest closing tag or opening tag
+        const closeTagIndex = chunk.lastIndexOf('>');
+        if (closeTagIndex !== -1) {
+          chunk = chunk.slice(0, closeTagIndex + 1);
         }
       }
 
@@ -122,10 +121,16 @@ export function useNoteAIEnhancement({
           events.forEach((event) => {
             if (event.eventType === 'chat_response' && event.eventData.message) {
               hasReceivedResponse = true;
+              // chat_response contains the full message, don't append
               enhancedContent = String(event.eventData.message);
             } else if (event.eventType === 'message' && event.eventData.message) {
               hasReceivedResponse = true;
-              enhancedContent += String(event.eventData.message);
+              // Only append message events if we haven't received chat_response yet
+              if (!enhancedContent) {
+                enhancedContent = String(event.eventData.message);
+              } else {
+                enhancedContent += String(event.eventData.message);
+              }
             }
           });
         }
@@ -134,6 +139,12 @@ export function useNoteAIEnhancement({
       if (hasReceivedResponse && enhancedContent.trim()) {
         if (getPlainText) {
           const htmlContent = markdownToHtml(enhancedContent);
+
+          console.log('✅ AI Enhancement received and converted:', {
+            mdLength: enhancedContent.length,
+            htmlLength: htmlContent.length,
+            willStream: !(htmlContent.includes('<ul>') || htmlContent.includes('<ol>')),
+          });
 
           fakeStreamNoteContent(htmlContent, () => {
             setIsEnhancing(false);

@@ -91,8 +91,12 @@ export function NotesEditor({
 
       // Update if content changed
       if (value !== currentHtml) {
-        // Directly update innerHTML for streaming content
-        quillRef.current.root.innerHTML = value;
+        // Use Quill's setContents with html module instead of direct innerHTML
+        // This is the proper way to update Quill content
+        const delta = quillRef.current.clipboard.convert({
+          html: value,
+        });
+        quillRef.current.setContents(delta, 'silent');
       }
     }
   }, [value]);
