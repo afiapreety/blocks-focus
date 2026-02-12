@@ -32,6 +32,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui-kit/alert-dialog';
+import { Skeleton } from '@/components/ui-kit/skeleton';
 
 export function NoteDetailPage() {
   const navigate = useNavigate();
@@ -112,15 +113,40 @@ export function NoteDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen w-full">
-        <p className="text-muted-foreground">Loading note...</p>
+      <div className="flex flex-col h-screen w-full bg-background">
+        <div className="flex items-center justify-between p-4 border-b">
+          <Skeleton className="h-9 w-9 rounded-md" />
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-9 w-9 rounded-md" />
+            <Skeleton className="h-9 w-9 rounded-md" />
+          </div>
+        </div>
+        <div className="flex-1 p-6 w-full space-y-6">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-5 w-16 rounded-full" />
+            <Skeleton className="h-4 w-36" />
+          </div>
+          <Skeleton className="h-9 w-2/3" />
+          <div className="space-y-3">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-5/6" />
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-2/3" />
+          </div>
+          <div className="pt-4 border-t">
+            <Skeleton className="h-4 w-32" />
+          </div>
+        </div>
       </div>
     );
   }
 
   if (!note) {
     return (
-      <div className="flex items-center justify-center h-screen w-full">
+      <div className="flex items-center justify-center h-[calc(100vh-7rem)] w-full">
         <p className="text-muted-foreground">Note not found</p>
       </div>
     );
@@ -133,8 +159,8 @@ export function NoteDetailPage() {
     : format(new Date(), 'yyyy-MM-dd');
 
   return (
-    <div className="flex flex-col h-screen w-full bg-background">
-      <div className="flex items-center justify-between p-4 border-b">
+    <div className="flex flex-col h-[calc(100vh-7rem)] w-full rounded-lg bg-card">
+      <div className="flex items-center justify-between p-4 border-b border-border">
         <Button variant="ghost" size="icon" onClick={() => navigate('/notes')}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
@@ -181,14 +207,14 @@ export function NoteDetailPage() {
           </span>
         </div>
 
-        <h1 className="text-3xl font-bold mb-6">{note.Title}</h1>
+        <h1 className="text-3xl font-bold mb-6 text-card-foreground">{note.Title}</h1>
 
-        <div className="prose prose-sm max-w-none">
-          <p className="whitespace-pre-wrap">{note.Content}</p>
+        <div className="prose prose-sm max-w-none dark:prose-invert">
+          <p className="whitespace-pre-wrap text-foreground/90">{note.Content}</p>
         </div>
 
         {note.CreatedBy && (
-          <div className="mt-8 pt-4 border-t text-sm text-muted-foreground">
+          <div className="mt-8 pt-4 border-t border-border text-sm text-muted-foreground">
             By {userName || note.CreatedBy || 'Unknown'}
           </div>
         )}

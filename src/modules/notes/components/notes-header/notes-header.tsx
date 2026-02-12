@@ -7,13 +7,13 @@ export function NotesHeader() {
 
   return (
     <div className="flex items-center justify-between">
-      <h1 className="text-2xl font-bold">Notes</h1>
+      <h1 className="text-2xl font-bold text-foreground">Notes</h1>
       <Button
         onClick={() => navigate('/notes/create')}
         size="icon"
-        className="rounded-full h-12 w-12"
+        className="rounded-full h-10 w-10"
       >
-        <Plus className="h-6 w-6" />
+        <Plus className="h-5 w-5" />
       </Button>
     </div>
   );

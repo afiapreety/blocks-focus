@@ -19,6 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui-kit/alert-dialog';
+import { Skeleton } from '@/components/ui-kit/skeleton';
 
 export function NotesPage() {
   const navigate = useNavigate();
@@ -44,17 +45,13 @@ export function NotesPage() {
     };
   }, [searchQuery]);
 
-  const {
-    data: notesData,
-    isLoading,
-    isFetching,
-  } = useGetNotes({
+  const { data: notesData, isLoading } = useGetNotes({
     pageNo: 1,
     pageSize: 100,
     searchQuery: debouncedSearchQuery,
   });
 
-  const { mutate: deleteNote } = useDeleteNote();
+  const { mutate: deleteNote, isPending: isDeleting } = useDeleteNote();
 
   const totalCount = notesData?.totalCount ?? 0;
 
@@ -148,13 +145,31 @@ export function NotesPage() {
   };
 
   return (
-    <div className="flex w-full gap-5 flex-col p-6">
+    <div className="flex w-full gap-5 flex-col">
       <NotesHeader />
       <NotesSearch value={searchQuery} onChange={setSearchQuery} />
 
-      {isLoading ? (
-        <div className="flex items-center justify-center h-64">
-          <p className="text-muted-foreground">Loading notes...</p>
+      {isLoading || isDeleting ? (
+        <div className="space-y-6">
+          <div>
+            <Skeleton className="h-4 w-20 mb-3" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="rounded-lg border bg-card p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Skeleton className="h-5 w-3/4" />
+                    <Skeleton className="h-5 w-5 rounded-full" />
+                  </div>
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-2/3" />
+                  <div className="flex items-center justify-between pt-2">
+                    <Skeleton className="h-3 w-16" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       ) : totalCount === 0 && !debouncedSearchQuery ? (
         <NotesEmptyState />
@@ -188,11 +203,6 @@ export function NotesPage() {
           {totalCount === 0 && debouncedSearchQuery && (
             <div className="flex items-center justify-center h-64">
               <p className="text-muted-foreground">No notes found matching your search.</p>
-            </div>
-          )}
-          {isFetching && (
-            <div className="flex items-center justify-center py-4">
-              <p className="text-sm text-muted-foreground">Updating...</p>
             </div>
           )}
         </div>

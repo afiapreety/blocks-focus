@@ -9,6 +9,7 @@ import { Button } from '@/components/ui-kit/button';
 import { Input } from '@/components/ui-kit/input';
 import { Textarea } from '@/components/ui-kit/textarea';
 import { Badge } from '@/components/ui-kit/badge';
+import { Skeleton } from '@/components/ui-kit/skeleton';
 
 export function EditNotePage() {
   const navigate = useNavigate();
@@ -16,7 +17,7 @@ export function EditNotePage() {
   const queryClient = useQueryClient();
   const { noteId } = useParams<{ noteId: string }>();
   const { data: note, isLoading } = useGetNoteById(noteId || '');
-  const { mutate: updateNote } = useUpdateNote();
+  const { mutate: updateNote, isPending } = useUpdateNote();
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -83,15 +84,35 @@ export function EditNotePage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen w-full">
-        <p className="text-muted-foreground">Loading note...</p>
+      <div className="flex flex-col h-screen w-full bg-background">
+        <div className="flex items-center justify-between p-4 border-b">
+          <Skeleton className="h-9 w-9 rounded-md" />
+          <Skeleton className="h-9 w-9 rounded-md" />
+        </div>
+        <div className="flex-1 p-6 w-full space-y-6">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-5 w-16 rounded-full" />
+            <Skeleton className="h-4 w-36" />
+          </div>
+          <Skeleton className="h-9 w-2/3" />
+          <div className="space-y-3">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-5/6" />
+            <Skeleton className="h-4 w-3/4" />
+          </div>
+        </div>
+        <div className="p-4 border-t flex items-center justify-end">
+          <Skeleton className="h-9 w-28 rounded-md" />
+        </div>
       </div>
     );
   }
 
   if (!note) {
     return (
-      <div className="flex items-center justify-center h-screen w-full">
+      <div className="flex items-center justify-center h-[calc(100vh-7rem)] w-full">
         <p className="text-muted-foreground">Note not found</p>
       </div>
     );
@@ -102,8 +123,8 @@ export function EditNotePage() {
     : format(new Date(), 'yyyy-MM-dd');
 
   return (
-    <div className="flex flex-col h-screen w-full bg-background">
-      <div className="flex items-center justify-between p-4 border-b">
+    <div className="flex flex-col h-[calc(100vh-7rem)] w-full rounded-lg bg-card">
+      <div className="flex items-center justify-between p-4 border-b border-border">
         <Button variant="ghost" size="icon" onClick={() => navigate('/notes')}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
@@ -131,19 +152,19 @@ export function EditNotePage() {
           placeholder="Write something..."
           value={title}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTitle(e.target.value)}
-          className="text-2xl font-bold border-none shadow-none focus-visible:ring-0 px-0 mb-4"
+          className="text-2xl font-bold border-none shadow-none focus-visible:ring-0 px-0 mb-4 bg-transparent text-card-foreground placeholder:text-muted-foreground"
         />
 
         <Textarea
           placeholder="Write something..."
           value={content}
           onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setContent(e.target.value)}
-          className="min-h-[500px] border-none shadow-none focus-visible:ring-0 px-0 resize-none text-base"
+          className="min-h-[400px] border-none shadow-none focus-visible:ring-0 px-0 resize-none text-base bg-transparent text-card-foreground placeholder:text-muted-foreground"
         />
       </div>
 
-      <div className="p-4 border-t flex items-center justify-end">
-        <Button onClick={handleSave} disabled={!title.trim()}>
+      <div className="p-4 border-t border-border flex items-center justify-end">
+        <Button onClick={handleSave} disabled={!title.trim() || isPending} loading={isPending}>
           Update Note
         </Button>
       </div>

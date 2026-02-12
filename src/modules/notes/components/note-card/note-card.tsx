@@ -52,13 +52,13 @@ export function NoteCard({
 
   return (
     <Card
-      className="group relative cursor-pointer hover:shadow-md transition-shadow"
+      className="group relative cursor-pointer hover:shadow-md transition-all duration-200 hover:border-primary/30"
       onClick={() => onClick(note)}
     >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
-            <h3 className="text-lg font-semibold truncate">{note.Title}</h3>
+            <h3 className="text-lg font-semibold truncate text-card-foreground">{note.Title}</h3>
             {hashtags.length > 0 && (
               <div className="flex gap-2 mt-2 flex-wrap">
                 {hashtags.map((tag, index) => (
