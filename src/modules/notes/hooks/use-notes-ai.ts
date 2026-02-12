@@ -19,7 +19,6 @@ export function useNoteAIEnhancement({
   const { toast } = useToast();
   const [isEnhancing, setIsEnhancing] = useState(false);
 
-  const projectSlug = import.meta.env.VITE_PROJECT_SLUG || '';
   const llmBasePrompt = import.meta.env.VITE_LLM_BASE_PROMPT;
 
   const fakeStreamNoteContent = (fullMessage: string, onComplete: (content: string) => void) => {
@@ -100,7 +99,7 @@ export function useNoteAIEnhancement({
         enable_next_suggestion: false,
         response_type: 'text',
         response_format: 'string',
-        call_from: 'notes_ai_enhancement' + projectSlug,
+        call_from: 'notes_ai_enhancement',
       });
 
       const decoder = new TextDecoder();
@@ -139,13 +138,6 @@ export function useNoteAIEnhancement({
       if (hasReceivedResponse && enhancedContent.trim()) {
         if (getPlainText) {
           const htmlContent = markdownToHtml(enhancedContent);
-
-          console.log('✅ AI Enhancement received and converted:', {
-            mdLength: enhancedContent.length,
-            htmlLength: htmlContent.length,
-            willStream: !(htmlContent.includes('<ul>') || htmlContent.includes('<ol>')),
-          });
-
           fakeStreamNoteContent(htmlContent, () => {
             setIsEnhancing(false);
             toast({

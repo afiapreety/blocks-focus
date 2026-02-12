@@ -25,11 +25,22 @@ export function EditNotePage() {
   const { title, content, setTitle, setContent, undo, redo, canUndo, canRedo, resetHistory } =
     useUndoRedo();
   const [isPrivate, setIsPrivate] = useState(true);
-  const [selectedModel, setSelectedModel] = useState<SelectModelType | undefined>(undefined);
+  const [selectedModel, setSelectedModel] = useState<SelectModelType | undefined>({
+    isBlocksModels: true,
+    provider: 'azure',
+    model: 'gpt-4o-mini',
+  });
+
+  const getPlainText = (html: string): string => {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    return tempDiv.textContent || '';
+  };
 
   const { isEnhancing, handleEnhanceWithAI } = useNoteAIEnhancement({
     content,
     setContent,
+    getPlainText,
   });
 
   useEffect(() => {
