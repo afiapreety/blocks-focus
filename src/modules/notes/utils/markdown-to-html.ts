@@ -37,32 +37,32 @@ export function markdownToHtml(markdown: string): string {
 
   // Handle lists - group consecutive list items
   // Unordered lists (- or *)
-  html = html.replace(/^[-*] (.+?)(?=\n[-*] |\n\n|$)/gm, (match) => {
+  html = html.replace(/^([-*] .+)(?:\n[-*] .+)*$/gm, (match) => {
     const items = match
       .split('\n')
       .map((line) => {
-        const content = line.replace(/^[-*] /, '');
+        const content = line.replace(/^[-*] /, '').trim();
         return `<li>${content}</li>`;
       })
-      .join('');
-    return `__UL_START__${items}__UL_END__`;
+      .join('\n');
+    return `__UL_START__\n${items}\n__UL_END__`;
   });
 
   // Ordered lists
-  html = html.replace(/^\d+\. (.+?)(?=\n\d+\. |\n\n|$)/gm, (match) => {
+  html = html.replace(/^(\d+\. .+)(?:\n\d+\. .+)*$/gm, (match) => {
     const items = match
       .split('\n')
       .map((line) => {
-        const content = line.replace(/^\d+\. /, '');
+        const content = line.replace(/^\d+\. /, '').trim();
         return `<li>${content}</li>`;
       })
-      .join('');
-    return `__OL_START__${items}__OL_END__`;
+      .join('\n');
+    return `__OL_START__\n${items}\n__OL_END__`;
   });
 
   // Replace list placeholders with proper tags
-  html = html.replace(/__UL_START__(.*?)__UL_END__/g, '<ul>$1</ul>');
-  html = html.replace(/__OL_START__(.*?)__OL_END__/g, '<ol>$1</ol>');
+  html = html.replace(/__UL_START__([\s\S]*?)__UL_END__/g, '<ul>$1</ul>');
+  html = html.replace(/__OL_START__([\s\S]*?)__OL_END__/g, '<ol>$1</ol>');
 
   // Blockquotes
   html = html.replace(/^&gt; (.*?)$/gm, '<blockquote>$1</blockquote>');
@@ -79,8 +79,12 @@ export function markdownToHtml(markdown: string): string {
     if (para.match(/^<[a-z]/i)) {
       return para;
     }
-    // Skip code block placeholders
-    if (para.includes('__CODE_BLOCK_')) {
+    // Skip code block and list placeholders
+    if (
+      para.includes('__CODE_BLOCK_') ||
+      para.includes('__UL_START__') ||
+      para.includes('__OL_START__')
+    ) {
       return para;
     }
     // Wrap plain text in <p>

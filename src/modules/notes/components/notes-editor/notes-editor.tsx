@@ -82,19 +82,17 @@ export function NotesEditor({
           setShowToolbar(false);
         }
       });
-
-      if (value) {
-        quillRef.current.root.innerHTML = value;
-      }
     }
-  }, [placeholder, onChange, value]);
+  }, [placeholder, onChange]);
 
   useEffect(() => {
-    if (quillRef.current && value !== quillRef.current.root.innerHTML) {
-      const selection = quillRef.current.getSelection();
-      quillRef.current.root.innerHTML = value || '';
-      if (selection) {
-        quillRef.current.setSelection(selection);
+    if (quillRef.current && value !== undefined) {
+      const currentHtml = quillRef.current.root.innerHTML;
+
+      // Update if content changed
+      if (value !== currentHtml) {
+        // Directly update innerHTML for streaming content
+        quillRef.current.root.innerHTML = value;
       }
     }
   }, [value]);

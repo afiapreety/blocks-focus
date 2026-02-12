@@ -23,7 +23,10 @@ export function useNoteAIEnhancement({
   const llmBasePrompt = import.meta.env.VITE_LLM_BASE_PROMPT;
 
   const fakeStreamNoteContent = (fullMessage: string, onComplete: (content: string) => void) => {
-    const chunkSize = 5;
+    const isHtmlContent = fullMessage.includes('<');
+    const chunkSize = isHtmlContent ? 30 : 5;
+    const delay = isHtmlContent ? 30 : 20;
+
     let index = 0;
     let accumulatedContent = '';
 
@@ -33,11 +36,22 @@ export function useNoteAIEnhancement({
         return;
       }
 
-      const chunk = fullMessage.slice(index, index + chunkSize);
+      let chunk = fullMessage.slice(index, index + chunkSize);
+
+      if (isHtmlContent && chunk.length === chunkSize && index + chunkSize < fullMessage.length) {
+        const nextChar = fullMessage[index + chunkSize];
+        if (!chunk.endsWith('>') && nextChar !== '<' && nextChar !== '\n') {
+          const nextTagIndex = fullMessage.indexOf('<', index + chunkSize);
+          if (nextTagIndex !== -1 && nextTagIndex - (index + chunkSize) < 30) {
+            chunk = fullMessage.slice(index, nextTagIndex);
+          }
+        }
+      }
+
       accumulatedContent += chunk;
       setContent(accumulatedContent);
       index += chunk.length;
-      setTimeout(sendNextChunk, 20);
+      setTimeout(sendNextChunk, delay);
     };
 
     sendNextChunk();
@@ -87,7 +101,7 @@ export function useNoteAIEnhancement({
         enable_next_suggestion: false,
         response_type: 'text',
         response_format: 'string',
-        call_from: projectSlug,
+        call_from: 'notes_ai_enhancement' + projectSlug,
       });
 
       const decoder = new TextDecoder();
