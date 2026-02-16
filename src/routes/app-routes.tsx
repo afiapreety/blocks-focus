@@ -53,7 +53,7 @@ export const AppRoutes = () => {
 
                 <Route path="/notes" element={<NotesPage />} />
                 <Route path="/notes/create" element={<CreateNotePage />} />
-                <Route path="/notes/:noteId/edit" element={<EditNotePage />} />
+                <Route path="/notes/:noteId" element={<EditNotePage />} />
 
                 <Route path="/503" element={<ServiceUnavailablePage />} />
                 <Route path="/404" element={<NotFoundPage />} />

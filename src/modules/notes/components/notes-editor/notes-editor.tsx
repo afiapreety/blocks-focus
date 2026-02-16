@@ -21,6 +21,7 @@ interface NotesEditorProps {
   onChange: (content: string) => void;
   placeholder?: string;
   className?: string;
+  onQuillReady?: (quill: Quill) => void;
 }
 
 interface ToolbarPosition {
@@ -33,6 +34,7 @@ export function NotesEditor({
   onChange,
   placeholder = 'Write something...',
   className,
+  onQuillReady,
 }: NotesEditorProps) {
   const editorRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -51,6 +53,11 @@ export function NotesEditor({
         placeholder,
         modules: {
           toolbar: false,
+          history: {
+            delay: 1000,
+            maxStack: 100,
+            userOnly: true,
+          },
         },
       });
 
@@ -60,6 +67,11 @@ export function NotesEditor({
           onChange(html === '<p><br></p>' ? '' : html);
         }
       });
+
+      // Notify parent component that Quill is ready
+      if (onQuillReady && quillRef.current) {
+        onQuillReady(quillRef.current);
+      }
 
       quillRef.current.on('selection-change', (range) => {
         if (range && range.length > 0) {
@@ -82,7 +94,7 @@ export function NotesEditor({
         }
       });
     }
-  }, [placeholder, onChange]);
+  }, [placeholder, onChange, onQuillReady]);
 
   useEffect(() => {
     if (quillRef.current && value !== undefined) {
