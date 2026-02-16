@@ -64,19 +64,18 @@ export function NotesEditor({
       quillRef.current.on('selection-change', (range) => {
         if (range && range.length > 0) {
           lastSelectionRef.current = { index: range.index, length: range.length };
-          const selection = window.getSelection();
-          if (selection && selection.rangeCount > 0) {
-            const domRange = selection.getRangeAt(0);
-            const rect = domRange.getBoundingClientRect();
-            const containerRect = containerRef.current?.getBoundingClientRect();
 
-            if (containerRect) {
-              setToolbarPosition({
-                top: rect.bottom - containerRect.top + 8,
-                left: rect.left - containerRect.left,
-              });
-              setShowToolbar(true);
-            }
+          // Use Quill's getBounds method which is more reliable
+          const bounds = quillRef.current?.getBounds(range.index, range.length);
+          const containerRect = containerRef.current?.getBoundingClientRect();
+          const editorRect = editorRef.current?.getBoundingClientRect();
+
+          if (bounds && containerRect && editorRect) {
+            setToolbarPosition({
+              top: bounds.bottom + editorRect.top - containerRect.top + 8,
+              left: bounds.left + editorRect.left - containerRect.left,
+            });
+            setShowToolbar(true);
           }
         } else {
           setShowToolbar(false);
