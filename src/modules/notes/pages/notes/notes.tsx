@@ -83,7 +83,7 @@ export function NotesPage() {
   }, [notesData?.items]);
 
   const handleNoteClick = (note: Note) => {
-    navigate(`/notes/${note.ItemId}`);
+    navigate(`/notes/${note.ItemId}/edit`);
   };
 
   const handleDeleteClick = (noteId: string) => {

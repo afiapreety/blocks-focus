@@ -69,7 +69,7 @@ export function CreateNotePage() {
         },
       },
       {
-        onSuccess: (data) => {
+        onSuccess: () => {
           queryClient.removeQueries({
             predicate: (query) => query.queryKey[0] === 'notes',
           });
@@ -79,12 +79,7 @@ export function CreateNotePage() {
             description: 'Note created successfully',
           });
 
-          const createdNoteId = data?.insertNoteItem?.itemId;
-          if (createdNoteId) {
-            navigate(`/notes/${createdNoteId}`);
-          } else {
-            navigate('/notes');
-          }
+          navigate('/notes');
         },
         onError: (error) => {
           console.error('Error creating note:', error);

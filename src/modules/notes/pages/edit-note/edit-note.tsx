@@ -76,7 +76,7 @@ export function EditNotePage() {
             title: 'Note updated',
             description: 'Note updated successfully',
           });
-          navigate(`/notes/${noteId}`);
+          navigate('/notes');
         },
         onError: (error) => {
           console.error('Error updating note:', error);
