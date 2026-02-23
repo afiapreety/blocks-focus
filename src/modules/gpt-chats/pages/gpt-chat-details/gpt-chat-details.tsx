@@ -42,7 +42,7 @@ const getFullTimestamp = (timestamp: string) => {
 };
 
 const ThinkingIndicator = () => (
-  <div className="flex gap-4 items-start ml-1 min-h-[48px] transition-all duration-500 ease-in-out animate-in fade-in slide-in-from-bottom-2">
+  <div className="flex gap-4 items-start ml-1 min-h-[48px] duration-500 ease-in-out animate-in fade-in slide-in-from-bottom-2">
     <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
       <img src={botLogoSELISEAI} alt="bot" className="h-5 w-5" />
     </div>
@@ -71,7 +71,7 @@ const ThinkingIndicator = () => (
 );
 
 const ChatEventMessageIndicator = ({ message }: { message: string }) => (
-  <div className="flex gap-4 items-start ml-1 min-h-[48px] transition-all duration-500 ease-in-out animate-in fade-in slide-in-from-bottom-2">
+  <div className="flex gap-4 items-start ml-1 min-h-[48px] duration-500 ease-in-out animate-in fade-in slide-in-from-bottom-2">
     <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
       <img src={botLogoSELISEAI} alt="bot" className="h-5 w-5" />
     </div>
@@ -251,7 +251,7 @@ export const GptChatPageDetails = () => {
                             <TooltipTrigger asChild>
                               <div
                                 className={cn(
-                                  'flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors',
+                                  'flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium ',
                                   msg.metadata.tool_calls_made > 0
                                     ? 'bg-primary/10 text-primary hover:bg-primary/20'
                                     : 'hover:bg-muted'

@@ -179,7 +179,7 @@ export function NotesEditor({
             return (
               <button
                 key={index}
-                className="h-8 w-8 flex items-center justify-center rounded hover:bg-muted transition-colors"
+                className="h-8 w-8 flex items-center justify-center rounded hover:bg-muted "
                 onMouseDown={(e) => {
                   e.preventDefault();
                   e.stopPropagation();

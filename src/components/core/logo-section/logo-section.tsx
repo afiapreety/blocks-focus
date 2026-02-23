@@ -17,7 +17,7 @@ export const LogoSection = ({ theme, open, isMobile, onClose }: Readonly<LogoSec
       <img
         src={theme === 'dark' ? lightLogo : darkLogo}
         alt="logo"
-        className={`absolute left-4 top-1 h-8 w-auto max-w-full transition-all duration-300 ${
+        className={`absolute left-4 top-1 h-8 w-auto max-w-full duration-300 ${
           open || isMobile ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
       />
@@ -25,7 +25,7 @@ export const LogoSection = ({ theme, open, isMobile, onClose }: Readonly<LogoSec
       <img
         src={theme === 'dark' ? darksmallLogo : lightsmallLogo}
         alt="smallLogo"
-        className={`absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 h-5 w-5 transition-all duration-300 ${
+        className={`absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 h-5 w-5  duration-300 ${
           open || isMobile ? 'opacity-0 pointer-events-none' : 'opacity-100'
         }`}
       />

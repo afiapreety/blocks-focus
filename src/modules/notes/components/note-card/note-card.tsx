@@ -41,7 +41,7 @@ export function NoteCard({
 
   return (
     <Card
-      className="group relative cursor-pointer hover:shadow-md transition-all duration-200 hover:border-primary/30 h-full"
+      className="group relative cursor-pointer hover:shadow-md hover:border-primary/30 h-full"
       onClick={() => onClick(note)}
     >
       <CardHeader className="!pb-2">

@@ -79,7 +79,7 @@ export const MarkdownComponentsMap: Partial<Components> = {
             <span className="text-sm uppercase">{language}</span>
             <button
               onClick={handleCopy}
-              className="flex items-center gap-1.5 rounded px-2 py-1 text-xs hover:bg-gray-600 transition-colors"
+              className="flex items-center gap-1.5 rounded px-2 py-1 text-xs hover:bg-gray-600 "
               title="Copy code"
             >
               {copied ? (
@@ -151,7 +151,7 @@ export const MarkdownComponentsMap: Partial<Components> = {
           <span className="text-sm text-high-emphasis font-medium truncate">{alt || 'Image'}</span>
           <button
             onClick={handleDownload}
-            className="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs bg-white hover:cursor-pointer border border-gray-300 transition-colors ml-2 flex-shrink-0"
+            className="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs bg-white hover:cursor-pointer border border-gray-300  ml-2 flex-shrink-0"
             title="Download image"
           >
             {downloaded ? (

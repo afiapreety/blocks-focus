@@ -83,7 +83,7 @@ export const AgentChatAccordion = ({
   const renderAgentChatItem = (chat: any) => (
     <div
       key={chat.id}
-      className={`rounded-lg hover:bg-accent/100 cursor-pointer flex justify-between items-center h-fit group/item px-2 py-1 transition-colors ${
+      className={`rounded-lg hover:bg-accent/100 cursor-pointer flex justify-between items-center h-fit group/item px-2 py-1  ${
         chatId === chat.id ? 'bg-accent/100' : ''
       }`}
       onClick={() => {
@@ -265,7 +265,7 @@ export const AgentChatAccordion = ({
     <AccordionItem value={agentId} className="border-none">
       <AccordionTrigger
         className={cn(
-          'hover:no-underline px-2 py-1.5 rounded-lg transition-all duration-200',
+          'hover:no-underline px-2 py-1.5 rounded-lg',
           'group/trigger hover:[&:not(:has(button:hover))]:bg-accent/50',
           '[&[data-state=open]]:bg-accent/30',
           '[&>svg]:hidden',
@@ -291,7 +291,7 @@ export const AgentChatAccordion = ({
           <div
             role="button"
             tabIndex={0}
-            className="h-6 w-6 p-0 hover:bg-primary/10 transition-colors flex-shrink-0 flex items-center justify-center rounded-md cursor-pointer"
+            className="h-6 w-6 p-0 hover:bg-primary/10  flex-shrink-0 flex items-center justify-center rounded-md cursor-pointer"
             onClick={handleNewAgentChat}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
