@@ -13,11 +13,14 @@ import { useNoteAIEnhancement } from '../../hooks/use-notes-ai';
 import { useQuillHistory } from '../../hooks/use-quill-history';
 import { NoteActionsMenu } from '../../components/note-actions-menu/note-actions-menu';
 import { useNoteActions } from '../../hooks/use-note-actions';
+import { htmlToMarkdown } from '../../utils/html-to-markdown';
+import { useAuthStore } from '@/state/store/auth';
 
 export function CreateNotePage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuthStore();
   const { mutate: addNote, isPending } = useAddNote();
 
   const [content, setContent] = useState('');
@@ -28,19 +31,19 @@ export function CreateNotePage() {
     model: 'gpt-4o-mini',
   });
 
-  const { canUndo, canRedo, handleQuillReady, handleUndo, handleRedo } = useQuillHistory();
+  const { canUndo, canRedo, handleQuillReady, handleUndo, handleRedo, quillInstance } =
+    useQuillHistory();
   const { handleDownload } = useNoteActions();
 
   const getPlainText = (html: string): string => {
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = html;
-    return tempDiv.textContent || '';
+    return htmlToMarkdown(html);
   };
 
   const { isEnhancing, handleEnhanceWithAI } = useNoteAIEnhancement({
     content,
     setContent,
     getPlainText,
+    quillInstance,
   });
 
   const extractTitle = (html: string): string => {
@@ -57,7 +60,7 @@ export function CreateNotePage() {
   const currentDate = format(new Date(), 'yyyy-MM-dd');
   const currentTime = format(new Date(), "'Today at' h:mm a");
 
-  const handleModelChange = (value: SelectModelType) => {
+  const handleModelChange = (value: SelectModelType | undefined) => {
     setSelectedModel(value);
   };
 
@@ -76,16 +79,29 @@ export function CreateNotePage() {
       return;
     }
 
-    const title = extractTitle(content);
-
     addNote(
       {
         input: {
-          Title: title,
-          Content: content,
           IsPrivate: isPrivate,
           WordCount: wordCount,
           CharacterCount: characterCount,
+          UserId: user?.itemId,
+          AccessControl: '{}',
+          NoteData: {
+            Files: [],
+            NoteContent: {
+              html: content,
+              md: plainText,
+            },
+          },
+          NoteUser: user
+            ? {
+                UserId: user.itemId,
+                Name: `${user.firstName} ${user.lastName}`.trim(),
+                Roles: user.roles?.join(',') || 'user',
+                Email: user.email,
+              }
+            : undefined,
         },
       },
       {
@@ -143,6 +159,7 @@ export function CreateNotePage() {
               onModelChange={handleModelChange}
               onEnhance={() => handleEnhanceWithAI(selectedModel)}
               isEnhancing={isEnhancing}
+              noteContent={content}
             />
 
             <NoteActionsMenu onDownload={onDownload} showShare={false} showDelete={false} />

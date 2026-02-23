@@ -15,11 +15,14 @@ import { useQuillHistory } from '../../hooks/use-quill-history';
 import { NoteActionsMenu } from '../../components/note-actions-menu/note-actions-menu';
 import { useNoteActions } from '../../hooks/use-note-actions';
 import { ConfirmationModal } from '@/components/core/confirmation-modal/confirmation-modal';
+import { htmlToMarkdown } from '../../utils/html-to-markdown';
+import { useAuthStore } from '@/state/store/auth';
 
 export function EditNotePage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuthStore();
   const { noteId } = useParams<{ noteId: string }>();
   const { data: note, isLoading } = useGetNoteById(noteId || '');
   const { mutate: updateNote, isPending } = useUpdateNote();
@@ -34,7 +37,8 @@ export function EditNotePage() {
     model: 'gpt-4o-mini',
   });
 
-  const { canUndo, canRedo, handleQuillReady, handleUndo, handleRedo } = useQuillHistory();
+  const { canUndo, canRedo, handleQuillReady, handleUndo, handleRedo, quillInstance } =
+    useQuillHistory();
   const { handleDownload, handleShare } = useNoteActions({
     noteId,
     noteTitle: note?.Title,
@@ -42,15 +46,14 @@ export function EditNotePage() {
   });
 
   const getPlainText = (html: string): string => {
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = html;
-    return tempDiv.textContent || '';
+    return htmlToMarkdown(html);
   };
 
   const { isEnhancing, handleEnhanceWithAI } = useNoteAIEnhancement({
     content,
     setContent,
     getPlainText,
+    quillInstance,
   });
 
   useEffect(() => {
@@ -71,7 +74,7 @@ export function EditNotePage() {
   const wordCount = plainText.trim().split(/\s+/).filter(Boolean).length;
   const characterCount = plainText.length;
 
-  const handleModelChange = (value: SelectModelType) => {
+  const handleModelChange = (value: SelectModelType | undefined) => {
     setSelectedModel(value);
   };
 
@@ -128,18 +131,31 @@ export function EditNotePage() {
 
     if (!noteId) return;
 
-    const title = extractTitle(content);
-
     const filter = JSON.stringify({ _id: noteId });
     updateNote(
       {
         filter,
         input: {
-          Title: title,
-          Content: content,
           IsPrivate: isPrivate,
           WordCount: wordCount,
           CharacterCount: characterCount,
+          UserId: user?.itemId,
+          AccessControl: '{}',
+          NoteData: {
+            Files: [],
+            NoteContent: {
+              html: content,
+              md: plainText,
+            },
+          },
+          NoteUser: user
+            ? {
+                UserId: user.itemId,
+                Name: `${user.firstName} ${user.lastName}`.trim(),
+                Roles: user.roles?.join(',') || 'user',
+                Email: user.email,
+              }
+            : undefined,
         },
       },
       {
@@ -239,6 +255,7 @@ export function EditNotePage() {
               onModelChange={handleModelChange}
               onEnhance={() => handleEnhanceWithAI(selectedModel)}
               isEnhancing={isEnhancing}
+              noteContent={content}
             />
 
             <NoteActionsMenu onDownload={onDownload} onShare={onShare} onDelete={onDelete} />

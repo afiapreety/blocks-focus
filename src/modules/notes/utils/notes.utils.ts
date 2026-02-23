@@ -1,6 +1,8 @@
 import { format } from 'date-fns';
 
-export function getPreviewText(content: string): string {
+export function getPreviewText(content?: string): string {
+  if (!content) return '';
+
   const text = content
     .replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1 ')
     .replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1 ')

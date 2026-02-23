@@ -44,10 +44,17 @@ export function NotesPage() {
 
   const { mutate: deleteNote, isPending: isDeleting } = useDeleteNote();
 
-  const totalCount = notesData?.totalCount ?? 0;
+  // Filter notes by current user
+  const userNotes = useMemo(() => {
+    const allNotes = notesData?.items ?? [];
+    if (!user?.itemId) return allNotes;
+    return allNotes.filter((note) => note.UserId === user.itemId);
+  }, [notesData?.items, user?.itemId]);
+
+  const totalCount = userNotes.length;
 
   const groupedNotes = useMemo(() => {
-    const notes = notesData?.items ?? [];
+    const notes = userNotes;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -71,7 +78,7 @@ export function NotesPage() {
     });
 
     return groups;
-  }, [notesData?.items]);
+  }, [userNotes]);
 
   const handleNoteClick = (note: Note) => {
     navigate(`/notes/${note.ItemId}`);
