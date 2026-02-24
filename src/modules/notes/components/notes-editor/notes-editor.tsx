@@ -21,6 +21,7 @@ interface NotesEditorProps {
   onChange: (content: string) => void;
   placeholder?: string;
   className?: string;
+  onQuillReady?: (quill: Quill) => void;
 }
 
 interface ToolbarPosition {
@@ -33,6 +34,7 @@ export function NotesEditor({
   onChange,
   placeholder = 'Write something...',
   className,
+  onQuillReady,
 }: NotesEditorProps) {
   const editorRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -51,6 +53,11 @@ export function NotesEditor({
         placeholder,
         modules: {
           toolbar: false,
+          history: {
+            delay: 1000,
+            maxStack: 100,
+            userOnly: true,
+          },
         },
       });
 
@@ -61,29 +68,33 @@ export function NotesEditor({
         }
       });
 
+      // Notify parent component that Quill is ready
+      if (onQuillReady && quillRef.current) {
+        onQuillReady(quillRef.current);
+      }
+
       quillRef.current.on('selection-change', (range) => {
         if (range && range.length > 0) {
           lastSelectionRef.current = { index: range.index, length: range.length };
-          const selection = window.getSelection();
-          if (selection && selection.rangeCount > 0) {
-            const domRange = selection.getRangeAt(0);
-            const rect = domRange.getBoundingClientRect();
-            const containerRect = containerRef.current?.getBoundingClientRect();
 
-            if (containerRect) {
-              setToolbarPosition({
-                top: rect.bottom - containerRect.top + 8,
-                left: rect.left - containerRect.left,
-              });
-              setShowToolbar(true);
-            }
+          // Use Quill's getBounds method which is more reliable
+          const bounds = quillRef.current?.getBounds(range.index, range.length);
+          const containerRect = containerRef.current?.getBoundingClientRect();
+          const editorRect = editorRef.current?.getBoundingClientRect();
+
+          if (bounds && containerRect && editorRect) {
+            setToolbarPosition({
+              top: bounds.bottom + editorRect.top - containerRect.top + 8,
+              left: bounds.left + editorRect.left - containerRect.left,
+            });
+            setShowToolbar(true);
           }
         } else {
           setShowToolbar(false);
         }
       });
     }
-  }, [placeholder, onChange]);
+  }, [placeholder, onChange, onQuillReady]);
 
   useEffect(() => {
     if (quillRef.current && value !== undefined) {
@@ -168,7 +179,7 @@ export function NotesEditor({
             return (
               <button
                 key={index}
-                className="h-8 w-8 flex items-center justify-center rounded hover:bg-muted transition-colors"
+                className="h-8 w-8 flex items-center justify-center rounded hover:bg-muted "
                 onMouseDown={(e) => {
                   e.preventDefault();
                   e.stopPropagation();

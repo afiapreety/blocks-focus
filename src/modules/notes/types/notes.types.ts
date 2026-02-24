@@ -1,19 +1,40 @@
+export interface NoteContent {
+  md: string;
+  html: string;
+}
+
+export interface NoteData {
+  Files?: string[];
+  NoteContent: NoteContent;
+}
+
+export interface NoteUser {
+  UserId: string;
+  Name: string;
+  Roles: string;
+  Email: string;
+}
+
 export interface Note {
   ItemId: string;
-  CreatedBy?: string;
   CreatedDate?: string;
+  CreatedBy?: string;
+  LastUpdatedDate?: string;
+  LastUpdatedBy?: string;
   IsDeleted?: boolean;
   Language?: string;
-  LastUpdatedBy?: string;
-  LastUpdatedDate?: string;
   OrganizationIds?: string[];
   Tags?: string[];
   DeletedDate?: string;
-  Title: string;
-  Content: string;
   IsPrivate: boolean;
   WordCount?: number;
   CharacterCount?: number;
+  AccessControl?: string;
+  UserId?: string;
+  NoteData: NoteData;
+  NoteUser?: NoteUser;
+  Title?: string;
+  Content?: string;
 }
 
 export interface GetNotesResponse {
@@ -35,12 +56,14 @@ export interface GetNoteResponse {
 }
 
 export interface AddNoteInput {
-  Title: string;
-  Content: string;
   IsPrivate: boolean;
   WordCount?: number;
   CharacterCount?: number;
   Tags?: string[];
+  AccessControl?: string;
+  UserId?: string;
+  NoteData: NoteData;
+  NoteUser?: NoteUser;
 }
 
 export interface AddNoteParams {
@@ -56,12 +79,14 @@ export interface AddNoteResponse {
 }
 
 export interface UpdateNoteInput {
-  Title?: string;
-  Content?: string;
   IsPrivate?: boolean;
   WordCount?: number;
   CharacterCount?: number;
   Tags?: string[];
+  AccessControl?: string;
+  UserId?: string;
+  NoteData?: NoteData;
+  NoteUser?: NoteUser;
 }
 
 export interface UpdateNoteParams {

@@ -118,7 +118,7 @@ export const SharedPasswordStrengthChecker = ({
       </h2>
       <div className="h-1 w-full bg-primary-50 rounded mb-2">
         <div
-          className={`h-1 rounded-full transition-all duration-300 ${getAdjustedStrengthColor()}`}
+          className={`h-1 rounded-full duration-300 ${getAdjustedStrengthColor()}`}
           style={{ width: `${getAdjustedStrength()}%` }}
         />
       </div>

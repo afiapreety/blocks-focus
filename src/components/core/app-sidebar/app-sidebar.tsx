@@ -262,7 +262,7 @@ export const AppSidebar = () => {
   const renderChatItem = (chat: (typeof chatList)[0]) => (
     <div
       key={chat.id}
-      className={`rounded-lg hover:bg-accent/100 cursor-pointer flex justify-between items-center h-fit group/item px-2 py-1 transition-colors ${
+      className={`rounded-lg hover:bg-accent/100 cursor-pointer flex justify-between items-center h-fit group/item px-2 py-1  ${
         chatId === chat.id ? 'bg-accent/100' : ''
       } ${openDropdownId === chat.id ? 'bg-accent/100' : ''}`}
       onClick={() => {

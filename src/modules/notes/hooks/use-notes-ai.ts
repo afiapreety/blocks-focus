@@ -9,12 +9,14 @@ interface UseNoteAIEnhancementProps {
   content: string;
   setContent: (content: string) => void;
   getPlainText?: (html: string) => string;
+  quillInstance?: any;
 }
 
 export function useNoteAIEnhancement({
   content,
   setContent,
   getPlainText,
+  quillInstance,
 }: UseNoteAIEnhancementProps) {
   const { toast } = useToast();
   const [isEnhancing, setIsEnhancing] = useState(false);
@@ -47,7 +49,15 @@ export function useNoteAIEnhancement({
       }
 
       accumulatedContent += chunk;
-      setContent(accumulatedContent);
+
+      // Use Quill API directly if available to preserve undo/redo history
+      if (quillInstance) {
+        const delta = quillInstance.clipboard.convert({ html: accumulatedContent });
+        quillInstance.setContents(delta, 'user');
+      } else {
+        setContent(accumulatedContent);
+      }
+
       index += chunk.length;
       setTimeout(sendNextChunk, delay);
     };

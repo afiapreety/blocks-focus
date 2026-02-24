@@ -204,7 +204,7 @@ export const GroupedModelSelector = ({
           aria-expanded={open}
           disabled={locked}
           className={cn(
-            'w-[220px] h-11 justify-between bg-card/50 border-border transition-all duration-200 rounded-xl px-3 group',
+            'w-[220px] h-11 justify-between bg-card/50 border-border rounded-xl px-3 group',
             !locked && 'hover:bg-card',
             locked && 'cursor-not-allowed opacity-70'
           )}
@@ -212,7 +212,7 @@ export const GroupedModelSelector = ({
           <div className="flex items-center gap-2.5 flex-1 min-w-0">
             <div
               className={cn(
-                'p-1.5 rounded-lg flex-shrink-0 transition-all duration-200',
+                'p-1.5 rounded-lg flex-shrink-0',
                 providerConfig.bgColor,
                 'group-hover:scale-110'
               )}
@@ -229,12 +229,7 @@ export const GroupedModelSelector = ({
             </div>
           </div>
 
-          <ChevronDown
-            className={cn(
-              'h-4 w-4 shrink-0 opacity-50 transition-all duration-200',
-              open && 'rotate-180'
-            )}
-          />
+          <ChevronDown className={cn('h-4 w-4 shrink-0 opacity-50', open && 'rotate-180')} />
         </Button>
       </PopoverTrigger>
       <PopoverContent
@@ -271,7 +266,7 @@ export const GroupedModelSelector = ({
                         key={group.provider}
                         onClick={() => handleProviderSelect(group)}
                         className={cn(
-                          'w-full flex items-center gap-2.5 px-2.5 py-2 text-left transition-all duration-200 rounded-xl group/provider relative',
+                          'w-full flex items-center gap-2.5 px-2.5 py-2 text-left rounded-xl group/provider relative',
                           isProviderSelected
                             ? 'bg-primary/15 border-b border-border'
                             : 'hover:bg-accent/50 border-2 border-transparent'
@@ -279,7 +274,7 @@ export const GroupedModelSelector = ({
                       >
                         <div
                           className={cn(
-                            'p-1.5 rounded-lg flex-shrink-0 transition-all duration-200',
+                            'p-1.5 rounded-lg flex-shrink-0',
                             groupConfig.bgColor,
                             !isProviderSelected && 'group-hover/provider:scale-110'
                           )}
@@ -289,7 +284,7 @@ export const GroupedModelSelector = ({
                         <div className="flex-1 min-w-0">
                           <p
                             className={cn(
-                              'font-medium text-sm truncate transition-colors',
+                              'font-medium text-sm truncate',
                               isProviderSelected && 'text-primary'
                             )}
                           >
@@ -350,7 +345,7 @@ export const GroupedModelSelector = ({
                             })
                           }
                           className={cn(
-                            'group/model flex flex-col gap-2 p-2.5 sm:p-3 rounded-xl text-left transition-all duration-200 border-2 relative overflow-hidden w-fit',
+                            'group/model flex flex-col gap-2 p-2.5 sm:p-3 rounded-xl text-left border-2 relative overflow-hidden w-fit',
                             isSelected
                               ? 'bg-primary/10 border-primary'
                               : 'bg-card/50 border-border/40 hover:bg-accent/50 hover:border-primary'
@@ -363,7 +358,7 @@ export const GroupedModelSelector = ({
                           <div className="flex items-start justify-between gap-2 relative z-10">
                             <p
                               className={cn(
-                                'font-medium text-sm truncate flex-1 transition-colors',
+                                'font-medium text-sm truncate flex-1',
                                 isSelected && 'text-primary'
                               )}
                               title={model.label || model.model}
@@ -371,7 +366,7 @@ export const GroupedModelSelector = ({
                               {model.label || model.model}
                             </p>
                             {isSelected && (
-                              <Check className="h-4 w-4 text-primary flex-shrink-0 animate-in zoom-in-50 duration-200" />
+                              <Check className="h-4 w-4 text-primary flex-shrink-0 animate-in zoom-in-50" />
                             )}
                           </div>
                         </button>

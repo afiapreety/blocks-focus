@@ -1,29 +1,35 @@
 import { useState, useEffect } from 'react';
-import { useUndoRedo } from '../../hooks/use-undo-redo';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { Globe, Undo2, Redo2, MoreHorizontal, Calendar, Users } from 'lucide-react';
-import { useGetNoteById, useUpdateNote } from '../../hooks/use-notes';
+import { Globe, Undo2, Redo2, Calendar, Users } from 'lucide-react';
+import { useGetNoteById, useUpdateNote, useDeleteNote } from '../../hooks/use-notes';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui-kit/button';
-import { Input } from '@/components/ui-kit/input';
 import { Skeleton } from '@/components/ui-kit/skeleton';
 import { NotesEditor } from '../../components/notes-editor/notes-editor';
 import { NoteAIActions } from '../../components/notes-ai/notes-ai-actions/notes-ai-actions';
 import { useNoteAIEnhancement } from '../../hooks/use-notes-ai';
 import { SelectModelType } from '@/modules/gpt-chats/hooks/use-chat-store';
+import { useQuillHistory } from '../../hooks/use-quill-history';
+import { NoteActionsMenu } from '../../components/note-actions-menu/note-actions-menu';
+import { useNoteActions } from '../../hooks/use-note-actions';
+import { ConfirmationModal } from '@/components/core/confirmation-modal/confirmation-modal';
+import { htmlToMarkdown } from '../../utils/html-to-markdown';
+import { useAuthStore } from '@/state/store/auth';
 
 export function EditNotePage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuthStore();
   const { noteId } = useParams<{ noteId: string }>();
   const { data: note, isLoading } = useGetNoteById(noteId || '');
   const { mutate: updateNote, isPending } = useUpdateNote();
+  const { mutate: deleteNote } = useDeleteNote();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  const { title, content, setTitle, setContent, undo, redo, canUndo, canRedo, resetHistory } =
-    useUndoRedo();
+  const [content, setContent] = useState('');
   const [isPrivate, setIsPrivate] = useState(true);
   const [selectedModel, setSelectedModel] = useState<SelectModelType | undefined>({
     isBlocksModels: true,
@@ -31,38 +37,94 @@ export function EditNotePage() {
     model: 'gpt-4o-mini',
   });
 
+  const { canUndo, canRedo, handleQuillReady, handleUndo, handleRedo, quillInstance } =
+    useQuillHistory();
+  const { handleDownload, handleShare } = useNoteActions({
+    noteId,
+    noteTitle: note?.Title,
+    noteContent: content,
+  });
+
   const getPlainText = (html: string): string => {
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = html;
-    return tempDiv.textContent || '';
+    return htmlToMarkdown(html);
   };
 
   const { isEnhancing, handleEnhanceWithAI } = useNoteAIEnhancement({
     content,
     setContent,
     getPlainText,
+    quillInstance,
   });
 
   useEffect(() => {
     if (note) {
-      resetHistory({ title: note.Title || '', content: note.Content || '' });
+      setContent(note.Content || '');
       setIsPrivate(note.IsPrivate ?? true);
     }
-  }, [note, resetHistory]);
+  }, [note]);
 
-  const wordCount = content.trim().split(/\s+/).filter(Boolean).length;
-  const characterCount = content.length;
+  const extractTitle = (html: string): string => {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    const firstElement = tempDiv.querySelector('h1, h2, h3, p');
+    return firstElement?.textContent?.trim() || 'Untitled Note';
+  };
 
-  const handleModelChange = (value: SelectModelType) => {
+  const plainText = getPlainText(content);
+  const wordCount = plainText.trim().split(/\s+/).filter(Boolean).length;
+  const characterCount = plainText.length;
+
+  const handleModelChange = (value: SelectModelType | undefined) => {
     setSelectedModel(value);
   };
 
+  const onDownload = (format: 'txt' | 'md' | 'pdf') => {
+    const title = extractTitle(content);
+    handleDownload(format, title, content);
+  };
+
+  const onShare = (type: 'link' | 'clipboard') => {
+    const title = extractTitle(content);
+    handleShare(type, noteId, title, content);
+  };
+
+  const onDelete = () => {
+    setShowDeleteDialog(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (noteId) {
+      const filter = JSON.stringify({ _id: noteId });
+      deleteNote(
+        { filter, input: { isHardDelete: true } },
+        {
+          onSuccess: () => {
+            toast({
+              variant: 'success',
+              title: 'Note deleted',
+              description: 'Note deleted successfully',
+            });
+            navigate('/notes');
+          },
+          onError: () => {
+            toast({
+              variant: 'destructive',
+              title: 'Failed to delete note',
+              description: 'Unable to delete note',
+            });
+          },
+        }
+      );
+    }
+    setShowDeleteDialog(false);
+  };
+
   const handleSave = () => {
-    if (!title.trim()) {
+    if (!content.trim() || content === '<p><br></p>') {
       toast({
         variant: 'destructive',
-        title: 'Title required',
-        description: 'Please enter a note title',
+        title: 'Content required',
+        description: 'Please write some content',
       });
       return;
     }
@@ -74,11 +136,26 @@ export function EditNotePage() {
       {
         filter,
         input: {
-          Title: title,
-          Content: content,
           IsPrivate: isPrivate,
           WordCount: wordCount,
           CharacterCount: characterCount,
+          UserId: user?.itemId,
+          AccessControl: '{}',
+          NoteData: {
+            Files: [],
+            NoteContent: {
+              html: content,
+              md: plainText,
+            },
+          },
+          NoteUser: user
+            ? {
+                UserId: user.itemId,
+                Name: `${user.firstName} ${user.lastName}`.trim(),
+                Roles: user.roles?.join(',') || 'user',
+                Email: user.email,
+              }
+            : undefined,
         },
       },
       {
@@ -91,7 +168,7 @@ export function EditNotePage() {
             title: 'Note updated',
             description: 'Note updated successfully',
           });
-          navigate(`/notes/${noteId}`);
+          navigate('/notes');
         },
         onError: (error) => {
           console.error('Error updating note:', error);
@@ -158,7 +235,7 @@ export function EditNotePage() {
               variant="ghost"
               size="icon"
               className="h-8 w-8"
-              onClick={undo}
+              onClick={handleUndo}
               disabled={!canUndo}
             >
               <Undo2 className="h-4 w-4" />
@@ -167,7 +244,7 @@ export function EditNotePage() {
               variant="ghost"
               size="icon"
               className="h-8 w-8"
-              onClick={redo}
+              onClick={handleRedo}
               disabled={!canRedo}
             >
               <Redo2 className="h-4 w-4" />
@@ -178,11 +255,10 @@ export function EditNotePage() {
               onModelChange={handleModelChange}
               onEnhance={() => handleEnhanceWithAI(selectedModel)}
               isEnhancing={isEnhancing}
+              noteContent={content}
             />
 
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
+            <NoteActionsMenu onDownload={onDownload} onShare={onShare} onDelete={onDelete} />
           </div>
         </div>
 
@@ -200,22 +276,29 @@ export function EditNotePage() {
           </span>
         </div>
 
-        <Input
-          type="text"
-          placeholder="Note title..."
-          value={title}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTitle(e.target.value)}
-          className="text-xl font-semibold border-none shadow-none focus-visible:ring-0 px-0 mb-4 bg-transparent text-card-foreground placeholder:text-muted-foreground h-auto"
+        <NotesEditor
+          value={content}
+          onChange={setContent}
+          placeholder="Write something..."
+          onQuillReady={handleQuillReady}
         />
-
-        <NotesEditor value={content} onChange={setContent} placeholder="Write something..." />
       </div>
 
       <div className="p-4 border-t border-border flex items-center justify-end">
-        <Button onClick={handleSave} disabled={!title.trim() || isPending} loading={isPending}>
+        <Button onClick={handleSave} disabled={isPending} loading={isPending}>
           Update Note
         </Button>
       </div>
+
+      <ConfirmationModal
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        title="Delete Note"
+        description="Are you sure you want to delete this note? This action cannot be undone."
+        onConfirm={handleConfirmDelete}
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
     </div>
   );
 }

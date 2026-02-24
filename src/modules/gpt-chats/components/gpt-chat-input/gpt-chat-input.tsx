@@ -47,7 +47,7 @@ export const GptChatInput = ({
   return (
     <div
       className={cn(
-        'fixed bottom-0 left-0 right-0 z-10 transition-all duration-300',
+        'fixed bottom-0 left-0 right-0 z-10',
         state === 'collapsed' ? 'md:ml-16 lg:ml-16 xl:ml-16' : 'md:ml-64 lg:ml-64 xl:ml-60',
         className
       )}
@@ -57,7 +57,7 @@ export const GptChatInput = ({
           variant === 'chat-details' ? ' bg-background backdrop-blur-3xl' : ''
         }`}
       >
-        <div className="bg-card relative rounded-3xl border-2 border-border hover:border-primary focus-within:border-primary transition-all duration-300 ">
+        <div className="bg-card relative rounded-3xl border-2 border-border hover:border-primary focus-within:border-primary">
           <Textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
@@ -75,7 +75,7 @@ export const GptChatInput = ({
           <div className="absolute  right-4 bottom-[75px] sm:right-4">
             <Button
               size="icon"
-              className={`h-10 w-10 rounded-2xl transition-all duration-300 ${
+              className={`h-10 w-10 rounded-2xl ${
                 message.trim() && !disabled
                   ? 'bg-primary hover:bg-primary/90 text-white  hover:scale-110'
                   : 'bg-muted text-muted-foreground cursor-not-allowed'

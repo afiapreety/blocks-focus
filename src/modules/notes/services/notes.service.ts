@@ -14,6 +14,23 @@ import {
   Note,
 } from '../types/notes.types';
 
+const normalizeNote = (note: Note): Note => {
+  if (note.NoteData?.NoteContent?.html) {
+    if (!note.Title) {
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = note.NoteData.NoteContent.html;
+      const firstElement = tempDiv.querySelector('h1, h2, h3, p');
+      note.Title = firstElement?.textContent?.trim() || 'Untitled Note';
+    }
+
+    if (!note.Content) {
+      note.Content = note.NoteData.NoteContent.html;
+    }
+  }
+
+  return note;
+};
+
 interface NotesData {
   hasNextPage: boolean;
   hasPreviousPage: boolean;
@@ -35,7 +52,10 @@ export const getNotes = async (context: GetNotesContext) => {
     let filter = '{}';
     if (searchQuery && searchQuery.trim() !== '') {
       filter = JSON.stringify({
-        Title: { $regex: searchQuery, $options: 'i' },
+        $or: [
+          { 'NoteData.NoteContent.html': { $regex: searchQuery, $options: 'i' } },
+          { 'NoteData.NoteContent.md': { $regex: searchQuery, $options: 'i' } },
+        ],
       });
     }
 
@@ -81,7 +101,7 @@ export const getNotes = async (context: GetNotesContext) => {
       totalPages: Number(notes?.totalPages ?? 0),
       pageSize: Number(notes?.pageSize ?? pageSize),
       pageNo: Number(notes?.pageNo ?? pageNo),
-      items: Array.isArray(notes?.items) ? notes.items : [],
+      items: Array.isArray(notes?.items) ? notes.items.map(normalizeNote) : [],
     };
 
     return result;
@@ -138,7 +158,7 @@ export const getNoteById = async (noteId: string): Promise<Note> => {
       throw new Error('Note not found');
     }
 
-    return note;
+    return normalizeNote(note);
   } catch (error) {
     console.error('Error in getNoteById:', error);
     throw error;
