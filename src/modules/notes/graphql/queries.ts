@@ -16,20 +16,33 @@ export const GET_NOTES_QUERY = `
       pageNo
       items {
         ItemId
-        CreatedBy
         CreatedDate
+        CreatedBy
+        LastUpdatedDate
+        LastUpdatedBy
         IsDeleted
         Language
-        LastUpdatedBy
-        LastUpdatedDate
         OrganizationIds
         Tags
         DeletedDate
-        Title
-        Content
         IsPrivate
         WordCount
         CharacterCount
+        AccessControl
+        UserId
+        NoteData {
+          Files
+          NoteContent {
+            md
+            html
+          }
+        }
+        NoteUser {
+          UserId
+          Name
+          Roles
+          Email
+        }
       }
     }
   }
@@ -40,20 +53,33 @@ export const GET_NOTE_BY_ID_QUERY = `
     getNoteItems(input: $input) {
       items {
         ItemId
-        CreatedBy
         CreatedDate
+        CreatedBy
+        LastUpdatedDate
+        LastUpdatedBy
         IsDeleted
         Language
-        LastUpdatedBy
-        LastUpdatedDate
         OrganizationIds
         Tags
         DeletedDate
-        Title
-        Content
         IsPrivate
         WordCount
         CharacterCount
+        AccessControl
+        UserId
+        NoteData {
+          Files
+          NoteContent {
+            md
+            html
+          }
+        }
+        NoteUser {
+          UserId
+          Name
+          Roles
+          Email
+        }
       }
     }
   }

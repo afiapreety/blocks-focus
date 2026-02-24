@@ -30,7 +30,11 @@ const fetchNotes = async ({
   return getNotes({
     queryKey: [
       'notes',
-      { pageNo: params.pageNo, pageSize: params.pageSize, searchQuery: params.searchQuery },
+      {
+        pageNo: params.pageNo,
+        pageSize: params.pageSize,
+        searchQuery: params.searchQuery,
+      },
     ],
   });
 };

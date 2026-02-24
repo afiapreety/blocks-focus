@@ -7,24 +7,15 @@ import { NotesHeader } from '../../components/notes-header/notes-header';
 import { NotesSearch } from '../../components/notes-search/notes-search';
 import { NotesEmptyState } from '../../components/notes-empty-state/notes-empty-state';
 import { NoteCard } from '../../components/note-card/note-card';
-import { useToast } from '@/hooks/use-toast';
+import { useNoteActions } from '../../hooks/use-note-actions';
 import { useAuthStore } from '@/state/store/auth';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui-kit/alert-dialog';
+import { ConfirmationModal } from '@/components/core/confirmation-modal/confirmation-modal';
 import { Skeleton } from '@/components/ui-kit/skeleton';
 
 export function NotesPage() {
   const navigate = useNavigate();
-  const { toast } = useToast();
   const { user } = useAuthStore();
+  const { handleDownload: downloadNote, handleShare: shareNote } = useNoteActions();
   const userName = user ? `${user.firstName} ${user.lastName}`.trim() : undefined;
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
@@ -53,10 +44,17 @@ export function NotesPage() {
 
   const { mutate: deleteNote, isPending: isDeleting } = useDeleteNote();
 
-  const totalCount = notesData?.totalCount ?? 0;
+  // Filter notes by current user
+  const userNotes = useMemo(() => {
+    const allNotes = notesData?.items ?? [];
+    if (!user?.itemId) return allNotes;
+    return allNotes.filter((note) => note.UserId === user.itemId);
+  }, [notesData?.items, user?.itemId]);
+
+  const totalCount = userNotes.length;
 
   const groupedNotes = useMemo(() => {
-    const notes = notesData?.items ?? [];
+    const notes = userNotes;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -80,7 +78,7 @@ export function NotesPage() {
     });
 
     return groups;
-  }, [notesData?.items]);
+  }, [userNotes]);
 
   const handleNoteClick = (note: Note) => {
     navigate(`/notes/${note.ItemId}`);
@@ -104,44 +102,12 @@ export function NotesPage() {
     }
   };
 
-  const handleDownload = (note: Note) => {
-    const content = `# ${note.Title}\n\n${note.Content}`;
-    const blob = new Blob([content], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${note.Title}.md`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    toast({
-      variant: 'success',
-      title: 'Note downloaded',
-      description: 'Note downloaded successfully',
-    });
+  const handleDownload = (note: Note, format: 'txt' | 'md' | 'pdf' = 'md') => {
+    downloadNote(format, note.Title, note.Content);
   };
 
   const handleShare = (note: Note) => {
-    const shareUrl = `${window.location.origin}/notes/${note.ItemId}`;
-
-    if (navigator.share) {
-      navigator
-        .share({
-          title: note.Title,
-          text: note.Content.substring(0, 100),
-          url: shareUrl,
-        })
-        .catch(() => undefined);
-    } else {
-      navigator.clipboard.writeText(shareUrl);
-      toast({
-        variant: 'success',
-        title: 'Link copied',
-        description: 'Note link copied to clipboard',
-      });
-    }
+    shareNote('link', note.ItemId, note.Title, note.Content);
   };
 
   return (
@@ -208,20 +174,15 @@ export function NotesPage() {
         </div>
       )}
 
-      <AlertDialog open={!!deleteNoteId} onOpenChange={() => setDeleteNoteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Note</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this note? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmDelete}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmationModal
+        open={!!deleteNoteId}
+        onOpenChange={(open) => !open && setDeleteNoteId(null)}
+        title="Delete Note"
+        description="Are you sure you want to delete this note? This action cannot be undone."
+        onConfirm={handleConfirmDelete}
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
     </div>
   );
 }

@@ -58,14 +58,14 @@ export const ToolsSelector = ({ value = [], onChange, tenantId }: ToolsSelectorP
           variant="ghost"
           role="combobox"
           aria-expanded={open}
-          className="w-11 h-11 justify-center bg-gradient-to-br from-card/80 to-card/50 hover:from-card hover:to-card/80   transition-all duration-300 rounded-xl p-0 group relative  backdrop-blur-sm"
+          className="w-11 h-11 justify-center bg-gradient-to-br from-card/80 to-card/50 hover:from-card hover:to-card/80 rounded-xl p-0 group relative  backdrop-blur-sm"
         >
-          <div className="p-1.5 rounded-lg flex-shrink-0 transition-all duration-300 bg-gradient-to-br from-primary/15 to-primary/5 group-hover:from-primary/20 group-hover:to-primary/10 group-hover:scale-110">
+          <div className="p-1.5 rounded-lg flex-shrink-0 bg-gradient-to-br from-primary/15 to-primary/5 group-hover:from-primary/20 group-hover:to-primary/10 group-hover:scale-110">
             <Zap className="h-5 w-5 text-primary transition-transform duration-300" />
           </div>
 
           {selectedCount > 0 && (
-            <Badge className="absolute -top-1.5 -right-1.5 h-5 min-w-[1.25rem] px-1.5 flex items-center justify-center text-[10px] font-semibold bg-gradient-to-br from-primary via-primary to-primary/90 text-white border-2 border-background  hover:scale-110 transition-all duration-200 animate-in zoom-in">
+            <Badge className="absolute -top-1.5 -right-1.5 h-5 min-w-[1.25rem] px-1.5 flex items-center justify-center text-[10px] font-semibold bg-gradient-to-br from-primary via-primary to-primary/90 text-white border-2 border-background  hover:scale-110  animate-in zoom-in">
               {selectedCount}
               <span className="absolute inset-0 rounded-full bg-primary/30 animate-ping" />
             </Badge>
@@ -86,7 +86,7 @@ export const ToolsSelector = ({ value = [], onChange, tenantId }: ToolsSelectorP
               <button
                 onClick={() => setToolType('api')}
                 className={cn(
-                  'flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200',
+                  'flex-1 px-3 py-1.5 text-xs font-medium rounded-md',
                   toolType === 'api'
                     ? 'bg-background text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
@@ -97,7 +97,7 @@ export const ToolsSelector = ({ value = [], onChange, tenantId }: ToolsSelectorP
               <button
                 onClick={() => setToolType('mcp_server')}
                 className={cn(
-                  'flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200',
+                  'flex-1 px-3 py-1.5 text-xs font-medium rounded-md',
                   toolType === 'mcp_server'
                     ? 'bg-background text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
@@ -118,7 +118,7 @@ export const ToolsSelector = ({ value = [], onChange, tenantId }: ToolsSelectorP
                       key={tool.id}
                       onClick={() => handleToggleTool(tool.id)}
                       className={cn(
-                        'group/tool flex flex-col gap-2.5 p-3.5 rounded-xl text-left transition-all duration-200 border relative overflow-hidden',
+                        'group/tool flex flex-col gap-2.5 p-3.5 rounded-xl text-left border relative overflow-hidden',
                         isSelected
                           ? 'bg-primary/5 border-primary shadow-sm'
                           : 'bg-card border-border hover:border-primary hover:shadow-sm'
@@ -137,7 +137,7 @@ export const ToolsSelector = ({ value = [], onChange, tenantId }: ToolsSelectorP
                           <div className="flex items-center gap-2.5 mb-1.5">
                             <div
                               className={cn(
-                                'p-1.5 rounded-lg transition-all duration-200',
+                                'p-1.5 rounded-lg',
                                 isSelected
                                   ? 'bg-primary/15'
                                   : 'bg-muted/50 group-hover/tool:bg-primary/10'
@@ -145,7 +145,7 @@ export const ToolsSelector = ({ value = [], onChange, tenantId }: ToolsSelectorP
                             >
                               <Zap
                                 className={cn(
-                                  'h-3.5 w-3.5 transition-colors',
+                                  'h-3.5 w-3.5',
                                   isSelected
                                     ? 'text-primary'
                                     : 'text-muted-foreground group-hover/tool:text-primary'
@@ -154,7 +154,7 @@ export const ToolsSelector = ({ value = [], onChange, tenantId }: ToolsSelectorP
                             </div>
                             <p
                               className={cn(
-                                'font-semibold text-sm truncate transition-colors',
+                                'font-semibold text-sm truncate',
                                 isSelected ? 'text-primary' : 'text-foreground'
                               )}
                               title={tool.name}
@@ -172,7 +172,7 @@ export const ToolsSelector = ({ value = [], onChange, tenantId }: ToolsSelectorP
 
                         {isSelected && (
                           <div className="p-1 rounded-full bg-primary/15">
-                            <Check className="h-3.5 w-3.5 text-primary flex-shrink-0 animate-in zoom-in-50 duration-200" />
+                            <Check className="h-3.5 w-3.5 text-primary flex-shrink-0 animate-in zoom-in-50" />
                           </div>
                         )}
                       </div>
@@ -180,7 +180,7 @@ export const ToolsSelector = ({ value = [], onChange, tenantId }: ToolsSelectorP
                       <div className="flex items-center relative z-10">
                         <span
                           className={cn(
-                            'px-2 py-1 rounded-md text-xs font-medium transition-colors bg-muted/50 text-muted-foreground border border-border/30'
+                            'px-2 py-1 rounded-md text-xs font-medium bg-muted/50 text-muted-foreground border border-border/30'
                           )}
                         >
                           {formatToolType(tool.type)}

@@ -206,7 +206,7 @@ export const GptChatPage = () => {
                 variant={isActive ? 'default' : 'outline'}
                 size="default"
                 onClick={() => setSelectedCategory(category.id)}
-                className={`gap-2 px-4 sm:px-6 py-3 sm:py-5 rounded-2xl transition-all duration-300 text-sm sm:text-base ${
+                className={`gap-2 px-4 sm:px-6 py-3 sm:py-5 rounded-2xl  duration-300 text-sm sm:text-base ${
                   isActive
                     ? 'bg-primary  text-white  scale-105 hover:bg-primary-300'
                     : 'bg-card/50 hover:bg-accent border-2 hover:scale-105'
@@ -226,14 +226,14 @@ export const GptChatPage = () => {
               <button
                 key={prompt.id}
                 onClick={() => handlePromptClick(prompt)}
-                className="group relative overflow-hidden text-left p-5 rounded-2xl border-2 border-border bg-card/50 backdrop-blur-sm hover:bg-accent/50  transition-all duration-300   hover:-translate-y-1"
+                className="group relative overflow-hidden text-left p-5 rounded-2xl border-2 border-border bg-card/50 backdrop-blur-sm hover:bg-accent/50   duration-300   hover:-translate-y-1"
               >
                 <div className="flex items-start gap-4">
-                  <div className="p-2.5 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-all duration-300 group-hover:scale-110">
+                  <div className="p-2.5 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white  duration-300 group-hover:scale-110">
                     <PromptIcon className="h-5 w-5" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-foreground mb-1 group-hover:text-primary transition-colors">
+                    <h3 className="font-semibold text-foreground mb-1 group-hover:text-primary ">
                       {prompt.title}
                     </h3>
                     <p className="text-sm text-muted-foreground line-clamp-1">

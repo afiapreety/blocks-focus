@@ -2,21 +2,25 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { Globe, Undo2, Redo2, MoreHorizontal, Calendar, Users } from 'lucide-react';
-
+import { Globe, Undo2, Redo2, Calendar, Users } from 'lucide-react';
 import { useAddNote } from '../../hooks/use-notes';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui-kit/button';
 import { NotesEditor } from '../../components/notes-editor/notes-editor';
-
 import { SelectModelType } from '@/modules/gpt-chats/hooks/use-chat-store';
 import { NoteAIActions } from '../../components/notes-ai/notes-ai-actions/notes-ai-actions';
 import { useNoteAIEnhancement } from '../../hooks/use-notes-ai';
+import { useQuillHistory } from '../../hooks/use-quill-history';
+import { NoteActionsMenu } from '../../components/note-actions-menu/note-actions-menu';
+import { useNoteActions } from '../../hooks/use-note-actions';
+import { htmlToMarkdown } from '../../utils/html-to-markdown';
+import { useAuthStore } from '@/state/store/auth';
 
 export function CreateNotePage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuthStore();
   const { mutate: addNote, isPending } = useAddNote();
 
   const [content, setContent] = useState('');
@@ -27,16 +31,19 @@ export function CreateNotePage() {
     model: 'gpt-4o-mini',
   });
 
+  const { canUndo, canRedo, handleQuillReady, handleUndo, handleRedo, quillInstance } =
+    useQuillHistory();
+  const { handleDownload } = useNoteActions();
+
   const getPlainText = (html: string): string => {
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = html;
-    return tempDiv.textContent || '';
+    return htmlToMarkdown(html);
   };
 
   const { isEnhancing, handleEnhanceWithAI } = useNoteAIEnhancement({
     content,
     setContent,
     getPlainText,
+    quillInstance,
   });
 
   const extractTitle = (html: string): string => {
@@ -53,8 +60,13 @@ export function CreateNotePage() {
   const currentDate = format(new Date(), 'yyyy-MM-dd');
   const currentTime = format(new Date(), "'Today at' h:mm a");
 
-  const handleModelChange = (value: SelectModelType) => {
+  const handleModelChange = (value: SelectModelType | undefined) => {
     setSelectedModel(value);
+  };
+
+  const onDownload = (format: 'txt' | 'md' | 'pdf') => {
+    const title = extractTitle(content);
+    handleDownload(format, title, content);
   };
 
   const handleSave = () => {
@@ -67,20 +79,33 @@ export function CreateNotePage() {
       return;
     }
 
-    const title = extractTitle(content);
-
     addNote(
       {
         input: {
-          Title: title,
-          Content: content,
           IsPrivate: isPrivate,
           WordCount: wordCount,
           CharacterCount: characterCount,
+          UserId: user?.itemId,
+          AccessControl: '{}',
+          NoteData: {
+            Files: [],
+            NoteContent: {
+              html: content,
+              md: plainText,
+            },
+          },
+          NoteUser: user
+            ? {
+                UserId: user.itemId,
+                Name: `${user.firstName} ${user.lastName}`.trim(),
+                Roles: user.roles?.join(',') || 'user',
+                Email: user.email,
+              }
+            : undefined,
         },
       },
       {
-        onSuccess: (data) => {
+        onSuccess: () => {
           queryClient.removeQueries({
             predicate: (query) => query.queryKey[0] === 'notes',
           });
@@ -90,12 +115,7 @@ export function CreateNotePage() {
             description: 'Note created successfully',
           });
 
-          const createdNoteId = data?.insertNoteItem?.itemId;
-          if (createdNoteId) {
-            navigate(`/notes/${createdNoteId}`);
-          } else {
-            navigate('/notes');
-          }
+          navigate('/notes');
         },
         onError: (error) => {
           console.error('Error creating note:', error);
@@ -115,10 +135,22 @@ export function CreateNotePage() {
         <div className="flex items-start justify-between mb-2">
           <h1 className="text-2xl font-bold text-card-foreground">{currentDate}</h1>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="h-8 w-8" disabled>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={handleUndo}
+              disabled={!canUndo}
+            >
               <Undo2 className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" disabled>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={handleRedo}
+              disabled={!canRedo}
+            >
               <Redo2 className="h-4 w-4" />
             </Button>
 
@@ -127,11 +159,10 @@ export function CreateNotePage() {
               onModelChange={handleModelChange}
               onEnhance={() => handleEnhanceWithAI(selectedModel)}
               isEnhancing={isEnhancing}
+              noteContent={content}
             />
 
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
+            <NoteActionsMenu onDownload={onDownload} showShare={false} showDelete={false} />
           </div>
         </div>
 
@@ -149,7 +180,12 @@ export function CreateNotePage() {
           </span>
         </div>
 
-        <NotesEditor value={content} onChange={setContent} placeholder="Write something..." />
+        <NotesEditor
+          value={content}
+          onChange={setContent}
+          placeholder="Write something..."
+          onQuillReady={handleQuillReady}
+        />
       </div>
 
       <div className="p-4 border-t border-border flex items-center justify-end">

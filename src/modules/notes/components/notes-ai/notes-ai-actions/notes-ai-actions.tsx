@@ -17,17 +17,18 @@ import { AIChatSheet } from '../notes-ask-ai/notes-ask-ai';
 
 interface NoteAIActionsProps {
   selectedModel: SelectModelType | undefined;
-  onModelChange: (value: SelectModelType) => void;
-  onEnhance?: () => void;
-  isEnhancing?: boolean;
-  content?: string;
+  onModelChange: (model: SelectModelType | undefined) => void;
+  onEnhance: () => void;
+  isEnhancing: boolean;
+  noteContent?: string;
 }
 
 export function NoteAIActions({
   selectedModel,
   onModelChange,
   onEnhance,
-  isEnhancing = false,
+  isEnhancing,
+  noteContent,
 }: NoteAIActionsProps) {
   return (
     <>
@@ -116,11 +117,11 @@ export function NoteAIActions({
         <Tooltip>
           <TooltipTrigger asChild>
             <div>
-              <AIChatSheet />
+              <AIChatSheet noteContent={noteContent} />
             </div>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Ask AI</p>
+            <p>Chat with AI</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
