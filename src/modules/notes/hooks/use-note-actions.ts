@@ -14,9 +14,15 @@ export function useNoteActions({ noteId, noteTitle, noteContent }: UseNoteAction
     const finalTitle = title || noteTitle || 'Untitled Note';
     const finalContent = content || noteContent || '';
 
+    // For markdown content, remove markdown syntax for plain text
     const plainText = finalContent
-      .replace(/<[^>]*>/g, '')
-      .replace(/\s+/g, ' ')
+      .replace(/^#{1,6}\s+/gm, '') // Remove heading markers
+      .replace(/\*\*(.+?)\*\*/g, '$1') // Remove bold
+      .replace(/\*(.+?)\*/g, '$1') // Remove italic
+      .replace(/`(.+?)`/g, '$1') // Remove inline code
+      .replace(/\[(.+?)\]\(.+?\)/g, '$1') // Remove links, keep text
+      .replace(/^[-*+]\s+/gm, '') // Remove list markers
+      .replace(/^\d+\.\s+/gm, '') // Remove ordered list markers
       .trim();
 
     if (format === 'pdf') {
@@ -66,7 +72,8 @@ export function useNoteActions({ noteId, noteTitle, noteContent }: UseNoteAction
       return;
     }
 
-    const fileContent = format === 'md' ? `# ${finalTitle}\n\n${plainText}` : plainText;
+    // For markdown format, use content as-is; for txt, use plain text
+    const fileContent = format === 'md' ? finalContent : plainText;
     const mimeType = format === 'md' ? 'text/markdown' : 'text/plain';
     const blob = new Blob([fileContent], { type: mimeType });
     const url = URL.createObjectURL(blob);
@@ -105,10 +112,6 @@ export function useNoteActions({ noteId, noteTitle, noteContent }: UseNoteAction
     }
 
     const shareUrl = `${window.location.origin}/notes/${finalId}`;
-    const plainText = finalContent
-      .replace(/<[^>]*>/g, '')
-      .replace(/\s+/g, ' ')
-      .trim();
 
     if (type === 'link') {
       navigator.clipboard.writeText(shareUrl);
@@ -118,7 +121,8 @@ export function useNoteActions({ noteId, noteTitle, noteContent }: UseNoteAction
         description: 'Note link copied to clipboard',
       });
     } else if (type === 'clipboard') {
-      const contentToCopy = `${finalTitle}\n\n${plainText}`;
+      // Copy markdown content as-is
+      const contentToCopy = `# ${finalTitle}\n\n${finalContent}`;
       navigator.clipboard.writeText(contentToCopy);
       toast({
         variant: 'success',

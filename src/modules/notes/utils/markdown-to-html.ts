@@ -25,6 +25,19 @@ export function markdownToHtml(markdown: string): string {
   html = html.replace(/^# (.*?)$/gm, '<h1>$1</h1>');
 
   // Handle lists BEFORE inline formatting to avoid breaking list detection
+  // Task lists (checkboxes) - must come before regular lists
+  html = html.replace(/^([-*] \[[ xX]\] .+)(?:\n[-*] \[[ xX]\] .+)*$/gm, (match) => {
+    const items = match
+      .split('\n')
+      .map((line) => {
+        const isChecked = /\[x\]/i.test(line);
+        const content = line.replace(/^[-*] \[[ xX]\] /, '').trim();
+        return `<li data-type="taskItem" data-checked="${isChecked}">${content}</li>`;
+      })
+      .join('\n');
+    return `__TASK_LIST_START__\n${items}\n__TASK_LIST_END__`;
+  });
+
   // Unordered lists (- or *)
   html = html.replace(/^([-*] .+)(?:\n[-*] .+)*$/gm, (match) => {
     const items = match
@@ -50,6 +63,10 @@ export function markdownToHtml(markdown: string): string {
   });
 
   // Replace list placeholders with proper tags
+  html = html.replace(
+    /__TASK_LIST_START__([\s\S]*?)__TASK_LIST_END__/g,
+    '<ul data-type="taskList">$1</ul>'
+  );
   html = html.replace(/__UL_START__([\s\S]*?)__UL_END__/g, '<ul>$1</ul>');
   html = html.replace(/__OL_START__([\s\S]*?)__OL_END__/g, '<ol>$1</ol>');
 
@@ -88,6 +105,7 @@ export function markdownToHtml(markdown: string): string {
     // Skip code block and list placeholders
     if (
       para.includes('__CODE_BLOCK_') ||
+      para.includes('__TASK_LIST_START__') ||
       para.includes('__UL_START__') ||
       para.includes('__OL_START__')
     ) {

@@ -4,19 +4,18 @@ import { SelectModelType } from '@/modules/gpt-chats/hooks/use-chat-store';
 import { conversationService } from '@/modules/gpt-chats/services/conversation.service';
 import { parseSSEBuffer } from '@/modules/gpt-chats/utils/parse-sse';
 import { markdownToHtml } from '../utils/markdown-to-html';
+import { htmlToMarkdown } from '../utils/html-to-markdown';
 
 interface UseNoteAIEnhancementProps {
   content: string;
   setContent: (content: string) => void;
-  getPlainText?: (html: string) => string;
-  quillInstance?: any;
+  isMarkdownMode?: boolean;
 }
 
 export function useNoteAIEnhancement({
   content,
   setContent,
-  getPlainText,
-  quillInstance,
+  isMarkdownMode = true,
 }: UseNoteAIEnhancementProps) {
   const { toast } = useToast();
   const [isEnhancing, setIsEnhancing] = useState(false);
@@ -24,9 +23,8 @@ export function useNoteAIEnhancement({
   const llmBasePrompt = import.meta.env.VITE_LLM_BASE_PROMPT;
 
   const fakeStreamNoteContent = (fullMessage: string, onComplete: (content: string) => void) => {
-    const isHtmlContent = fullMessage.includes('<');
-    const chunkSize = isHtmlContent ? 80 : 5;
-    const delay = isHtmlContent ? 25 : 20;
+    const chunkSize = 10;
+    const delay = 20;
 
     let index = 0;
     let accumulatedContent = '';
@@ -37,26 +35,9 @@ export function useNoteAIEnhancement({
         return;
       }
 
-      let chunk = fullMessage.slice(index, index + chunkSize);
-
-      // For HTML: try to break at tag boundaries to maintain valid HTML
-      if (isHtmlContent && chunk.length === chunkSize && index + chunkSize < fullMessage.length) {
-        // Look for the nearest closing tag or opening tag
-        const closeTagIndex = chunk.lastIndexOf('>');
-        if (closeTagIndex !== -1) {
-          chunk = chunk.slice(0, closeTagIndex + 1);
-        }
-      }
-
+      const chunk = fullMessage.slice(index, index + chunkSize);
       accumulatedContent += chunk;
-
-      // Use Quill API directly if available to preserve undo/redo history
-      if (quillInstance) {
-        const delta = quillInstance.clipboard.convert({ html: accumulatedContent });
-        quillInstance.setContents(delta, 'user');
-      } else {
-        setContent(accumulatedContent);
-      }
+      setContent(accumulatedContent);
 
       index += chunk.length;
       setTimeout(sendNextChunk, delay);
@@ -66,7 +47,7 @@ export function useNoteAIEnhancement({
   };
 
   const handleEnhanceWithAI = async (selectedModel: SelectModelType | undefined) => {
-    if (!content.trim() || content === '<p><br></p>') {
+    if (!content.trim()) {
       toast({
         variant: 'destructive',
         title: 'No content',
@@ -91,10 +72,12 @@ export function useNoteAIEnhancement({
       const modelName = selectedModel.isBlocksModels ? selectedModel.model : '';
       const modelProvider = selectedModel.isBlocksModels ? selectedModel.provider : '';
 
-      const plainTextContent = getPlainText ? getPlainText(content) : content;
-      //   const enhancePrompt = `Enhance existing notes using additional context provided  content in the content's primary language. Your task is to make the notes more useful and comprehensive by incorporating relevant information from the provided context.:\n\n${plainTextContent}`;
+      // Convert HTML content to markdown for AI processing
+      const markdownContent = isMarkdownMode ? htmlToMarkdown(content) : content;
 
-      const enhancePrompt = `Enhance existing notes using additional context. Your task is to make the notes more useful and comprehensive by incorporating relevant information from the provided context according to the base prompt.:\n\n${plainTextContent}`;
+      const enhancePrompt = isMarkdownMode
+        ? `Enhance the following markdown notes. Make them more useful and comprehensive by incorporating relevant information. Return the enhanced content in markdown format:\n\n${markdownContent}`
+        : `Enhance existing notes using additional context. Your task is to make the notes more useful and comprehensive by incorporating relevant information from the provided context according to the base prompt.:\n\n${markdownContent}`;
 
       const reader = await conversationService.query({
         query: enhancePrompt,
@@ -144,25 +127,16 @@ export function useNoteAIEnhancement({
       }
 
       if (hasReceivedResponse && enhancedContent.trim()) {
-        if (getPlainText) {
-          const htmlContent = markdownToHtml(enhancedContent);
-          fakeStreamNoteContent(htmlContent, () => {
-            setIsEnhancing(false);
-            toast({
-              variant: 'success',
-              title: 'Content enhanced',
-              description: 'Your note has been enhanced with AI',
-            });
-          });
-        } else {
-          setContent(enhancedContent);
+        // Convert markdown response to HTML for BlockEditor
+        const htmlContent = isMarkdownMode ? markdownToHtml(enhancedContent) : enhancedContent;
+        fakeStreamNoteContent(htmlContent, () => {
           setIsEnhancing(false);
           toast({
             variant: 'success',
             title: 'Content enhanced',
             description: 'Your note has been enhanced with AI',
           });
-        }
+        });
       } else {
         setIsEnhancing(false);
         toast({
