@@ -1,20 +1,27 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { format } from 'date-fns';
-import { Globe, Undo2, Redo2, Calendar, Users } from 'lucide-react';
+import { Undo2, Redo2 } from 'lucide-react';
 import { useAddNote } from '../../hooks/use-notes';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui-kit/button';
-import { NotesEditor } from '../../components/notes-editor/notes-editor';
-import { SelectModelType } from '@/modules/gpt-chats/hooks/use-chat-store';
-import { NoteAIActions } from '../../components/notes-ai/notes-ai-actions/notes-ai-actions';
-import { useNoteAIEnhancement } from '../../hooks/use-notes-ai';
-import { useQuillHistory } from '../../hooks/use-quill-history';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui-kit/tooltip';
+import { BlockEditor } from '../../components/block-editor/block-editor';
+import { useMarkdownHistory } from '../../hooks/use-markdown-history';
 import { NoteActionsMenu } from '../../components/note-actions-menu/note-actions-menu';
 import { useNoteActions } from '../../hooks/use-note-actions';
-import { htmlToMarkdown } from '../../utils/html-to-markdown';
 import { useAuthStore } from '@/state/store/auth';
+import { NoteAIActions } from '../../components/notes-ai/notes-ai-actions/notes-ai-actions';
+import { useNoteAIEnhancement } from '../../hooks/use-notes-ai';
+import { htmlToMarkdown } from '../../utils/html-to-markdown';
+import { SelectModelType } from '@/modules/gpt-chats/hooks/use-chat-store';
+import { NotesChatPanel } from '../../components/notes-ai/notes-chat-panel/notes-chat-panel';
+import { cn } from '@/lib/utils';
 
 export function CreateNotePage() {
   const navigate = useNavigate();
@@ -25,52 +32,65 @@ export function CreateNotePage() {
 
   const [content, setContent] = useState('');
   const [isPrivate] = useState(true);
+  const [editorMode, setEditorMode] = useState<'edit' | 'preview'>('edit');
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const [selectedModel, setSelectedModel] = useState<SelectModelType | undefined>({
     isBlocksModels: true,
     provider: 'azure',
     model: 'gpt-4o-mini',
   });
 
-  const { canUndo, canRedo, handleQuillReady, handleUndo, handleRedo, quillInstance } =
-    useQuillHistory();
-  const { handleDownload } = useNoteActions();
+  const {
+    canUndo,
+    canRedo,
+    handleEditorReady,
+    handleUndo,
+    handleRedo,
+    updateHistory,
+    resetHistory,
+  } = useMarkdownHistory();
 
-  const getPlainText = (html: string): string => {
-    return htmlToMarkdown(html);
-  };
+  useEffect(() => {
+    // Initialize history with empty content when component mounts
+    resetHistory('');
+  }, [resetHistory]);
+  const { handleDownload } = useNoteActions();
 
   const { isEnhancing, handleEnhanceWithAI } = useNoteAIEnhancement({
     content,
     setContent,
-    getPlainText,
-    quillInstance,
+    isMarkdownMode: true,
   });
-
-  const extractTitle = (html: string): string => {
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = html;
-    const firstElement = tempDiv.querySelector('h1, h2, h3, p');
-    return firstElement?.textContent?.trim() || 'Untitled Note';
-  };
-
-  const plainText = getPlainText(content);
-  const wordCount = plainText.trim().split(/\s+/).filter(Boolean).length;
-  const characterCount = plainText.length;
-
-  const currentDate = format(new Date(), 'yyyy-MM-dd');
-  const currentTime = format(new Date(), "'Today at' h:mm a");
 
   const handleModelChange = (value: SelectModelType | undefined) => {
     setSelectedModel(value);
   };
 
+  const extractTitle = (html: string): string => {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    const firstHeading = tempDiv.querySelector('h1, h2, h3');
+    if (firstHeading) {
+      return firstHeading.textContent?.trim() || 'Untitled Note';
+    }
+    const firstPara = tempDiv.querySelector('p');
+    return firstPara?.textContent?.substring(0, 50).trim() || 'Untitled Note';
+  };
+
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = content;
+  const textContent = tempDiv.textContent || '';
+  const wordCount = textContent.trim().split(/\s+/).filter(Boolean).length;
+  const characterCount = textContent.length;
+
   const onDownload = (format: 'txt' | 'md' | 'pdf') => {
     const title = extractTitle(content);
-    handleDownload(format, title, content);
+    const markdownContent = htmlToMarkdown(content);
+    handleDownload(format, title, markdownContent);
   };
 
   const handleSave = () => {
-    if (!content.trim() || content === '<p><br></p>') {
+    if (!content.trim()) {
       toast({
         variant: 'destructive',
         title: 'Content required',
@@ -78,6 +98,8 @@ export function CreateNotePage() {
       });
       return;
     }
+
+    const markdownContent = htmlToMarkdown(content);
 
     addNote(
       {
@@ -91,7 +113,7 @@ export function CreateNotePage() {
             Files: [],
             NoteContent: {
               html: content,
-              md: plainText,
+              md: markdownContent,
             },
           },
           NoteUser: user
@@ -130,73 +152,138 @@ export function CreateNotePage() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-7rem)] w-full rounded-lg bg-card">
-      <div className="flex-1 overflow-y-auto p-6 w-full">
-        <div className="flex items-start justify-between mb-2">
-          <h1 className="text-2xl font-bold text-card-foreground">{currentDate}</h1>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={handleUndo}
-              disabled={!canUndo}
-            >
-              <Undo2 className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={handleRedo}
-              disabled={!canRedo}
-            >
-              <Redo2 className="h-4 w-4" />
-            </Button>
+    <div className="flex h-[calc(100vh-3.5rem)] w-full bg-card">
+      <div className={cn('flex flex-col flex-1 min-h-0', isChatOpen ? '' : 'w-full')}>
+        <div className="flex items-center justify-end px-8 py-3 border-b border-border flex-shrink-0">
+          <div className="flex items-center gap-2">
+            {editorMode === 'edit' && (
+              <>
+                <TooltipProvider delayDuration={0}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => {
+                          const previous = handleUndo();
+                          if (previous !== null) setContent(previous);
+                        }}
+                        disabled={!canUndo}
+                      >
+                        <Undo2 className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Undo</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
+                <TooltipProvider delayDuration={0}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => {
+                          const next = handleRedo();
+                          if (next !== null) setContent(next);
+                        }}
+                        disabled={!canRedo}
+                      >
+                        <Redo2 className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Redo</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
+                <div className="h-4 w-px bg-border mx-1" />
+              </>
+            )}
 
             <NoteAIActions
               selectedModel={selectedModel}
               onModelChange={handleModelChange}
               onEnhance={() => handleEnhanceWithAI(selectedModel)}
               isEnhancing={isEnhancing}
-              noteContent={content}
+              editorMode={editorMode}
+              onChatToggle={() => setIsChatOpen(!isChatOpen)}
+              isChatOpen={isChatOpen}
             />
+
+            <div className="h-4 w-px bg-border mx-1" />
 
             <NoteActionsMenu onDownload={onDownload} showShare={false} showDelete={false} />
           </div>
         </div>
 
-        <div className="mb-6 flex items-center gap-3 text-sm text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <Calendar className="h-3.5 w-3.5" />
-            {currentTime}
-          </span>
-          <span className="flex items-center gap-1">
-            {isPrivate ? <Users className="h-3.5 w-3.5" /> : <Globe className="h-3.5 w-3.5" />}
-            {isPrivate ? 'Private' : 'Public'}
-          </span>
-          <span>
-            {wordCount} words {characterCount} characters
-          </span>
+        <div className="flex-1 overflow-y-auto px-8 py-8 relative">
+          <div className="absolute top-4 right-8 z-10">
+            <div className="inline-flex h-9 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground">
+              <button
+                onClick={() => setEditorMode('edit')}
+                className={`inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${
+                  editorMode === 'edit'
+                    ? 'bg-background text-foreground shadow'
+                    : 'hover:bg-background/50'
+                }`}
+              >
+                Edit
+              </button>
+              <button
+                onClick={() => setEditorMode('preview')}
+                className={`inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${
+                  editorMode === 'preview'
+                    ? 'bg-background text-foreground shadow'
+                    : 'hover:bg-background/50'
+                }`}
+              >
+                Read
+              </button>
+            </div>
+          </div>
+
+          <div className="pt-12">
+            <BlockEditor
+              value={content}
+              onChange={(val) => {
+                setContent(val);
+                updateHistory(val);
+              }}
+              placeholder="Write anything. Enter '/' for commands"
+              onEditorReady={handleEditorReady}
+              readOnly={editorMode === 'preview'}
+            />
+          </div>
         </div>
 
-        <NotesEditor
-          value={content}
-          onChange={setContent}
-          placeholder="Write something..."
-          onQuillReady={handleQuillReady}
-        />
+        {editorMode === 'edit' && (
+          <div className="px-8 py-3 border-t border-border flex items-center justify-between flex-shrink-0">
+            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <span>{wordCount} words</span>
+              <span>{characterCount} characters</span>
+            </div>
+            <Button onClick={handleSave} disabled={isPending} loading={isPending}>
+              Save Note
+            </Button>
+          </div>
+        )}
       </div>
 
-      <div className="p-4 border-t border-border flex items-center justify-end">
-        <Button
-          onClick={handleSave}
-          disabled={!content.trim() || content === '<p><br></p>' || isPending}
-          loading={isPending}
-        >
-          Save Note
-        </Button>
-      </div>
+      {isChatOpen && (
+        <div className="w-[450px] flex-shrink-0">
+          <NotesChatPanel
+            noteContent={content}
+            isOpen={isChatOpen}
+            onClose={() => setIsChatOpen(false)}
+          />
+        </div>
+      )}
     </div>
   );
 }

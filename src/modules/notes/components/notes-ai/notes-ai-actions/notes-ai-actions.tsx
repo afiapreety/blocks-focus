@@ -12,15 +12,16 @@ import {
 } from '@/components/ui-kit/tooltip';
 import { GroupedModelSelector } from '@/modules/gpt-chats/components/gpt-chat-input/model-selector';
 import { SelectModelType } from '@/modules/gpt-chats/hooks/use-chat-store';
-import { SlidersHorizontal, Sparkles } from 'lucide-react';
-import { AIChatSheet } from '../notes-ask-ai/notes-ask-ai';
+import { SlidersHorizontal, Sparkles, MessageCircle } from 'lucide-react';
 
 interface NoteAIActionsProps {
   selectedModel: SelectModelType | undefined;
   onModelChange: (model: SelectModelType | undefined) => void;
   onEnhance: () => void;
   isEnhancing: boolean;
-  noteContent?: string;
+  editorMode?: 'edit' | 'preview';
+  onChatToggle?: () => void;
+  isChatOpen?: boolean;
 }
 
 export function NoteAIActions({
@@ -28,7 +29,9 @@ export function NoteAIActions({
   onModelChange,
   onEnhance,
   isEnhancing,
-  noteContent,
+  editorMode = 'edit',
+  onChatToggle,
+  isChatOpen = false,
 }: NoteAIActionsProps) {
   return (
     <>
@@ -90,8 +93,8 @@ export function NoteAIActions({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Enhance with AI */}
-      {onEnhance && (
+      {/* Enhance with AI - only show in Edit mode */}
+      {onEnhance && editorMode === 'edit' && (
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -112,19 +115,21 @@ export function NoteAIActions({
         </TooltipProvider>
       )}
 
-      {/* Chat Sheet */}
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div>
-              <AIChatSheet noteContent={noteContent} />
-            </div>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Chat with AI</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      {/* Chat Toggle */}
+      {onChatToggle && (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onChatToggle}>
+                <MessageCircle className={`h-4 w-4 ${isChatOpen ? 'text-primary' : ''}`} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{isChatOpen ? 'Close Chat' : 'Chat with AI'}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
     </>
   );
 }
