@@ -106,84 +106,87 @@ export const SlashCommand = Extension.create({
                 editor.chain().focus().deleteRange(range).setHorizontalRule().run();
               },
             },
-            {
-              title: 'Image',
-              description: 'Upload any image from your device.',
-              icon: '🖼',
-              command: ({ editor, range }: any) => {
-                editor.chain().focus().deleteRange(range).run();
-                const input = document.createElement('input');
-                input.type = 'file';
-                input.accept = 'image/*';
-                input.onchange = (e: any) => {
-                  const file = e.target?.files?.[0];
-                  if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (readerEvent) => {
-                      const url = readerEvent.target?.result as string;
-                      editor.chain().focus().setImage({ src: url }).run();
-                    };
-                    reader.readAsDataURL(file);
-                  }
-                };
-                input.click();
-              },
-            },
-            {
-              title: 'Video',
-              description: 'Upload any video from your device.',
-              icon: '🎥',
-              command: ({ editor, range }: any) => {
-                editor.chain().focus().deleteRange(range).run();
-                const input = document.createElement('input');
-                input.type = 'file';
-                input.accept = 'video/*';
-                input.onchange = (e: any) => {
-                  const file = e.target?.files?.[0];
-                  if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (readerEvent) => {
-                      const url = readerEvent.target?.result as string;
-                      editor
-                        .chain()
-                        .focus()
-                        .insertContent(`<video controls src="${url}" class="tiptap-video"></video>`)
-                        .run();
-                    };
-                    reader.readAsDataURL(file);
-                  }
-                };
-                input.click();
-              },
-            },
-            {
-              title: 'File attachment',
-              description: 'Upload any file from your device.',
-              icon: '📎',
-              command: ({ editor, range }: any) => {
-                editor.chain().focus().deleteRange(range).run();
-                const input = document.createElement('input');
-                input.type = 'file';
-                input.onchange = (e: any) => {
-                  const file = e.target?.files?.[0];
-                  if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (readerEvent) => {
-                      const url = readerEvent.target?.result as string;
-                      editor
-                        .chain()
-                        .focus()
-                        .insertContent(
-                          `<a href="${url}" download="${file.name}" class="tiptap-file-attachment">📎 ${file.name}</a>`
-                        )
-                        .run();
-                    };
-                    reader.readAsDataURL(file);
-                  }
-                };
-                input.click();
-              },
-            },
+            // TODO: Uncomment when ready to enable Image upload
+            // {
+            //   title: 'Image',
+            //   description: 'Upload any image from your device.',
+            //   icon: '🖼️',
+            //   command: ({ editor, range }: any) => {
+            //     editor.chain().focus().deleteRange(range).run();
+            //     const input = document.createElement('input');
+            //     input.type = 'file';
+            //     input.accept = 'image/*';
+            //     input.onchange = (e: any) => {
+            //       const file = e.target?.files?.[0];
+            //       if (file) {
+            //         const reader = new FileReader();
+            //         reader.onload = (readerEvent) => {
+            //           const url = readerEvent.target?.result as string;
+            //           editor.chain().focus().setImage({ src: url }).run();
+            //         };
+            //         reader.readAsDataURL(file);
+            //       }
+            //     };
+            //     input.click();
+            //   },
+            // },
+            // TODO: Uncomment when ready to enable Video upload
+            // {
+            //   title: 'Video',
+            //   description: 'Upload any video from your device.',
+            //   icon: '🎥',
+            //   command: ({ editor, range }: any) => {
+            //     editor.chain().focus().deleteRange(range).run();
+            //     const input = document.createElement('input');
+            //     input.type = 'file';
+            //     input.accept = 'video/*';
+            //     input.onchange = (e: any) => {
+            //       const file = e.target?.files?.[0];
+            //       if (file) {
+            //         const reader = new FileReader();
+            //         reader.onload = (readerEvent) => {
+            //           const url = readerEvent.target?.result as string;
+            //           editor
+            //             .chain()
+            //             .focus()
+            //             .insertContent(`<video controls src="${url}" class="tiptap-video"></video>`)
+            //             .run();
+            //         };
+            //         reader.readAsDataURL(file);
+            //       }
+            //     };
+            //     input.click();
+            //   },
+            // },
+            // TODO: Uncomment when ready to enable File attachment
+            // {
+            //   title: 'File attachment',
+            //   description: 'Upload any file from your device.',
+            //   icon: '📎',
+            //   command: ({ editor, range }: any) => {
+            //     editor.chain().focus().deleteRange(range).run();
+            //     const input = document.createElement('input');
+            //     input.type = 'file';
+            //     input.onchange = (e: any) => {
+            //       const file = e.target?.files?.[0];
+            //       if (file) {
+            //         const reader = new FileReader();
+            //         reader.onload = (readerEvent) => {
+            //           const url = readerEvent.target?.result as string;
+            //           editor
+            //             .chain()
+            //             .focus()
+            //             .insertContent(
+            //               `<a href="${url}" download="${file.name}" class="tiptap-file-attachment">📎 ${file.name}</a>`
+            //             )
+            //             .run();
+            //         };
+            //         reader.readAsDataURL(file);
+            //       }
+            //     };
+            //     input.click();
+            //   },
+            // },
             {
               title: 'Table',
               description: 'Insert a table.',
