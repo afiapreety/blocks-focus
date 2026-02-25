@@ -11,6 +11,7 @@ import { useNoteActions } from '../../hooks/use-note-actions';
 import { useAuthStore } from '@/state/store/auth';
 import { ConfirmationModal } from '@/components/core/confirmation-modal/confirmation-modal';
 import { Skeleton } from '@/components/ui-kit/skeleton';
+import { htmlToMarkdown } from '../../utils/html-to-markdown';
 
 export function NotesPage() {
   const navigate = useNavigate();
@@ -103,7 +104,16 @@ export function NotesPage() {
   };
 
   const handleDownload = (note: Note, format: 'txt' | 'md' | 'pdf' = 'md') => {
-    downloadNote(format, note.Title, note.Content);
+    let content = note.Content || '';
+    if (note.NoteData?.NoteContent?.md) {
+      content = note.NoteData.NoteContent.md;
+    } else if (note.NoteData?.NoteContent?.html) {
+      content = htmlToMarkdown(note.NoteData.NoteContent.html);
+    } else if (note.Content) {
+      content = htmlToMarkdown(note.Content);
+    }
+
+    downloadNote(format, note.Title, content);
   };
 
   const handleShare = (note: Note) => {

@@ -14,15 +14,25 @@ export function useNoteActions({ noteId, noteTitle, noteContent }: UseNoteAction
     const finalTitle = title || noteTitle || 'Untitled Note';
     const finalContent = content || noteContent || '';
 
-    // For markdown content, remove markdown syntax for plain text
+    // Convert markdown to readable plain text while preserving structure
     const plainText = finalContent
-      .replace(/^#{1,6}\s+/gm, '') // Remove heading markers
-      .replace(/\*\*(.+?)\*\*/g, '$1') // Remove bold
-      .replace(/\*(.+?)\*/g, '$1') // Remove italic
-      .replace(/`(.+?)`/g, '$1') // Remove inline code
-      .replace(/\[(.+?)\]\(.+?\)/g, '$1') // Remove links, keep text
-      .replace(/^[-*+]\s+/gm, '') // Remove list markers
-      .replace(/^\d+\.\s+/gm, '') // Remove ordered list markers
+      .replace(/^######\s+(.+)$/gm, '$1') // H6 - keep text
+      .replace(/^#####\s+(.+)$/gm, '$1') // H5 - keep text
+      .replace(/^####\s+(.+)$/gm, '$1') // H3 - keep text
+      .replace(/^###\s+(.+)$/gm, '$1') // H3 - keep text
+      .replace(/^##\s+(.+)$/gm, '$1') // H2 - keep text
+      .replace(/^#\s+(.+)$/gm, '$1') // H1 - keep text
+      .replace(/\*\*(.+?)\*\*/g, '$1') // Remove bold markers
+      .replace(/\*(.+?)\*/g, '$1') // Remove italic markers
+      .replace(/~~(.+?)~~/g, '$1') // Remove strikethrough
+      .replace(/`(.+?)`/g, '$1') // Remove inline code markers
+      .replace(/\[(.+?)\]\((.+?)\)/g, '$1 ($2)') // Convert links to "text (url)"
+      .replace(/^[-*+]\s+/gm, '• ') // Convert bullet markers to bullet symbol
+      .replace(/^(\s*)[-*+]\s+/gm, '$1• ') // Convert indented bullets to bullet symbol
+      .replace(/^\d+\.\s+/gm, (match) => match) // Keep numbered list format
+      .replace(/^(\s+)\d+\.\s+/gm, (match) => match) // Keep indented numbered lists
+      .replace(/^>\s+(.+)$/gm, '$1') // Remove blockquote markers
+      .replace(/^---$/gm, '---') // Keep horizontal rules
       .trim();
 
     if (format === 'pdf') {
