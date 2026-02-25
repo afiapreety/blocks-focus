@@ -75,16 +75,12 @@ export function EditNotePage() {
 
   useEffect(() => {
     if (note) {
-      // Prioritize markdown as the primary storage format
       let initialContent = '';
       if (note.NoteData?.NoteContent?.md) {
-        // Convert markdown to HTML for BlockEditor (TipTap)
         initialContent = markdownToHtml(note.NoteData.NoteContent.md);
       } else if (note.NoteData?.NoteContent?.html) {
-        // Fallback to HTML if markdown is not available
         initialContent = note.NoteData.NoteContent.html;
       } else if (note.Content) {
-        // Legacy content format
         initialContent = note.Content;
       }
       setContent(initialContent);
@@ -322,10 +318,7 @@ export function EditNotePage() {
               <NoteActionsMenu onDownload={onDownload} onShare={onShare} onDelete={onDelete} />
             </div>
           </div>
-
-          {/* Editor area with tab-style Edit/Read toggle in top right */}
           <div className="flex-1 overflow-y-auto px-8 py-8 relative">
-            {/* Tab-style Edit/Read toggle - positioned in top right corner */}
             <div className="absolute top-4 right-8 z-10">
               <div className="inline-flex h-9 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground">
                 <button
@@ -350,8 +343,6 @@ export function EditNotePage() {
                 </button>
               </div>
             </div>
-
-            {/* Editor content with top padding to avoid overlap with tabs */}
             <div className="pt-12">
               {contentLoaded && (
                 <BlockEditor
@@ -367,8 +358,6 @@ export function EditNotePage() {
               )}
             </div>
           </div>
-
-          {/* Bottom action bar - only show in edit mode */}
           {editorMode === 'edit' && (
             <div className="px-8 py-3 border-t border-border flex items-center justify-between flex-shrink-0">
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
@@ -381,8 +370,6 @@ export function EditNotePage() {
             </div>
           )}
         </div>
-
-        {/* Chat Panel */}
         {isChatOpen && (
           <div className="w-[450px] flex-shrink-0">
             <NotesChatPanel

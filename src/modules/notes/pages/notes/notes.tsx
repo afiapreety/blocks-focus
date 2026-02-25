@@ -104,16 +104,12 @@ export function NotesPage() {
   };
 
   const handleDownload = (note: Note, format: 'txt' | 'md' | 'pdf' = 'md') => {
-    // Convert content to markdown format for proper download
     let content = note.Content || '';
-
-    // Check if we have markdown in NoteData, otherwise convert HTML to markdown
     if (note.NoteData?.NoteContent?.md) {
       content = note.NoteData.NoteContent.md;
     } else if (note.NoteData?.NoteContent?.html) {
       content = htmlToMarkdown(note.NoteData.NoteContent.html);
     } else if (note.Content) {
-      // Legacy content - assume it's HTML and convert
       content = htmlToMarkdown(note.Content);
     }
 
