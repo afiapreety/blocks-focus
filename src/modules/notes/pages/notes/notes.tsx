@@ -111,7 +111,7 @@ export function NotesPage() {
   };
 
   return (
-    <div className="flex w-full gap-5 flex-col">
+    <div className="flex w-full gap-5 flex-col bg-gradient-to-b from-background to-muted/20 overflow-y-auto p-4 sm:p-6 md:p-8">
       <NotesHeader />
       <NotesSearch value={searchQuery} onChange={setSearchQuery} />
 
