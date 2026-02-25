@@ -194,13 +194,18 @@
 }
 
 .tippy-box {
-  background: transparent;
-  border: none;
-  box-shadow: none;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.tippy-box .tippy-arrow {
+  display: none !important;
 }
 
 .tippy-content {
   padding: 0;
+  background: transparent;
 }
 
 /* Tables */
@@ -314,19 +319,19 @@
 }
 
 .block-editor-wrapper .ProseMirror .callout-info {
-  background: rgba(59, 130, 246, 0.1);
+  background: hsl(var(--primary-500) / 0.1);
 }
 
 .block-editor-wrapper .ProseMirror .callout-success {
-  background: rgba(34, 197, 94, 0.1);
+  background: hsla(var(--success), 0.1);
 }
 
 .block-editor-wrapper .ProseMirror .callout-warning {
-  background: rgba(234, 179, 8, 0.1);
+  background: hsla(var(--warning), 0.1);
 }
 
 .block-editor-wrapper .ProseMirror .callout-danger {
-  background: rgba(239, 68, 68, 0.1);
+  background: hsla(var(--error), 0.1);
 }
 
 .block-editor-wrapper .ProseMirror .callout-icon {
@@ -337,19 +342,19 @@
 }
 
 .block-editor-wrapper .ProseMirror .callout-info .callout-icon {
-  color: #3b82f6;
+  color: hsl(var(--primary));
 }
 
 .block-editor-wrapper .ProseMirror .callout-success .callout-icon {
-  color: #22c55e;
+  color: hsl(var(--success));
 }
 
 .block-editor-wrapper .ProseMirror .callout-warning .callout-icon {
-  color: #eab308;
+  color: hsl(var(--warning));
 }
 
 .block-editor-wrapper .ProseMirror .callout-danger .callout-icon {
-  color: #ef4444;
+  color: hsl(var(--error));
 }
 
 .block-editor-wrapper .ProseMirror .callout-content {

@@ -4,6 +4,7 @@ import { conversationService } from '@/modules/gpt-chats/services/conversation.s
 import { parseSSEBuffer } from '@/modules/gpt-chats/utils/parse-sse';
 import { SelectModelType } from '@/modules/gpt-chats/hooks/use-chat-store';
 import { getRandomEventMessage } from '@/modules/gpt-chats/utils/chat-event-messages';
+import { htmlToMarkdown } from '../utils/html-to-markdown';
 
 export interface ChatMessage {
   id: string;
@@ -76,7 +77,9 @@ export function useNotesChat({ noteContent }: UseNotesChatProps = {}) {
       // Build context from note content if available
       let contextPrompt = userMessage;
       if (noteContent) {
-        contextPrompt = `Context: The user is working on a note with the following content:\n\n${noteContent}\n\nUser question: ${userMessage}`;
+        // Convert HTML content to markdown for better AI context
+        const markdownContent = htmlToMarkdown(noteContent);
+        contextPrompt = `Context: The user is working on a note with the following content:\n\n${markdownContent}\n\nUser question: ${userMessage}`;
       }
 
       // Create abort controller for this request

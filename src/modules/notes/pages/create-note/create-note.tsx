@@ -51,7 +51,6 @@ export function CreateNotePage() {
   } = useMarkdownHistory();
 
   useEffect(() => {
-    // Initialize history with empty content when component mounts
     resetHistory('');
   }, [resetHistory]);
   const { handleDownload } = useNoteActions();
