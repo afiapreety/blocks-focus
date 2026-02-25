@@ -75,14 +75,16 @@ export function EditNotePage() {
 
   useEffect(() => {
     if (note) {
-      // BlockEditor uses HTML format, so prioritize HTML content
+      // Prioritize markdown as the primary storage format
       let initialContent = '';
-      if (note.NoteData?.NoteContent?.html) {
-        initialContent = note.NoteData.NoteContent.html;
-      } else if (note.NoteData?.NoteContent?.md) {
-        // Convert markdown to HTML for BlockEditor
+      if (note.NoteData?.NoteContent?.md) {
+        // Convert markdown to HTML for BlockEditor (TipTap)
         initialContent = markdownToHtml(note.NoteData.NoteContent.md);
+      } else if (note.NoteData?.NoteContent?.html) {
+        // Fallback to HTML if markdown is not available
+        initialContent = note.NoteData.NoteContent.html;
       } else if (note.Content) {
+        // Legacy content format
         initialContent = note.Content;
       }
       setContent(initialContent);

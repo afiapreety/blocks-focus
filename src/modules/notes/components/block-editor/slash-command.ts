@@ -3,6 +3,20 @@ import Suggestion from '@tiptap/suggestion';
 import { ReactRenderer } from '@tiptap/react';
 import tippy from 'tippy.js';
 import { SlashCommandMenu } from './slash-command-menu';
+import {
+  Type,
+  CheckSquare,
+  Heading1,
+  Heading2,
+  Heading3,
+  List,
+  ListOrdered,
+  Quote,
+  Code,
+  Minus,
+  Table,
+  Info,
+} from 'lucide-react';
 
 export const SlashCommand = Extension.create({
   name: 'slashCommand',
@@ -29,7 +43,7 @@ export const SlashCommand = Extension.create({
             {
               title: 'Text',
               description: 'Just start typing with plain text.',
-              icon: 'A',
+              icon: Type,
               command: ({ editor, range }: any) => {
                 editor.chain().focus().deleteRange(range).setNode('paragraph').run();
               },
@@ -37,7 +51,7 @@ export const SlashCommand = Extension.create({
             {
               title: 'To-do list',
               description: 'Track tasks with a to-do list.',
-              icon: '☑',
+              icon: CheckSquare,
               command: ({ editor, range }: any) => {
                 editor.chain().focus().deleteRange(range).toggleTaskList().run();
               },
@@ -45,7 +59,7 @@ export const SlashCommand = Extension.create({
             {
               title: 'Heading 1',
               description: 'Big section heading.',
-              icon: 'H1',
+              icon: Heading1,
               command: ({ editor, range }: any) => {
                 editor.chain().focus().deleteRange(range).setNode('heading', { level: 1 }).run();
               },
@@ -53,7 +67,7 @@ export const SlashCommand = Extension.create({
             {
               title: 'Heading 2',
               description: 'Medium section heading.',
-              icon: 'H2',
+              icon: Heading2,
               command: ({ editor, range }: any) => {
                 editor.chain().focus().deleteRange(range).setNode('heading', { level: 2 }).run();
               },
@@ -61,7 +75,7 @@ export const SlashCommand = Extension.create({
             {
               title: 'Heading 3',
               description: 'Small section heading.',
-              icon: 'H3',
+              icon: Heading3,
               command: ({ editor, range }: any) => {
                 editor.chain().focus().deleteRange(range).setNode('heading', { level: 3 }).run();
               },
@@ -69,7 +83,7 @@ export const SlashCommand = Extension.create({
             {
               title: 'Bullet list',
               description: 'Create a simple bullet list.',
-              icon: '•',
+              icon: List,
               command: ({ editor, range }: any) => {
                 editor.chain().focus().deleteRange(range).toggleBulletList().run();
               },
@@ -77,7 +91,7 @@ export const SlashCommand = Extension.create({
             {
               title: 'Numbered list',
               description: 'Create a list with numbering.',
-              icon: '1.',
+              icon: ListOrdered,
               command: ({ editor, range }: any) => {
                 editor.chain().focus().deleteRange(range).toggleOrderedList().run();
               },
@@ -85,7 +99,7 @@ export const SlashCommand = Extension.create({
             {
               title: 'Quote',
               description: 'Create block quote.',
-              icon: '❝',
+              icon: Quote,
               command: ({ editor, range }: any) => {
                 editor.chain().focus().deleteRange(range).toggleBlockquote().run();
               },
@@ -93,7 +107,7 @@ export const SlashCommand = Extension.create({
             {
               title: 'Code',
               description: 'Insert code snippet.',
-              icon: '</>',
+              icon: Code,
               command: ({ editor, range }: any) => {
                 editor.chain().focus().deleteRange(range).toggleCodeBlock().run();
               },
@@ -101,7 +115,7 @@ export const SlashCommand = Extension.create({
             {
               title: 'Divider',
               description: 'Insert horizontal rule divider.',
-              icon: '—',
+              icon: Minus,
               command: ({ editor, range }: any) => {
                 editor.chain().focus().deleteRange(range).setHorizontalRule().run();
               },
@@ -190,7 +204,7 @@ export const SlashCommand = Extension.create({
             {
               title: 'Table',
               description: 'Insert a table.',
-              icon: '⊞',
+              icon: Table,
               command: ({ editor, range }: any) => {
                 editor
                   .chain()
@@ -203,7 +217,7 @@ export const SlashCommand = Extension.create({
             {
               title: 'Callout',
               description: 'Insert callout notice.',
-              icon: 'ⓘ',
+              icon: Info,
               command: ({ editor, range }: any) => {
                 editor.chain().focus().deleteRange(range).setCallout().run();
               },
