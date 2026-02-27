@@ -1,4 +1,6 @@
 import { Node, mergeAttributes } from '@tiptap/core';
+import { ReactNodeViewRenderer } from '@tiptap/react';
+import { CalloutNodeView } from '../callout-node-view';
 
 export interface CalloutOptions {
   HTMLAttributes: Record<string, any>;
@@ -42,36 +44,16 @@ export const Callout = Node.create<CalloutOptions>({
   renderHTML({ HTMLAttributes }) {
     const type = HTMLAttributes['data-type'] || 'info';
 
-    const getIcon = (calloutType: string) => {
+    const getIconSVG = (calloutType: string) => {
       switch (calloutType) {
         case 'success':
-          return [
-            ['circle', { cx: '12', cy: '12', r: '10' }],
-            ['path', { d: 'M9 12l2 2 4-4' }],
-          ];
+          return '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9 12l2 2 4-4"></path></svg>';
         case 'warning':
-          return [
-            [
-              'path',
-              {
-                d: 'M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z',
-              },
-            ],
-            ['line', { x1: '12', y1: '9', x2: '12', y2: '13' }],
-            ['line', { x1: '12', y1: '17', x2: '12.01', y2: '17' }],
-          ];
+          return '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>';
         case 'danger':
-          return [
-            ['circle', { cx: '12', cy: '12', r: '10' }],
-            ['line', { x1: '15', y1: '9', x2: '9', y2: '15' }],
-            ['line', { x1: '9', y1: '9', x2: '15', y2: '15' }],
-          ];
+          return '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>';
         default: // info
-          return [
-            ['circle', { cx: '12', cy: '12', r: '10' }],
-            ['path', { d: 'M12 16v-4' }],
-            ['path', { d: 'M12 8h.01' }],
-          ];
+          return '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>';
       }
     };
 
@@ -83,25 +65,17 @@ export const Callout = Node.create<CalloutOptions>({
       }),
       [
         'div',
-        { class: 'callout-icon' },
-        [
-          'svg',
-          {
-            xmlns: 'http://www.w3.org/2000/svg',
-            width: '16',
-            height: '16',
-            viewBox: '0 0 24 24',
-            fill: 'none',
-            stroke: 'currentColor',
-            'stroke-width': '2',
-            'stroke-linecap': 'round',
-            'stroke-linejoin': 'round',
-          },
-          ...getIcon(type),
-        ],
+        {
+          class: 'callout-icon',
+          innerHTML: getIconSVG(type),
+        },
       ],
       ['div', { class: 'callout-content' }, 0],
     ];
+  },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(CalloutNodeView);
   },
 
   addCommands() {
@@ -115,7 +89,6 @@ export const Callout = Node.create<CalloutOptions>({
             content: [
               {
                 type: 'paragraph',
-                content: [{ type: 'text', text: 'This is a callout notice.' }],
               },
             ],
           });

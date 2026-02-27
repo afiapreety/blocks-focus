@@ -337,8 +337,16 @@
 .block-editor-wrapper .ProseMirror .callout-icon {
   flex-shrink: 0;
   display: flex;
-  align-items: flex-start;
-  padding-top: 0.125rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.block-editor-wrapper .ProseMirror .callout-icon svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  stroke: currentColor;
+  fill: none;
 }
 
 .block-editor-wrapper .ProseMirror .callout-info .callout-icon {
