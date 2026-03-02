@@ -1,14 +1,16 @@
 import { Button } from '@/components/ui-kit/button';
 import { Textarea } from '@/components/ui-kit/textarea';
-import { ArrowUp } from 'lucide-react';
+import { ArrowUp, FileText, X } from 'lucide-react';
 import { useState } from 'react';
 import { GroupedModelSelector } from './model-selector';
 import { ToolsSelector } from './tools-selector';
+import { MoreMenu } from './more-menu';
 import { Tooltip, TooltipTrigger } from '@/components/ui-kit/tooltip';
 import { useSidebar } from '@/components/ui-kit/sidebar';
 import { useTranslation } from 'react-i18next';
 import { SelectModelType } from '../../hooks/use-chat-store';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 interface GptChatInputProps {
   onSendMessage: (message: string) => void;
@@ -35,9 +37,23 @@ export const GptChatInput = ({
   variant = 'default',
 }: GptChatInputProps) => {
   const [message, setMessage] = useState('');
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const { state } = useSidebar();
   const { t } = useTranslation();
+  const { toast } = useToast();
   const isAgentChat = selectedModel?.provider === 'agents';
+
+  const handleUploadFiles = (files: File[]) => {
+    setUploadedFiles((prev) => [...prev, ...files]);
+    toast({
+      title: 'Files Uploaded',
+      description: `Successfully uploaded ${files.length} file${files.length > 1 ? 's' : ''}`,
+    });
+  };
+
+  const removeFile = (index: number) => {
+    setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const onMessageHandler = () => {
     onSendMessage(message);
@@ -58,6 +74,30 @@ export const GptChatInput = ({
         }`}
       >
         <div className="bg-card relative rounded-3xl border-2 border-border hover:border-primary focus-within:border-primary">
+          {uploadedFiles.length > 0 && (
+            <div className="flex flex-wrap gap-2 px-6 pt-4 pb-2">
+              {uploadedFiles.map((file, index) => (
+                <div
+                  key={index}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 border border-border rounded-lg text-sm"
+                >
+                  <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <span className="truncate max-w-[150px]" title={file.name}>
+                    {file.name}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {(file.size / 1024).toFixed(1)} KB
+                  </span>
+                  <button
+                    onClick={() => removeFile(index)}
+                    className="ml-1 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
           <Textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
@@ -69,7 +109,10 @@ export const GptChatInput = ({
             }}
             placeholder={placeholder || t('ASK_ME_ANYTHING')}
             disabled={disabled}
-            className=" min-h-[80px] max-h-[200px] resize-none border-0  focus-visible:ring-0 focus-visible:ring-offset-0 pr-16 px-6 py-5 pb-12 sm:pb-5 text-base placeholder:text-muted-foreground/60"
+            className={cn(
+              'min-h-[80px] max-h-[200px] resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 pr-16 px-6 pb-12 sm:pb-5 text-base placeholder:text-muted-foreground/60',
+              uploadedFiles.length > 0 ? 'pt-2' : 'py-5'
+            )}
           />
 
           <div className="absolute  right-4 bottom-[75px] sm:right-4">
@@ -89,6 +132,7 @@ export const GptChatInput = ({
 
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 sm:px-6 pb-3 pt-2 border-t border-border/50 gap-2 sm:gap-0">
             <div className="flex items-center gap-2 flex-wrap">
+              <MoreMenu onUploadFiles={handleUploadFiles} />
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div>
