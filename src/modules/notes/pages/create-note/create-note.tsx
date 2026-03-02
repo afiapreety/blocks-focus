@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Undo2, Redo2 } from 'lucide-react';
 import { useAddNote } from '../../hooks/use-notes';
@@ -24,7 +23,6 @@ import { NotesChatPanel } from '../../components/notes-ai/notes-chat-panel/notes
 import { cn } from '@/lib/utils';
 
 export function CreateNotePage() {
-  const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
@@ -133,10 +131,8 @@ export function CreateNotePage() {
           toast({
             variant: 'success',
             title: 'Note created',
-            description: 'Note created successfully',
+            description: 'Note saved successfully',
           });
-
-          navigate('/notes');
         },
         onError: (error) => {
           console.error('Error creating note:', error);

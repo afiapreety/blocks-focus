@@ -195,9 +195,8 @@ export function EditNotePage() {
           toast({
             variant: 'success',
             title: 'Note updated',
-            description: 'Note updated successfully',
+            description: 'Note saved successfully',
           });
-          navigate('/notes');
         },
         onError: (error) => {
           console.error('Error updating note:', error);
