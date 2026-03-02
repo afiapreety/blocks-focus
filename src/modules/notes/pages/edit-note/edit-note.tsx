@@ -32,7 +32,7 @@ export function EditNotePage() {
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
   const { noteId } = useParams<{ noteId: string }>();
-  const { data: note, isLoading } = useGetNoteById(noteId || '');
+  const { data: note, isLoading } = useGetNoteById(noteId ?? '');
   const { mutate: updateNote, isPending } = useUpdateNote();
   const { mutate: deleteNote } = useDeleteNote();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);

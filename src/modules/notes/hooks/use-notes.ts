@@ -93,7 +93,7 @@ export const useGetNoteById = (noteId: string) => {
         throw error;
       }
     },
-    enabled: !!noteId,
+    enabled: !!noteId && noteId.trim().length > 0,
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });

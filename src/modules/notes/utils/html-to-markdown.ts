@@ -9,7 +9,7 @@ export function htmlToMarkdown(html: string): string {
 
   // Convert TipTap callouts to markdown blockquotes with emoji indicators
   markdown = markdown.replace(
-    /<div[^>]*data-callout[^>]*class="callout callout-(\w+)"[^>]*>.*?<div[^>]*class="callout-content"[^>]*>(.*?)<\/div>\s*<\/div>/gis,
+    /<div[^>]*data-type="(\w+)"[^>]*data-callout[^>]*>.*?<div[^>]*class="callout-content"[^>]*>(.*?)<\/div>\s*<\/div>/gis,
     (match, type, content) => {
       const emoji =
         type === 'success' ? '✅' : type === 'warning' ? '⚠️' : type === 'danger' ? '❌' : 'ℹ️';
