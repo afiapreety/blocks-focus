@@ -16,6 +16,32 @@ export function markdownToHtml(markdown: string): string {
     return placeholder;
   });
 
+  // Handle callout-style blockquotes EARLY with placeholders (before regular blockquotes)
+  const callouts: string[] = [];
+  html = html.replace(
+    /^> (ℹ️|✅|⚠️|❌) \*\*([A-Z]+)\*\*: (.*)$/gm,
+    (match, emoji, type, content) => {
+      const calloutType = type.toLowerCase();
+      const getIconSVG = (calloutTypeStr: string) => {
+        switch (calloutTypeStr) {
+          case 'success':
+            return '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9 12l2 2 4-4"></path></svg>';
+          case 'warning':
+            return '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>';
+          case 'danger':
+            return '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>';
+          default: // info
+            return '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>';
+        }
+      };
+      const placeholder = `XXXXXCALLOUTPLACEHOLDER${callouts.length}XXXXX`;
+      callouts.push(
+        `<div data-callout="" data-type="${calloutType}" class="callout callout-${calloutType}"><div class="callout-icon">${getIconSVG(calloutType)}</div><div class="callout-content"><p>${content}</p></div></div>`
+      );
+      return placeholder;
+    }
+  );
+
   // Handle markdown tables
   html = html.replace(
     /^\|(.+)\|\s*\n\|([\s\-:|]+)\|\s*\n((\|.+\|\s*\n?)+)/gm,
@@ -39,15 +65,6 @@ export function markdownToHtml(markdown: string): string {
         .join('');
 
       return `<table class="tiptap-table"><tbody>${headerRow}${bodyRowsHtml}</tbody></table>`;
-    }
-  );
-
-  // Handle callout-style blockquotes (with emoji indicators)
-  html = html.replace(
-    /^> (ℹ️|✅|⚠️|❌) \*\*([A-Z]+)\*\*: (.+)$/gm,
-    (match, emoji, type, content) => {
-      const calloutType = type.toLowerCase();
-      return `<div data-callout="" class="callout callout-${calloutType}"><div class="callout-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg></div><div class="callout-content"><p>${content}</p></div></div>`;
     }
   );
 
@@ -156,6 +173,12 @@ export function markdownToHtml(markdown: string): string {
   codeBlocks.forEach((block, index) => {
     html = html.replace(`<p>__CODE_BLOCK_${index}__</p>`, block);
     html = html.replace(`__CODE_BLOCK_${index}__`, block);
+  });
+
+  // Restore callouts
+  callouts.forEach((callout, index) => {
+    html = html.replace(new RegExp(`<p>XXXXXCALLOUTPLACEHOLDER${index}XXXXX</p>`, 'g'), callout);
+    html = html.replace(new RegExp(`XXXXXCALLOUTPLACEHOLDER${index}XXXXX`, 'g'), callout);
   });
 
   return html;
