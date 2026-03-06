@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui-kit/button';
 import { Textarea } from '@/components/ui-kit/textarea';
-import { ArrowUp, FileText, X } from 'lucide-react';
+import { ArrowUp, FileText, X, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { GroupedModelSelector } from './model-selector';
 import { ToolsSelector } from './tools-selector';
@@ -11,9 +11,13 @@ import { useTranslation } from 'react-i18next';
 import { SelectModelType } from '../../hooks/use-chat-store';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useGetPreSignedUrlForUpload } from '@/lib/api/hooks/use-storage';
 
 interface GptChatInputProps {
-  onSendMessage: (message: string) => void;
+  onSendMessage: (
+    message: string,
+    files?: Array<{ fileId: string; fileName: string; fileUrl: string; extension: string }>
+  ) => void;
   disabled?: boolean;
   placeholder?: string;
   selectedModel: SelectModelType;
@@ -24,6 +28,14 @@ interface GptChatInputProps {
   variant?: 'default' | 'chat-details';
 }
 
+type UploadedFile = {
+  file: File;
+  uploadUrl?: string;
+  fileId?: string;
+};
+
+const projectKey = import.meta.env.VITE_X_BLOCKS_KEY || '';
+
 export const GptChatInput = ({
   onSendMessage,
   disabled = false,
@@ -33,21 +45,76 @@ export const GptChatInput = ({
   selectedTools,
   onToolsChange,
   className,
-
   variant = 'default',
 }: GptChatInputProps) => {
   const [message, setMessage] = useState('');
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set());
   const { state } = useSidebar();
   const { t } = useTranslation();
   const { toast } = useToast();
+  const uploadMutation = useGetPreSignedUrlForUpload();
   const isAgentChat = selectedModel?.provider === 'agents';
 
-  const handleUploadFiles = (files: File[]) => {
-    setUploadedFiles((prev) => [...prev, ...files]);
-    toast({
-      title: 'Files Uploaded',
-      description: `Successfully uploaded ${files.length} file${files.length > 1 ? 's' : ''}`,
+  const uploadFileToStorage = async (url: string, file: File) => {
+    await fetch(url, {
+      method: 'PUT',
+      body: file,
+      headers: {
+        'Content-Type': file.type,
+        'x-ms-blob-type': 'BlockBlob',
+      },
+    });
+    return { uploadUrl: url.split('?')[0] };
+  };
+
+  const uploadSingleFile = async (file: File, index: number) => {
+    const fileName = file.name;
+    setUploadingFiles((prev) => new Set(prev).add(fileName));
+
+    try {
+      const data = await uploadMutation.mutateAsync({
+        name: file.name,
+        projectKey: projectKey,
+        itemId: '',
+        metaData: '',
+        accessModifier: 'Public',
+        configurationName: 'Default',
+        parentDirectoryId: '',
+        tags: '',
+      });
+
+      if (!data.isSuccess || !data.uploadUrl) {
+        throw new Error('Failed to get upload URL');
+      }
+
+      const { uploadUrl } = await uploadFileToStorage(data.uploadUrl, file);
+
+      setUploadedFiles((prev) =>
+        prev.map((f, i) => (i === index ? { ...f, uploadUrl, fileId: data.fileId } : f))
+      );
+    } catch (error) {
+      toast({
+        title: 'Upload Failed',
+        description: `Error uploading ${file.name}`,
+        variant: 'destructive',
+      });
+    } finally {
+      setUploadingFiles((prev) => {
+        const next = new Set(prev);
+        next.delete(fileName);
+        return next;
+      });
+    }
+  };
+
+  const handleUploadFiles = async (files: File[]) => {
+    const newFiles: UploadedFile[] = files.map((file) => ({ file }));
+    setUploadedFiles((prev) => [...prev, ...newFiles]);
+
+    const startIndex = uploadedFiles.length;
+    files.forEach((file, index) => {
+      uploadSingleFile(file, startIndex + index);
     });
   };
 
@@ -55,9 +122,44 @@ export const GptChatInput = ({
     setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const hasUploadingFiles = uploadingFiles.size > 0;
+  const hasFailedFiles = uploadedFiles.some((f) => !f.fileId && !uploadingFiles.has(f.file.name));
+
   const onMessageHandler = () => {
-    onSendMessage(message);
+    if (hasUploadingFiles) {
+      toast({
+        title: 'Files Uploading',
+        description: 'Please wait for files to finish uploading',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (hasFailedFiles) {
+      toast({
+        title: 'Upload Failed',
+        description: 'Please remove failed files before sending',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const files = uploadedFiles
+      .filter((f) => f.fileId && f.uploadUrl)
+      .map((f) => {
+        const fileName = f.file.name;
+        const extension = fileName.substring(fileName.lastIndexOf('.')).toLowerCase();
+        return {
+          fileId: f.fileId as string,
+          fileName: fileName,
+          fileUrl: f.uploadUrl as string,
+          extension: extension,
+        };
+      });
+
+    onSendMessage(message, files.length > 0 ? files : undefined);
     setMessage('');
+    setUploadedFiles([]);
   };
 
   return (
@@ -76,26 +178,55 @@ export const GptChatInput = ({
         <div className="bg-card relative rounded-3xl border-2 border-border hover:border-primary focus-within:border-primary">
           {uploadedFiles.length > 0 && (
             <div className="flex flex-wrap gap-2 px-6 pt-4 pb-2">
-              {uploadedFiles.map((file, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 border border-border rounded-lg text-sm"
-                >
-                  <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                  <span className="truncate max-w-[150px]" title={file.name}>
-                    {file.name}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {(file.size / 1024).toFixed(1)} KB
-                  </span>
-                  <button
-                    onClick={() => removeFile(index)}
-                    className="ml-1 text-muted-foreground hover:text-foreground transition-colors"
+              {uploadedFiles.map((uploadedFile, index) => {
+                const isUploading = uploadingFiles.has(uploadedFile.file.name);
+                const hasError = !uploadedFile.fileId && !isUploading;
+                const fileSizeKB = uploadedFile.file.size / 1024;
+                const fileSizeDisplay =
+                  fileSizeKB >= 1024
+                    ? `${(fileSizeKB / 1024).toFixed(1)} MB`
+                    : fileSizeKB >= 1
+                      ? `${fileSizeKB.toFixed(1)} KB`
+                      : `${uploadedFile.file.size} B`;
+
+                return (
+                  <div
+                    key={index}
+                    className={cn(
+                      'group relative flex items-center gap-2.5 px-4 py-2.5 rounded-lg text-sm transition-all',
+                      hasError
+                        ? 'bg-destructive/10 border border-destructive'
+                        : 'bg-muted/90 hover:bg-muted'
+                    )}
                   >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              ))}
+                    {isUploading ? (
+                      <Loader2 className="h-4 w-4 text-muted-foreground flex-shrink-0 animate-spin" />
+                    ) : (
+                      <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    )}
+                    <span
+                      className="truncate max-w-[200px] font-medium"
+                      title={uploadedFile.file.name}
+                    >
+                      {uploadedFile.file.name}
+                    </span>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      {fileSizeDisplay}
+                    </span>
+                    {hasError && (
+                      <span className="text-xs text-destructive font-medium">Failed</span>
+                    )}
+                    <button
+                      onClick={() => removeFile(index)}
+                      className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-background border border-border rounded-full p-1 hover:bg-destructive hover:border-destructive hover:text-destructive-foreground shadow-sm"
+                      disabled={isUploading}
+                      aria-label="Remove file"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           )}
           <Textarea
@@ -119,12 +250,12 @@ export const GptChatInput = ({
             <Button
               size="icon"
               className={`h-10 w-10 rounded-2xl ${
-                message.trim() && !disabled
+                message.trim() && !disabled && !hasUploadingFiles && !hasFailedFiles
                   ? 'bg-primary hover:bg-primary/90 text-white  hover:scale-110'
                   : 'bg-muted text-muted-foreground cursor-not-allowed'
               }`}
               onClick={onMessageHandler}
-              disabled={!message.trim() || disabled}
+              disabled={!message.trim() || disabled || hasUploadingFiles || hasFailedFiles}
             >
               <ArrowUp className="h-5 w-5" />
             </Button>
@@ -132,7 +263,7 @@ export const GptChatInput = ({
 
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 sm:px-6 pb-3 pt-2 border-t border-border/50 gap-2 sm:gap-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <MoreMenu onUploadFiles={handleUploadFiles} />
+              {!isAgentChat && <MoreMenu onUploadFiles={handleUploadFiles} />}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div>

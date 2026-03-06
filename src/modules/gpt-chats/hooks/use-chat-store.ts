@@ -7,9 +7,17 @@ import { parseSSEBuffer } from '../utils/parse-sse';
 import { handleSSEMessage } from '../utils/sse-message-handler';
 import { NavigateFunction } from 'react-router-dom';
 import { agentService } from '../services/agent.service';
+import { processFileStream } from '../utils/process-file-stream';
 
 const projectSlug = import.meta.env.VITE_PROJECT_SLUG || '';
 const llmBasePrompt = import.meta.env.VITE_LLM_BASE_PROMPT || 'You are a helpful AI assistant.';
+
+// Type for file processing callback - to be provided by React Query hook layer
+export type ProcessFilesCallback = (params: {
+  session_id: string;
+  call_from: string;
+  file_ids: string[];
+}) => Promise<{ success: boolean; message?: string }>;
 
 const generateUniqueId = (): string => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -33,6 +41,7 @@ interface ChatMessage {
   tokenUsage?: {
     model_name?: string;
   };
+  files?: Array<{ fileId: string; fileName: string; fileUrl: string; extension: string }>;
 }
 
 interface Chat {
@@ -45,6 +54,8 @@ interface Chat {
   lastUpdated: string;
   selectedModel: SelectModelType;
   selectedTools: string[];
+  processedFileIds: string[];
+  sessionFiles: Array<{ fileId: string; fileName: string; fileUrl: string; extension: string }>;
 }
 
 interface ChatEvent {
@@ -62,6 +73,8 @@ const chatDefaultValue: Chat = {
   lastUpdated: '',
   selectedModel: { isBlocksModels: true, provider: 'azure', model: 'gpt-4o-mini' },
   selectedTools: [],
+  processedFileIds: [],
+  sessionFiles: [],
 };
 
 interface ChatStore {
@@ -75,7 +88,9 @@ interface ChatStore {
     model: SelectModelType,
     tools: string[],
     navigate: NavigateFunction,
-    queryClient?: QueryClient
+    queryClient?: QueryClient,
+    files?: Array<{ fileId: string; fileName: string; fileUrl: string; extension: string }>,
+    processFilesCallback?: ProcessFilesCallback
   ) => void;
   loadChat: (id: string, conversations: Conversation[]) => void;
   loadAgentChat: (
@@ -85,7 +100,11 @@ interface ChatStore {
     widgetId?: string
   ) => void;
   setSessionId: (id: string, sessionId: string) => void;
-  addUserMessage: (id: string, message: string) => void;
+  addUserMessage: (
+    id: string,
+    message: string,
+    files?: Array<{ fileId: string; fileName: string; fileUrl: string; extension: string }>
+  ) => void;
   initiateBotMessage: (id: string, chunk: string) => void;
   startBotMessage: (id: string, chunk: string) => void;
   streamBotMessage: (id: string, chunk: string) => void;
@@ -100,9 +119,17 @@ interface ChatStore {
   generateBotMessage: (
     id: string,
     message: string,
-    setSuggestions?: (suggestions: string[]) => void
+    setSuggestions?: (suggestions: string[]) => void,
+    files?: Array<{ fileId: string; fileName: string; fileUrl: string; extension: string }>,
+    isNewFileUpload?: boolean,
+    processFilesCallback?: ProcessFilesCallback
   ) => Promise<void>;
-  sendMessage: (id: string, message: string) => Promise<void>;
+  sendMessage: (
+    id: string,
+    message: string,
+    files?: Array<{ fileId: string; fileName: string; fileUrl: string; extension: string }>,
+    processFilesCallback?: ProcessFilesCallback
+  ) => Promise<void>;
   reset: () => void;
 }
 
@@ -115,7 +142,8 @@ const getBotSSE = async (
       eventData: { session_id?: string; query?: string; message?: string };
     },
     done: boolean
-  ) => void
+  ) => void,
+  files?: Array<{ fileId: string; fileName: string; fileUrl: string; extension: string }>
 ) => {
   const modelId = chat?.selectedModel
     ? chat?.selectedModel.isBlocksModels
@@ -154,11 +182,15 @@ const getBotSSE = async (
           model_provider: modelProvider,
           tool_ids: chat.selectedTools,
           last_n_turn: 5,
-          enable_summary: false,
-          enable_next_suggestion: false,
+          enable_summary: true,
+          enable_next_suggestion: true,
           response_type: 'text',
           response_format: 'string',
           call_from: projectSlug,
+          files: files?.map((f) => ({
+            extension: f.extension,
+            file_id: f.fileId,
+          })),
         });
 
     const decoder = new TextDecoder();
@@ -189,10 +221,10 @@ const getBotSSE = async (
 };
 
 export const useChatStore = create<ChatStore>()(
-  persist(
+  persist<ChatStore>(
     (set, get) => ({
       chats: {},
-      activeChatId: null,
+      activeChatId: null as string | null,
 
       resolveChatId: (chatId) => {
         const state = get();
@@ -202,12 +234,13 @@ export const useChatStore = create<ChatStore>()(
         return chatId;
       },
 
-      startChat: (message, model, tools, navigate, queryClient) => {
+      startChat: (message, model, tools, navigate, queryClient, files, processFilesCallback) => {
         const chatMessage: ChatMessage = {
           message,
           type: 'user',
           streaming: false,
           timestamp: new Date().toISOString(),
+          ...(files && files.length > 0 && { files }),
         };
 
         const chatId = generateUniqueId();
@@ -219,6 +252,7 @@ export const useChatStore = create<ChatStore>()(
           lastUpdated: new Date().toISOString(),
           selectedModel: model,
           selectedTools: tools,
+          sessionFiles: files || [],
         };
 
         set((state) => ({
@@ -234,42 +268,369 @@ export const useChatStore = create<ChatStore>()(
         let receivedSessionId: string | null = null;
         let migrationScheduled = false;
 
-        getBotSSE(message, chat, (event, done) => {
-          if (event.eventData.session_id && !receivedSessionId) {
-            receivedSessionId = event.eventData.session_id;
-            set((state) => ({
-              chats: {
-                ...state.chats,
-                [chatId]: {
-                  ...state.chats[chatId],
-                  sessionId: receivedSessionId,
-                },
-              },
-            }));
-          }
+        // Handle file processing for unstructured files
+        const processFilesAndSendMessage = async () => {
+          try {
+            // If files are present, we need to get session_id first
+            if (files && files.length > 0) {
+              // Send user message to get session_id (use actual message for proper chat title)
+              const initReader = await conversationService.query({
+                query: message,
+                base_prompt: llmBasePrompt,
+                model_id: '',
+                model_name: chat.selectedModel.isBlocksModels ? chat.selectedModel.model : '',
+                model_provider: chat.selectedModel.isBlocksModels
+                  ? chat.selectedModel.provider
+                  : '',
+                tool_ids: tools,
+                last_n_turn: 5,
+                enable_summary: true,
+                enable_next_suggestion: true,
+                response_type: 'text',
+                response_format: 'string',
+                call_from: projectSlug,
+              });
 
-          handleSSEMessage(chatId, event, undefined);
+              // Read the response to get session_id
+              const decoder = new TextDecoder();
+              let buffer = '';
+              let isDone = false;
+              while (!isDone) {
+                const { done, value } = await initReader.read();
+                isDone = done;
+                if (done) break;
+                if (value) {
+                  buffer += decoder.decode(value, { stream: true });
+                  const lines = buffer.split('\n');
+                  buffer = lines.pop() || '';
 
-          if (done && !migrationScheduled && receivedSessionId) {
-            migrationScheduled = true;
+                  for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                      try {
+                        const data = JSON.parse(line.slice(6));
+                        if (data.session_id && !receivedSessionId) {
+                          receivedSessionId = data.session_id;
+                          set((state) => ({
+                            chats: {
+                              ...state.chats,
+                              [chatId]: {
+                                ...state.chats[chatId],
+                                sessionId: receivedSessionId,
+                              },
+                            },
+                          }));
 
-            const checkAndMigrate = () => {
-              const currentChat = get().chats[chatId];
+                          // Update URL immediately with session ID (like ChatGPT)
+                          const isAgentChat = chat.selectedModel?.provider === 'agents';
+                          const newUrl = isAgentChat
+                            ? `/chat/${receivedSessionId}?agent=${chat.selectedModel.model}&widget=${chat.selectedModel.widget_id}`
+                            : `/chat/${receivedSessionId}`;
+                          window.history.replaceState(null, '', newUrl);
 
-              if (!currentChat) {
-                return;
+                          // Optimistically add chat to sidebar to avoid flicker
+                          if (queryClient) {
+                            const queryKey = isAgentChat
+                              ? ['agent-conversation-list']
+                              : ['conversations'];
+
+                            // Add placeholder entry immediately
+                            queryClient.setQueryData(queryKey, (oldData: any) => {
+                              if (!oldData?.pages) return oldData;
+
+                              const newSession = {
+                                session_id: receivedSessionId,
+                                last_entry_date: new Date().toISOString(),
+                                conversation: {
+                                  Title: message.slice(0, 35),
+                                  Query: message,
+                                },
+                              };
+
+                              const updatedPages = [...oldData.pages];
+                              if (updatedPages[0]) {
+                                updatedPages[0] = {
+                                  ...updatedPages[0],
+                                  sessions: [newSession, ...updatedPages[0].sessions],
+                                };
+                              }
+
+                              return { ...oldData, pages: updatedPages };
+                            });
+
+                            // Invalidate after delay to get real data from backend
+                            setTimeout(() => {
+                              if (isAgentChat) {
+                                queryClient.invalidateQueries({
+                                  queryKey: ['agent-conversation-list'],
+                                });
+                              } else {
+                                queryClient.invalidateQueries({ queryKey: ['conversations'] });
+                              }
+                            }, 2000);
+                          }
+
+                          break;
+                        }
+                      } catch (e) {
+                        // Ignore parse errors
+                      }
+                    }
+                  }
+                  if (receivedSessionId) break;
+                }
               }
 
-              if (!currentChat.isBotStreaming && !currentChat.isBotThinking) {
-                performMigration();
-              } else {
+              // Process unstructured files
+              if (receivedSessionId) {
+                const unstructuredExtensions = ['.pdf', '.docx', '.txt', '.html', '.md', '.doc'];
+                const unstructuredFiles = files.filter((f) =>
+                  unstructuredExtensions.includes(f.extension)
+                );
+
+                if (unstructuredFiles.length > 0) {
+                  // Use callback if provided (from React Query hook), otherwise fallback to direct service call
+                  const processResult = processFilesCallback
+                    ? await processFilesCallback({
+                        session_id: receivedSessionId,
+                        call_from: projectSlug,
+                        file_ids: unstructuredFiles.map((f) => f.fileId),
+                      })
+                    : await processFileStream(
+                        await agentService.processFiles({
+                          session_id: receivedSessionId,
+                          call_from: projectSlug,
+                          file_ids: unstructuredFiles.map((f) => f.fileId),
+                        })
+                      );
+
+                  if (!processResult.success) {
+                    set((state) => ({
+                      chats: {
+                        ...state.chats,
+                        [chatId]: {
+                          ...state.chats[chatId],
+                          conversations: [
+                            ...state.chats[chatId].conversations,
+                            {
+                              message: `⚠️ File processing failed: ${processResult.message}. The AI may not be able to access the file content.`,
+                              type: 'bot',
+                              streaming: false,
+                              timestamp: new Date().toISOString(),
+                            },
+                          ],
+                        },
+                      },
+                    }));
+                  }
+                }
+
+                // Update chat with session_id
+                set((state) => ({
+                  chats: {
+                    ...state.chats,
+                    [chatId]: {
+                      ...state.chats[chatId],
+                      sessionId: receivedSessionId,
+                      processedFileIds: files.map((f) => f.fileId),
+                      sessionFiles: files,
+                    },
+                  },
+                }));
+              }
+            }
+          } catch (error) {
+            // Session setup failed - error handling can be added here if needed
+          }
+        };
+
+        // Process files first if present, then send the actual message
+        if (files && files.length > 0) {
+          processFilesAndSendMessage().then(() => {
+            // Enhance query with file context when files are attached
+            let enhancedQuery = message;
+            if (files.length === 1) {
+              const fileName = files[0].fileName;
+              enhancedQuery = `[Context: User has attached 1 file: ${fileName}. Focus on this specific file.]\n\n${message}`;
+            } else {
+              const fileNames = files.map((f) => f.fileName).join(', ');
+              enhancedQuery = `[Context: User has attached ${files.length} files: ${fileNames}. IMPORTANT: Analyze and provide information about ALL ${files.length} files, not just one. Address each file separately in your response.]\n\n${message}`;
+            }
+
+            getBotSSE(
+              enhancedQuery,
+              { ...chat, sessionId: receivedSessionId || chat.sessionId },
+              (event, done) => {
+                if (event.eventData.session_id && !receivedSessionId) {
+                  receivedSessionId = event.eventData.session_id;
+                  set((state) => ({
+                    chats: {
+                      ...state.chats,
+                      [chatId]: {
+                        ...state.chats[chatId],
+                        sessionId: receivedSessionId,
+                      },
+                    },
+                  }));
+
+                  // Update URL immediately with session ID (like ChatGPT)
+                  const isAgentChat = chat.selectedModel?.provider === 'agents';
+                  const newUrl = isAgentChat
+                    ? `/chat/${receivedSessionId}?agent=${chat.selectedModel.model}&widget=${chat.selectedModel.widget_id}`
+                    : `/chat/${receivedSessionId}`;
+                  window.history.replaceState(null, '', newUrl);
+
+                  // Optimistically add chat to sidebar to avoid flicker
+                  if (queryClient) {
+                    const queryKey = isAgentChat ? ['agent-conversation-list'] : ['conversations'];
+
+                    // Add placeholder entry immediately
+                    queryClient.setQueryData(queryKey, (oldData: any) => {
+                      if (!oldData?.pages) return oldData;
+
+                      const newSession = {
+                        session_id: receivedSessionId,
+                        last_entry_date: new Date().toISOString(),
+                        conversation: {
+                          Title: message.slice(0, 35),
+                          Query: message,
+                        },
+                      };
+
+                      const updatedPages = [...oldData.pages];
+                      if (updatedPages[0]) {
+                        updatedPages[0] = {
+                          ...updatedPages[0],
+                          sessions: [newSession, ...updatedPages[0].sessions],
+                        };
+                      }
+
+                      return { ...oldData, pages: updatedPages };
+                    });
+
+                    // Invalidate after delay to get real data from backend
+                    setTimeout(() => {
+                      if (isAgentChat) {
+                        queryClient.invalidateQueries({ queryKey: ['agent-conversation-list'] });
+                      } else {
+                        queryClient.invalidateQueries({ queryKey: ['conversations'] });
+                      }
+                    }, 2000);
+                  }
+                }
+
+                handleSSEMessage(chatId, event, undefined);
+
+                if (done && !migrationScheduled && receivedSessionId) {
+                  migrationScheduled = true;
+
+                  const checkAndMigrate = () => {
+                    const currentChat = get().chats[chatId];
+
+                    if (!currentChat) {
+                      return;
+                    }
+
+                    if (!currentChat.isBotStreaming && !currentChat.isBotThinking) {
+                      performMigration();
+                    } else {
+                      setTimeout(checkAndMigrate, 50);
+                    }
+                  };
+
+                  setTimeout(checkAndMigrate, 50);
+                }
+              },
+              files
+            );
+          });
+        } else {
+          getBotSSE(
+            message,
+            chat,
+            (event, done) => {
+              if (event.eventData.session_id && !receivedSessionId) {
+                receivedSessionId = event.eventData.session_id;
+                set((state) => ({
+                  chats: {
+                    ...state.chats,
+                    [chatId]: {
+                      ...state.chats[chatId],
+                      sessionId: receivedSessionId,
+                    },
+                  },
+                }));
+
+                // Update URL immediately with session ID (like ChatGPT)
+                const isAgentChat = chat.selectedModel?.provider === 'agents';
+                const newUrl = isAgentChat
+                  ? `/chat/${receivedSessionId}?agent=${chat.selectedModel.model}&widget=${chat.selectedModel.widget_id}`
+                  : `/chat/${receivedSessionId}`;
+                window.history.replaceState(null, '', newUrl);
+
+                // Optimistically add chat to sidebar to avoid flicker
+                if (queryClient) {
+                  const queryKey = isAgentChat ? ['agent-conversation-list'] : ['conversations'];
+
+                  // Add placeholder entry immediately
+                  queryClient.setQueryData(queryKey, (oldData: any) => {
+                    if (!oldData?.pages) return oldData;
+
+                    const newSession = {
+                      session_id: receivedSessionId,
+                      last_entry_date: new Date().toISOString(),
+                      conversation: {
+                        Title: message.slice(0, 35),
+                        Query: message,
+                      },
+                    };
+
+                    const updatedPages = [...oldData.pages];
+                    if (updatedPages[0]) {
+                      updatedPages[0] = {
+                        ...updatedPages[0],
+                        sessions: [newSession, ...updatedPages[0].sessions],
+                      };
+                    }
+
+                    return { ...oldData, pages: updatedPages };
+                  });
+
+                  // Invalidate after delay to get real data from backend
+                  setTimeout(() => {
+                    if (isAgentChat) {
+                      queryClient.invalidateQueries({ queryKey: ['agent-conversation-list'] });
+                    } else {
+                      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+                    }
+                  }, 2000);
+                }
+              }
+
+              handleSSEMessage(chatId, event, undefined);
+
+              if (done && !migrationScheduled && receivedSessionId) {
+                migrationScheduled = true;
+
+                const checkAndMigrate = () => {
+                  const currentChat = get().chats[chatId];
+
+                  if (!currentChat) {
+                    return;
+                  }
+
+                  if (!currentChat.isBotStreaming && !currentChat.isBotThinking) {
+                    performMigration();
+                  } else {
+                    setTimeout(checkAndMigrate, 50);
+                  }
+                };
+
                 setTimeout(checkAndMigrate, 50);
               }
-            };
-
-            setTimeout(checkAndMigrate, 50);
-          }
-        });
+            },
+            files
+          );
+        }
 
         const performMigration = () => {
           if (!receivedSessionId) {
@@ -459,7 +820,7 @@ export const useChatStore = create<ChatStore>()(
           };
         }),
 
-      addUserMessage: (id, message) =>
+      addUserMessage: (id, message, files) =>
         set((state) => {
           const chat = state.chats[id] || { ...chatDefaultValue, id };
           return {
@@ -474,6 +835,7 @@ export const useChatStore = create<ChatStore>()(
                     type: 'user',
                     streaming: false,
                     timestamp: new Date().toISOString(),
+                    ...(files && files.length > 0 && { files }),
                   },
                 ],
                 lastUpdated: new Date().toISOString(),
@@ -669,27 +1031,153 @@ export const useChatStore = create<ChatStore>()(
           };
         }),
 
-      generateBotMessage: async (id, message, setSuggestions) => {
+      generateBotMessage: async (
+        id,
+        message,
+        setSuggestions,
+        files,
+        isNewFileUpload = false,
+        processFilesCallback
+      ) => {
         const state = get();
         const chat = state.chats[id];
 
         state.setBotThinking(id, true);
         if (setSuggestions) setSuggestions([]);
 
+        // Process unstructured files if present and not already processed
+        if (files && files.length > 0 && chat.sessionId) {
+          try {
+            // Separate structured and unstructured files
+            const unstructuredExtensions = ['.pdf', '.docx', '.txt', '.html', '.md', '.doc'];
+            const unstructuredFiles = files.filter((f) =>
+              unstructuredExtensions.includes(f.extension)
+            );
+
+            // Filter out already processed unstructured files
+            const unprocessedUnstructuredFiles = unstructuredFiles.filter(
+              (f) => !chat.processedFileIds.includes(f.fileId)
+            );
+
+            // Only process unstructured files that haven't been processed yet
+            if (unprocessedUnstructuredFiles.length > 0) {
+              // Use callback if provided (from React Query hook), otherwise fallback to direct service call
+              const processResult = processFilesCallback
+                ? await processFilesCallback({
+                    session_id: chat.sessionId,
+                    call_from: projectSlug,
+                    file_ids: unprocessedUnstructuredFiles.map((f) => f.fileId),
+                  })
+                : await processFileStream(
+                    await agentService.processFiles({
+                      session_id: chat.sessionId,
+                      call_from: projectSlug,
+                      file_ids: unprocessedUnstructuredFiles.map((f) => f.fileId),
+                    })
+                  );
+
+              if (!processResult.success) {
+                set((state) => ({
+                  chats: {
+                    ...state.chats,
+                    [id]: {
+                      ...state.chats[id],
+                      conversations: [
+                        ...state.chats[id].conversations,
+                        {
+                          message: `⚠️ File processing failed: ${processResult.message}. The AI may not be able to access the file content.`,
+                          type: 'bot',
+                          streaming: false,
+                          timestamp: new Date().toISOString(),
+                        },
+                      ],
+                    },
+                  },
+                }));
+              } else {
+                // Track only unstructured files as processed (they only need processing once)
+                set((state) => ({
+                  chats: {
+                    ...state.chats,
+                    [id]: {
+                      ...state.chats[id],
+                      processedFileIds: [
+                        ...state.chats[id].processedFileIds,
+                        ...unprocessedUnstructuredFiles.map((f) => f.fileId),
+                      ],
+                    },
+                  },
+                }));
+              }
+            }
+          } catch (error) {
+            // File processing error - error handling can be added here if needed
+          }
+        }
+
         try {
-          getBotSSE(message, chat, (event) => {
-            handleSSEMessage(id, event, undefined);
-          });
+          // Only enhance query with file context when NEW files are attached
+          let enhancedQuery = message;
+          if (isNewFileUpload && files && files.length > 0) {
+            const fileNames = files.map((f) => f.fileName).join(', ');
+            if (files.length === 1) {
+              enhancedQuery = `[Context: User has attached 1 file: ${fileNames}. Focus on this specific file.]\n\n${message}`;
+            } else {
+              enhancedQuery = `[Context: User has attached ${files.length} files: ${fileNames}. IMPORTANT: Analyze and provide information about ALL ${files.length} files, not just one. Address each file separately in your response.]\n\n${message}`;
+            }
+          }
+
+          getBotSSE(
+            enhancedQuery,
+            chat,
+            (event) => {
+              handleSSEMessage(id, event, undefined);
+            },
+            files
+          );
         } catch (error) {
           state.setBotThinking(id, false);
           state.setCurrentEvent(id, null, '');
         }
       },
 
-      sendMessage: async (id, message) => {
+      sendMessage: async (id, message, files, processFilesCallback) => {
         const state = get();
-        state.addUserMessage(id, message);
-        await state.generateBotMessage(id, message);
+        const chat = state.chats[id];
+
+        // Merge new files with existing session files for tracking (avoid duplicates)
+        if (files && files.length > 0) {
+          const updatedSessionFiles = [...(chat?.sessionFiles || [])];
+          files.forEach((newFile) => {
+            if (!updatedSessionFiles.some((f) => f.fileId === newFile.fileId)) {
+              updatedSessionFiles.push(newFile);
+            }
+          });
+
+          // Update session files in the chat for tracking purposes
+          set((state) => ({
+            chats: {
+              ...state.chats,
+              [id]: {
+                ...state.chats[id],
+                sessionFiles: updatedSessionFiles,
+              },
+            },
+          }));
+        }
+
+        state.addUserMessage(id, message, files);
+        // Always pass all session files to maintain context across the conversation
+        const currentSessionFiles = get().chats[id]?.sessionFiles || [];
+        const hasNewFiles = files && files.length > 0;
+        await state.generateBotMessage(
+          id,
+          message,
+          undefined,
+          currentSessionFiles.length > 0 ? currentSessionFiles : undefined,
+          hasNewFiles,
+          processFilesCallback
+        );
       },
 
       setSelectedModel: (id, model) => {

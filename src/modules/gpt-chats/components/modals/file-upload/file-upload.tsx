@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { UploadCloud, X } from 'lucide-react';
+import { UploadCloud, X, FileText } from 'lucide-react';
 import { Button } from '@/components/ui-kit/button';
 import {
   Dialog,
@@ -25,14 +25,18 @@ export function FileUpload({ open, onOpenChange, onUpload }: FileUploadProps) {
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
       const validFiles = acceptedFiles.filter((file) => {
-        const isValidType = file.type === 'application/pdf' || file.type.startsWith('text/');
+        const isValidType =
+          file.type === 'application/pdf' ||
+          file.type === 'application/json' ||
+          file.type === 'text/csv' ||
+          file.type.startsWith('text/');
         const isValidSize = file.size <= 5 * 1024 * 1024;
 
         if (!isValidType) {
           toast({
             variant: 'destructive',
             title: 'Invalid file type',
-            description: `${file.name} is not a text file or PDF`,
+            description: `${file.name} is not a supported file type`,
           });
           return false;
         }
@@ -68,20 +72,10 @@ export function FileUpload({ open, onOpenChange, onUpload }: FileUploadProps) {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      'text/*': [
-        '.txt',
-        '.md',
-        '.csv',
-        '.json',
-        '.xml',
-        '.html',
-        '.css',
-        '.js',
-        '.ts',
-        '.tsx',
-        '.jsx',
-      ],
+      'text/*': ['.txt', '.md', '.xml', '.html', '.css', '.js', '.ts', '.tsx', '.jsx'],
       'application/pdf': ['.pdf'],
+      'application/json': ['.json'],
+      'text/csv': ['.csv'],
     },
     maxSize: 5 * 1024 * 1024,
     multiple: true,
@@ -136,38 +130,43 @@ export function FileUpload({ open, onOpenChange, onUpload }: FileUploadProps) {
               <span className="text-high-emphasis text-sm"> or drag and drop</span>
             </div>
             <p className="text-xs text-muted-foreground">
-              Only text files and PDFs are supported. The context must be text only
+              Add files to include them in your conversation
             </p>
             <p className="text-xs text-muted-foreground mt-1">(Max 5 files, 5MB each)</p>
           </div>
 
           {selectedFiles.length > 0 && (
             <div className="space-y-2">
-              <p className="text-sm font-medium">Selected Files ({selectedFiles.length}/5)</p>
-              <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto">
-                {selectedFiles.map((file, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors"
-                  >
-                    <div className="flex-1 min-w-0 mr-2">
-                      <p className="text-sm font-medium truncate" title={file.name}>
-                        {file.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {(file.size / 1024).toFixed(2)} KB
-                      </p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeFile(index)}
-                      className="h-8 w-8 flex-shrink-0"
+              <p className="text-sm font-medium">Files added ({selectedFiles.length}/5)</p>
+              <div className="grid grid-cols-2 gap-4 max-h-60">
+                {selectedFiles.map((file, index) => {
+                  const fileSizeKB = file.size / 1024;
+                  const fileSizeDisplay =
+                    fileSizeKB >= 1024
+                      ? `${(fileSizeKB / 1024).toFixed(1)} MB`
+                      : `${fileSizeKB.toFixed(1)} KB`;
+                  return (
+                    <div
+                      key={index}
+                      className="group relative flex items-center gap-2.5 px-4 py-2.5 bg-muted/90 hover:bg-muted rounded-lg text-sm transition-all"
                     >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
+                      <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <span className="truncate max-w-[200px] font-medium" title={file.name}>
+                        {file.name}
+                      </span>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                        {fileSizeDisplay}
+                      </span>
+                      <button
+                        onClick={() => removeFile(index)}
+                        className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-background border border-border rounded-full p-1 hover:bg-destructive hover:border-destructive hover:text-destructive-foreground shadow-sm"
+                        aria-label="Remove file"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

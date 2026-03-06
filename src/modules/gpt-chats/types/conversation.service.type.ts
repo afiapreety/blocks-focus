@@ -571,3 +571,29 @@ export interface IDeleteConversationByIdPayload {
   session_id: string;
   project_key: string;
 }
+
+export interface IQueryFileMetadata {
+  file_id: string;
+  extension?: string; // For unstructured files (.pdf, .docx, etc.)
+  file_name?: string; // For structured files (.json, .csv)
+  file_url?: string; // For structured files (.json, .csv)
+  [key: string]: any;
+}
+
+export interface IQueryRequestPayload {
+  query: string;
+  session_id?: string;
+  base_prompt?: string;
+  model_id?: string;
+  model_name?: string;
+  model_provider?: string;
+  tool_ids?: string[];
+  last_n_turn?: number;
+  enable_summary?: boolean;
+  enable_next_suggestion?: boolean;
+  response_type?: string;
+  response_format?: string;
+  call_from?: string;
+  files?: IQueryFileMetadata[];
+  images?: string[];
+}

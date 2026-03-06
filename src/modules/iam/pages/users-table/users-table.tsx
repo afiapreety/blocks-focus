@@ -211,7 +211,7 @@ export const UsersTablePage = () => {
   );
 
   return (
-    <div className="flex flex-col h-full w-full">
+    <div className="flex flex-col h-full w-full p-4 sm:p-6 md:p-8">
       <div className="h-full flex-col flex w-full gap-6 md:gap-8">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-bold tracking-tight">{t('IDENTITY_ACCESS_MANAGEMENT')}</h2>

@@ -9,7 +9,7 @@ export const ProfilePage = () => {
   const { t } = useTranslation();
 
   return (
-    <div className="flex w-full flex-col">
+    <div className="flex w-full flex-col p-4 sm:p-6 md:p-8">
       <div className="mb-2 md:mb-[18px] flex items-center text-base text-high-emphasis">
         <h3 className="text-2xl font-bold tracking-tight">{t('MY_PROFILE')}</h3>
       </div>
