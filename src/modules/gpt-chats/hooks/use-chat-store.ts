@@ -23,6 +23,14 @@ const generateUniqueId = (): string => `${Date.now()}-${Math.random().toString(3
 
 type MessageType = 'user' | 'bot';
 
+export interface ChatFileMetadata {
+  fileId: string;
+  fileName: string;
+  fileUrl: string;
+  extension: string;
+  fileSize?: number;
+}
+
 export type SelectModelType = {
   isBlocksModels: boolean;
   provider: string;
@@ -41,7 +49,7 @@ interface ChatMessage {
   tokenUsage?: {
     model_name?: string;
   };
-  files?: Array<{ fileId: string; fileName: string; fileUrl: string; extension: string }>;
+  files?: ChatFileMetadata[];
 }
 
 interface Chat {
@@ -55,7 +63,7 @@ interface Chat {
   selectedModel: SelectModelType;
   selectedTools: string[];
   processedFileIds: string[];
-  sessionFiles: Array<{ fileId: string; fileName: string; fileUrl: string; extension: string }>;
+  sessionFiles: ChatFileMetadata[];
 }
 
 interface ChatEvent {
@@ -89,7 +97,7 @@ interface ChatStore {
     tools: string[],
     navigate: NavigateFunction,
     queryClient?: QueryClient,
-    files?: Array<{ fileId: string; fileName: string; fileUrl: string; extension: string }>,
+    files?: ChatFileMetadata[],
     processFilesCallback?: ProcessFilesCallback
   ) => void;
   loadChat: (id: string, conversations: Conversation[]) => void;
@@ -100,11 +108,7 @@ interface ChatStore {
     widgetId?: string
   ) => void;
   setSessionId: (id: string, sessionId: string) => void;
-  addUserMessage: (
-    id: string,
-    message: string,
-    files?: Array<{ fileId: string; fileName: string; fileUrl: string; extension: string }>
-  ) => void;
+  addUserMessage: (id: string, message: string, files?: ChatFileMetadata[]) => void;
   initiateBotMessage: (id: string, chunk: string) => void;
   startBotMessage: (id: string, chunk: string) => void;
   streamBotMessage: (id: string, chunk: string) => void;
@@ -120,14 +124,14 @@ interface ChatStore {
     id: string,
     message: string,
     setSuggestions?: (suggestions: string[]) => void,
-    files?: Array<{ fileId: string; fileName: string; fileUrl: string; extension: string }>,
+    files?: ChatFileMetadata[],
     isNewFileUpload?: boolean,
     processFilesCallback?: ProcessFilesCallback
   ) => Promise<void>;
   sendMessage: (
     id: string,
     message: string,
-    files?: Array<{ fileId: string; fileName: string; fileUrl: string; extension: string }>,
+    files?: ChatFileMetadata[],
     processFilesCallback?: ProcessFilesCallback
   ) => Promise<void>;
   reset: () => void;
@@ -143,7 +147,7 @@ const getBotSSE = async (
     },
     done: boolean
   ) => void,
-  files?: Array<{ fileId: string; fileName: string; fileUrl: string; extension: string }>
+  files?: ChatFileMetadata[]
 ) => {
   const modelId = chat?.selectedModel
     ? chat?.selectedModel.isBlocksModels

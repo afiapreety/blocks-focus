@@ -8,16 +8,13 @@ import { MoreMenu } from './more-menu';
 import { Tooltip, TooltipTrigger } from '@/components/ui-kit/tooltip';
 import { useSidebar } from '@/components/ui-kit/sidebar';
 import { useTranslation } from 'react-i18next';
-import { SelectModelType } from '../../hooks/use-chat-store';
+import { SelectModelType, ChatFileMetadata } from '../../hooks/use-chat-store';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useGetPreSignedUrlForUpload } from '@/lib/api/hooks/use-storage';
 
 interface GptChatInputProps {
-  onSendMessage: (
-    message: string,
-    files?: Array<{ fileId: string; fileName: string; fileUrl: string; extension: string }>
-  ) => void;
+  onSendMessage: (message: string, files?: ChatFileMetadata[]) => void;
   disabled?: boolean;
   placeholder?: string;
   selectedModel: SelectModelType;
@@ -154,6 +151,7 @@ export const GptChatInput = ({
           fileName: fileName,
           fileUrl: f.uploadUrl as string,
           extension: extension,
+          fileSize: f.file.size,
         };
       });
 

@@ -574,9 +574,7 @@ export interface IDeleteConversationByIdPayload {
 
 export interface IQueryFileMetadata {
   file_id: string;
-  extension?: string; // For unstructured files (.pdf, .docx, etc.)
-  file_name?: string; // For structured files (.json, .csv)
-  file_url?: string; // For structured files (.json, .csv)
+  extension?: string;
   [key: string]: any;
 }
 

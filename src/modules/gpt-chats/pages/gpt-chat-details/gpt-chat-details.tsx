@@ -128,7 +128,13 @@ export const GptChatPageDetails = () => {
 
   const handleSendMessage = (
     message: string,
-    files?: Array<{ fileId: string; fileName: string; fileUrl: string; extension: string }>
+    files?: Array<{
+      fileId: string;
+      fileName: string;
+      fileUrl: string;
+      extension: string;
+      fileSize?: number;
+    }>
   ) => {
     if (!message.trim()) return;
     sendMessage({ message, files });
@@ -197,16 +203,13 @@ export const GptChatPageDetails = () => {
                   {msg.type === 'user' && msg.files && msg.files.length > 0 && (
                     <div className="flex flex-col gap-2 max-w-[90%]">
                       {msg.files.map((file, fileIndex) => {
-                        const getFileSize = (extension: string) => {
-                          const sizes: Record<string, string> = {
-                            '.pdf': '406.0 B',
-                            '.csv': '1.2 KB',
-                            '.json': '5.2 KB',
-                            '.txt': '1.0 KB',
-                            '.docx': '2.5 KB',
-                            '.md': '800 B',
-                          };
-                          return sizes[extension] || '1.2 KB';
+                        const formatFileSize = (bytes?: number) => {
+                          if (!bytes) return '';
+                          if (bytes < 1024) return `${bytes} B`;
+                          if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+                          if (bytes < 1024 * 1024 * 1024)
+                            return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+                          return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
                         };
 
                         return (
@@ -218,9 +221,11 @@ export const GptChatPageDetails = () => {
                             <span className="truncate font-medium flex-1" title={file.fileName}>
                               {file.fileName}
                             </span>
-                            <span className="text-xs text-muted-foreground whitespace-nowrap">
-                              {getFileSize(file.extension)}
-                            </span>
+                            {file.fileSize && (
+                              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                {formatFileSize(file.fileSize)}
+                              </span>
+                            )}
                           </div>
                         );
                       })}
