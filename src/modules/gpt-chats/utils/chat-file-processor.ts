@@ -4,7 +4,7 @@ import { ChatFileMetadata, ProcessFilesCallback } from '../types/chat-store.type
 
 const projectSlug = import.meta.env.VITE_PROJECT_SLUG || '';
 
-const UNSTRUCTURED_EXTENSIONS = ['.pdf', '.docx', '.txt', '.html', '.md', '.doc'];
+export const UNSTRUCTURED_EXTENSIONS = ['.pdf', '.docx', '.txt', '.html', '.md', '.doc'];
 
 export const isUnstructuredFile = (extension: string): boolean => {
   return UNSTRUCTURED_EXTENSIONS.includes(extension);

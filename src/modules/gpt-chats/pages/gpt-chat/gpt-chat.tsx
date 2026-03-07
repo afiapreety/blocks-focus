@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
-import {
-  SelectModelType,
-  useChatStore,
-  ChatFileMetadata,
-} from '@/modules/gpt-chats/hooks/use-chat-store';
+import { useChatStore } from '@/modules/gpt-chats/hooks/use-chat-store';
 import { useProcessFiles } from '@/modules/gpt-chats/hooks/use-agents';
 import { GptChatInput } from '@/modules/gpt-chats/components/gpt-chat-input/gpt-chat-input';
+import {
+  ChatFileMetadata,
+  ProcessFilesCallback,
+  SelectModelType,
+} from '../../types/chat-store.types';
 
 export const GptChatPage = () => {
   const navigate = useNavigate();
@@ -49,12 +50,7 @@ export const GptChatPage = () => {
 
   const handleSendMessage = (message: string, files?: ChatFileMetadata[]) => {
     if (message.trim()) {
-      // Create callback wrapper for file processing
-      const processFilesCallback = async (params: {
-        session_id: string;
-        call_from: string;
-        file_ids: string[];
-      }) => {
+      const processFilesCallback: ProcessFilesCallback = async (params) => {
         try {
           const result = await processFilesMutation(params);
           return result;

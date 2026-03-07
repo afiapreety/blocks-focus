@@ -16,6 +16,7 @@ import { ChatEventMessage, SparkleText } from '../../utils/chat-event-messages';
 import DummyProfile from '@/assets/images/dummy_profile.png';
 import { useGetAccount } from '@/modules/profile/hooks/use-account';
 import botLogoSELISEAI from '@/assets/images/selise_ai_small.png';
+import { ChatFileMetadata } from '../../types/chat-store.types';
 
 const formatTimestamp = (timestamp: string) => {
   if (!timestamp) return '';
@@ -126,16 +127,7 @@ export const GptChatPageDetails = () => {
     return () => clearTimeout(timeoutId);
   }, [conversations, isBotStreaming]);
 
-  const handleSendMessage = (
-    message: string,
-    files?: Array<{
-      fileId: string;
-      fileName: string;
-      fileUrl: string;
-      extension: string;
-      fileSize?: number;
-    }>
-  ) => {
+  const handleSendMessage = (message: string, files?: ChatFileMetadata[]) => {
     if (!message.trim()) return;
     sendMessage({ message, files });
   };

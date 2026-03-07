@@ -27,6 +27,7 @@ import {
   handleStreamError,
   createFileProcessingErrorMessage,
 } from '../utils/chat-error-handler';
+import { UNSTRUCTURED_EXTENSIONS } from '../utils/chat-file-processor';
 
 const projectSlug = import.meta.env.VITE_PROJECT_SLUG || '';
 const llmBasePrompt = import.meta.env.VITE_LLM_BASE_PROMPT || 'You are a helpful AI assistant.';
@@ -778,18 +779,14 @@ export const useChatStore = create<ChatStore>()(
         // Process unstructured files if present and not already processed
         if (files && files.length > 0 && chat.sessionId) {
           try {
-            // Separate structured and unstructured files
-            const unstructuredExtensions = ['.pdf', '.docx', '.txt', '.html', '.md', '.doc'];
             const unstructuredFiles = files.filter((f) =>
-              unstructuredExtensions.includes(f.extension)
+              UNSTRUCTURED_EXTENSIONS.includes(f.extension)
             );
 
-            // Filter out already processed unstructured files
             const unprocessedUnstructuredFiles = unstructuredFiles.filter(
               (f) => !chat.processedFileIds.includes(f.fileId)
             );
 
-            // Only process unstructured files that haven't been processed yet
             if (unprocessedUnstructuredFiles.length > 0) {
               const processResult = await processUnstructuredFiles(
                 chat.sessionId as string,
@@ -816,7 +813,6 @@ export const useChatStore = create<ChatStore>()(
                   },
                 }));
               } else {
-                // Track only unstructured files as processed (they only need processing once)
                 set((state) => ({
                   chats: {
                     ...state.chats,

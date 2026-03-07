@@ -1,15 +1,11 @@
 import { useCallback, useEffect } from 'react';
 import { onlineManager } from '@tanstack/react-query';
-import {
-  SelectModelType,
-  useChatStore,
-  ProcessFilesCallback,
-  ChatFileMetadata,
-} from './use-chat-store';
+import { ChatFileMetadata, ProcessFilesCallback, SelectModelType } from '../types/chat-store.types';
 import { useGetConversationById } from './use-conversation-api';
 import { useGetAgentConversationSessionById } from './use-agent-conversation';
 import { Conversation } from '../types/conversation.service.type';
 import { useProcessFiles } from './use-agents';
+import { useChatStore } from './use-chat-store';
 
 interface UseChatSSE {
   chatId?: string;
@@ -118,13 +114,7 @@ export const useChatSSE = ({ chatId = '', agentId = null, widgetId = null }: Use
     async (data: {
       message: string;
       setSuggestions?: (suggestions: string[]) => void;
-      files?: Array<{
-        fileId: string;
-        fileName: string;
-        fileUrl: string;
-        extension: string;
-        fileSize?: number;
-      }>;
+      files?: ChatFileMetadata[];
     }) => {
       await generateFromStore(
         activeChatId,
