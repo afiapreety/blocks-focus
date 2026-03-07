@@ -29,6 +29,8 @@ export function FileUpload({ open, onOpenChange, onUpload }: FileUploadProps) {
           file.type === 'application/pdf' ||
           file.type === 'application/json' ||
           file.type === 'text/csv' ||
+          file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+          file.type === 'application/vnd.ms-excel' ||
           file.type.startsWith('text/');
         const isValidSize = file.size <= 5 * 1024 * 1024;
 
@@ -76,6 +78,8 @@ export function FileUpload({ open, onOpenChange, onUpload }: FileUploadProps) {
       'application/pdf': ['.pdf'],
       'application/json': ['.json'],
       'text/csv': ['.csv'],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'application/vnd.ms-excel': ['.xls'],
     },
     maxSize: 5 * 1024 * 1024,
     multiple: true,

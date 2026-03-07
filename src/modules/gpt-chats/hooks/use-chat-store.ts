@@ -1,89 +1,35 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import type { QueryClient } from '@tanstack/react-query';
+import { NavigateFunction } from 'react-router-dom';
 import { Conversation } from '../types/conversation.service.type';
 import { conversationService } from '../services/conversation.service';
-import { parseSSEBuffer } from '../utils/parse-sse';
 import { handleSSEMessage } from '../utils/sse-message-handler';
-import { NavigateFunction } from 'react-router-dom';
-import { agentService } from '../services/agent.service';
-import { processFileStream } from '../utils/process-file-stream';
+import {
+  ProcessFilesCallback,
+  ChatFileMetadata,
+  SelectModelType,
+  ChatMessage,
+  Chat,
+  chatDefaultValue,
+} from '../types/chat-store.types';
+import { createSSEHandler } from '../utils/chat-sse-handler';
+import {
+  processUnstructuredFiles,
+  enhanceQueryWithFileContext,
+} from '../utils/chat-file-processor';
+import { syncChatToSidebar, updateUrlWithSessionId } from '../utils/chat-session-sync';
+import { generateUniqueId } from '../utils/chat-helpers';
+import {
+  handleSSEParseError,
+  handleFileProcessingError,
+  handleSessionSetupError,
+  handleStreamError,
+  createFileProcessingErrorMessage,
+} from '../utils/chat-error-handler';
 
 const projectSlug = import.meta.env.VITE_PROJECT_SLUG || '';
 const llmBasePrompt = import.meta.env.VITE_LLM_BASE_PROMPT || 'You are a helpful AI assistant.';
-
-// Type for file processing callback - to be provided by React Query hook layer
-export type ProcessFilesCallback = (params: {
-  session_id: string;
-  call_from: string;
-  file_ids: string[];
-}) => Promise<{ success: boolean; message?: string }>;
-
-const generateUniqueId = (): string => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-type MessageType = 'user' | 'bot';
-
-export interface ChatFileMetadata {
-  fileId: string;
-  fileName: string;
-  fileUrl: string;
-  extension: string;
-  fileSize?: number;
-}
-
-export type SelectModelType = {
-  isBlocksModels: boolean;
-  provider: string;
-  model: string;
-  widget_id?: string;
-};
-
-interface ChatMessage {
-  message: string;
-  type: MessageType;
-  streaming: boolean;
-  timestamp: string;
-  metadata?: {
-    tool_calls_made?: number;
-  };
-  tokenUsage?: {
-    model_name?: string;
-  };
-  files?: ChatFileMetadata[];
-}
-
-interface Chat {
-  id: string | null;
-  sessionId: string | null;
-  conversations: ChatMessage[];
-  isBotStreaming: boolean;
-  isBotThinking: boolean;
-  currentEvent: ChatEvent | null;
-  lastUpdated: string;
-  selectedModel: SelectModelType;
-  selectedTools: string[];
-  processedFileIds: string[];
-  sessionFiles: ChatFileMetadata[];
-}
-
-interface ChatEvent {
-  type: string;
-  message: string;
-}
-
-const chatDefaultValue: Chat = {
-  id: null,
-  conversations: [],
-  sessionId: null,
-  isBotStreaming: false,
-  isBotThinking: false,
-  currentEvent: null as ChatEvent | null,
-  lastUpdated: '',
-  selectedModel: { isBlocksModels: true, provider: 'azure', model: 'gpt-4o-mini' },
-  selectedTools: [],
-  processedFileIds: [],
-  sessionFiles: [],
-};
 
 interface ChatStore {
   chats: {
@@ -136,93 +82,6 @@ interface ChatStore {
   ) => Promise<void>;
   reset: () => void;
 }
-
-const getBotSSE = async (
-  query: string,
-  chat: Chat,
-  cb: (
-    event: {
-      eventType: string;
-      eventData: { session_id?: string; query?: string; message?: string };
-    },
-    done: boolean
-  ) => void,
-  files?: ChatFileMetadata[]
-) => {
-  const modelId = chat?.selectedModel
-    ? chat?.selectedModel.isBlocksModels
-      ? ''
-      : chat?.selectedModel.model
-    : '';
-  const modelName = chat?.selectedModel
-    ? chat?.selectedModel.isBlocksModels
-      ? chat?.selectedModel.model
-      : ''
-    : '';
-  const modelProvider = chat?.selectedModel
-    ? chat?.selectedModel.isBlocksModels
-      ? chat?.selectedModel.provider
-      : ''
-    : '';
-
-  const isAgent = chat?.selectedModel?.provider === 'agents' && chat?.selectedModel?.widget_id;
-
-  try {
-    const reader = isAgent
-      ? await agentService.agentChatStream(
-          chat.selectedModel.widget_id as string,
-          {
-            message: query,
-            message_type: 'text',
-          },
-          chat.sessionId as string | undefined
-        )
-      : await conversationService.query({
-          query: query,
-          session_id: (chat.sessionId as string) || undefined,
-          base_prompt: llmBasePrompt,
-          model_id: modelId,
-          model_name: modelName,
-          model_provider: modelProvider,
-          tool_ids: chat.selectedTools,
-          last_n_turn: 5,
-          enable_summary: true,
-          enable_next_suggestion: true,
-          response_type: 'text',
-          response_format: 'string',
-          call_from: projectSlug,
-          files: files?.map((f) => ({
-            extension: f.extension,
-            file_id: f.fileId,
-          })),
-        });
-
-    const decoder = new TextDecoder();
-    let buffer = '';
-    let isDone = false;
-
-    while (!isDone) {
-      const { done, value } = await reader.read();
-      isDone = done;
-
-      if (value) {
-        buffer += decoder.decode(value, { stream: true });
-        const { events, remaining } = parseSSEBuffer(buffer);
-        buffer = remaining;
-
-        events.forEach((event) => {
-          cb(event, isDone);
-        });
-      }
-    }
-
-    if (isDone) {
-      cb({ eventType: 'stream_complete', eventData: {} }, true);
-    }
-  } catch (error) {
-    //
-  }
-};
 
 export const useChatStore = create<ChatStore>()(
   persist<ChatStore>(
@@ -324,59 +183,21 @@ export const useChatStore = create<ChatStore>()(
                             },
                           }));
 
-                          // Update URL immediately with session ID (like ChatGPT)
-                          const isAgentChat = chat.selectedModel?.provider === 'agents';
-                          const newUrl = isAgentChat
-                            ? `/chat/${receivedSessionId}?agent=${chat.selectedModel.model}&widget=${chat.selectedModel.widget_id}`
-                            : `/chat/${receivedSessionId}`;
-                          window.history.replaceState(null, '', newUrl);
+                          updateUrlWithSessionId(receivedSessionId, chat.selectedModel);
 
-                          // Optimistically add chat to sidebar to avoid flicker
                           if (queryClient) {
-                            const queryKey = isAgentChat
-                              ? ['agent-conversation-list']
-                              : ['conversations'];
-
-                            // Add placeholder entry immediately
-                            queryClient.setQueryData(queryKey, (oldData: any) => {
-                              if (!oldData?.pages) return oldData;
-
-                              const newSession = {
-                                session_id: receivedSessionId,
-                                last_entry_date: new Date().toISOString(),
-                                conversation: {
-                                  Title: message.slice(0, 35),
-                                  Query: message,
-                                },
-                              };
-
-                              const updatedPages = [...oldData.pages];
-                              if (updatedPages[0]) {
-                                updatedPages[0] = {
-                                  ...updatedPages[0],
-                                  sessions: [newSession, ...updatedPages[0].sessions],
-                                };
-                              }
-
-                              return { ...oldData, pages: updatedPages };
-                            });
-
-                            // Invalidate after delay to get real data from backend
-                            setTimeout(() => {
-                              if (isAgentChat) {
-                                queryClient.invalidateQueries({
-                                  queryKey: ['agent-conversation-list'],
-                                });
-                              } else {
-                                queryClient.invalidateQueries({ queryKey: ['conversations'] });
-                              }
-                            }, 2000);
+                            syncChatToSidebar(
+                              queryClient,
+                              receivedSessionId,
+                              message,
+                              chat.selectedModel
+                            );
                           }
 
                           break;
                         }
                       } catch (e) {
-                        // Ignore parse errors
+                        handleSSEParseError(e);
                       }
                     }
                   }
@@ -384,51 +205,33 @@ export const useChatStore = create<ChatStore>()(
                 }
               }
 
-              // Process unstructured files
               if (receivedSessionId) {
-                const unstructuredExtensions = ['.pdf', '.docx', '.txt', '.html', '.md', '.doc'];
-                const unstructuredFiles = files.filter((f) =>
-                  unstructuredExtensions.includes(f.extension)
+                const processResult = await processUnstructuredFiles(
+                  receivedSessionId,
+                  files,
+                  processFilesCallback
                 );
 
-                if (unstructuredFiles.length > 0) {
-                  // Use callback if provided (from React Query hook), otherwise fallback to direct service call
-                  const processResult = processFilesCallback
-                    ? await processFilesCallback({
-                        session_id: receivedSessionId,
-                        call_from: projectSlug,
-                        file_ids: unstructuredFiles.map((f) => f.fileId),
-                      })
-                    : await processFileStream(
-                        await agentService.processFiles({
-                          session_id: receivedSessionId,
-                          call_from: projectSlug,
-                          file_ids: unstructuredFiles.map((f) => f.fileId),
-                        })
-                      );
-
-                  if (!processResult.success) {
-                    set((state) => ({
-                      chats: {
-                        ...state.chats,
-                        [chatId]: {
-                          ...state.chats[chatId],
-                          conversations: [
-                            ...state.chats[chatId].conversations,
-                            {
-                              message: `⚠️ File processing failed: ${processResult.message}. The AI may not be able to access the file content.`,
-                              type: 'bot',
-                              streaming: false,
-                              timestamp: new Date().toISOString(),
-                            },
-                          ],
-                        },
+                if (!processResult.success) {
+                  set((state) => ({
+                    chats: {
+                      ...state.chats,
+                      [chatId]: {
+                        ...state.chats[chatId],
+                        conversations: [
+                          ...state.chats[chatId].conversations,
+                          {
+                            message: createFileProcessingErrorMessage(processResult.message),
+                            type: 'bot',
+                            streaming: false,
+                            timestamp: new Date().toISOString(),
+                          },
+                        ],
                       },
-                    }));
-                  }
+                    },
+                  }));
                 }
 
-                // Update chat with session_id
                 set((state) => ({
                   chats: {
                     ...state.chats,
@@ -443,24 +246,15 @@ export const useChatStore = create<ChatStore>()(
               }
             }
           } catch (error) {
-            // Session setup failed - error handling can be added here if needed
+            handleSessionSetupError(chatId, error, set);
           }
         };
 
-        // Process files first if present, then send the actual message
         if (files && files.length > 0) {
           processFilesAndSendMessage().then(() => {
-            // Enhance query with file context when files are attached
-            let enhancedQuery = message;
-            if (files.length === 1) {
-              const fileName = files[0].fileName;
-              enhancedQuery = `[Context: User has attached 1 file: ${fileName}. Focus on this specific file.]\n\n${message}`;
-            } else {
-              const fileNames = files.map((f) => f.fileName).join(', ');
-              enhancedQuery = `[Context: User has attached ${files.length} files: ${fileNames}. IMPORTANT: Analyze and provide information about ALL ${files.length} files, not just one. Address each file separately in your response.]\n\n${message}`;
-            }
+            const enhancedQuery = enhanceQueryWithFileContext(message, files);
 
-            getBotSSE(
+            createSSEHandler(
               enhancedQuery,
               { ...chat, sessionId: receivedSessionId || chat.sessionId },
               (event, done) => {
@@ -476,53 +270,19 @@ export const useChatStore = create<ChatStore>()(
                     },
                   }));
 
-                  // Update URL immediately with session ID (like ChatGPT)
-                  const isAgentChat = chat.selectedModel?.provider === 'agents';
-                  const newUrl = isAgentChat
-                    ? `/chat/${receivedSessionId}?agent=${chat.selectedModel.model}&widget=${chat.selectedModel.widget_id}`
-                    : `/chat/${receivedSessionId}`;
-                  window.history.replaceState(null, '', newUrl);
+                  updateUrlWithSessionId(receivedSessionId, chat.selectedModel);
 
-                  // Optimistically add chat to sidebar to avoid flicker
                   if (queryClient) {
-                    const queryKey = isAgentChat ? ['agent-conversation-list'] : ['conversations'];
-
-                    // Add placeholder entry immediately
-                    queryClient.setQueryData(queryKey, (oldData: any) => {
-                      if (!oldData?.pages) return oldData;
-
-                      const newSession = {
-                        session_id: receivedSessionId,
-                        last_entry_date: new Date().toISOString(),
-                        conversation: {
-                          Title: message.slice(0, 35),
-                          Query: message,
-                        },
-                      };
-
-                      const updatedPages = [...oldData.pages];
-                      if (updatedPages[0]) {
-                        updatedPages[0] = {
-                          ...updatedPages[0],
-                          sessions: [newSession, ...updatedPages[0].sessions],
-                        };
-                      }
-
-                      return { ...oldData, pages: updatedPages };
-                    });
-
-                    // Invalidate after delay to get real data from backend
-                    setTimeout(() => {
-                      if (isAgentChat) {
-                        queryClient.invalidateQueries({ queryKey: ['agent-conversation-list'] });
-                      } else {
-                        queryClient.invalidateQueries({ queryKey: ['conversations'] });
-                      }
-                    }, 2000);
+                    syncChatToSidebar(queryClient, receivedSessionId, message, chat.selectedModel);
                   }
                 }
 
                 handleSSEMessage(chatId, event, undefined);
+
+                if (done && event.eventType === 'stream_complete') {
+                  const state = get();
+                  state.setBotThinking(chatId, false);
+                }
 
                 if (done && !migrationScheduled && receivedSessionId) {
                   migrationScheduled = true;
@@ -548,7 +308,7 @@ export const useChatStore = create<ChatStore>()(
             );
           });
         } else {
-          getBotSSE(
+          createSSEHandler(
             message,
             chat,
             (event, done) => {
@@ -564,53 +324,19 @@ export const useChatStore = create<ChatStore>()(
                   },
                 }));
 
-                // Update URL immediately with session ID (like ChatGPT)
-                const isAgentChat = chat.selectedModel?.provider === 'agents';
-                const newUrl = isAgentChat
-                  ? `/chat/${receivedSessionId}?agent=${chat.selectedModel.model}&widget=${chat.selectedModel.widget_id}`
-                  : `/chat/${receivedSessionId}`;
-                window.history.replaceState(null, '', newUrl);
+                updateUrlWithSessionId(receivedSessionId, chat.selectedModel);
 
-                // Optimistically add chat to sidebar to avoid flicker
                 if (queryClient) {
-                  const queryKey = isAgentChat ? ['agent-conversation-list'] : ['conversations'];
-
-                  // Add placeholder entry immediately
-                  queryClient.setQueryData(queryKey, (oldData: any) => {
-                    if (!oldData?.pages) return oldData;
-
-                    const newSession = {
-                      session_id: receivedSessionId,
-                      last_entry_date: new Date().toISOString(),
-                      conversation: {
-                        Title: message.slice(0, 35),
-                        Query: message,
-                      },
-                    };
-
-                    const updatedPages = [...oldData.pages];
-                    if (updatedPages[0]) {
-                      updatedPages[0] = {
-                        ...updatedPages[0],
-                        sessions: [newSession, ...updatedPages[0].sessions],
-                      };
-                    }
-
-                    return { ...oldData, pages: updatedPages };
-                  });
-
-                  // Invalidate after delay to get real data from backend
-                  setTimeout(() => {
-                    if (isAgentChat) {
-                      queryClient.invalidateQueries({ queryKey: ['agent-conversation-list'] });
-                    } else {
-                      queryClient.invalidateQueries({ queryKey: ['conversations'] });
-                    }
-                  }, 2000);
+                  syncChatToSidebar(queryClient, receivedSessionId, message, chat.selectedModel);
                 }
               }
 
               handleSSEMessage(chatId, event, undefined);
+
+              if (done && event.eventType === 'stream_complete') {
+                const state = get();
+                state.setBotThinking(chatId, false);
+              }
 
               if (done && !migrationScheduled && receivedSessionId) {
                 migrationScheduled = true;
@@ -1065,20 +791,11 @@ export const useChatStore = create<ChatStore>()(
 
             // Only process unstructured files that haven't been processed yet
             if (unprocessedUnstructuredFiles.length > 0) {
-              // Use callback if provided (from React Query hook), otherwise fallback to direct service call
-              const processResult = processFilesCallback
-                ? await processFilesCallback({
-                    session_id: chat.sessionId,
-                    call_from: projectSlug,
-                    file_ids: unprocessedUnstructuredFiles.map((f) => f.fileId),
-                  })
-                : await processFileStream(
-                    await agentService.processFiles({
-                      session_id: chat.sessionId,
-                      call_from: projectSlug,
-                      file_ids: unprocessedUnstructuredFiles.map((f) => f.fileId),
-                    })
-                  );
+              const processResult = await processUnstructuredFiles(
+                chat.sessionId as string,
+                unprocessedUnstructuredFiles,
+                processFilesCallback
+              );
 
               if (!processResult.success) {
                 set((state) => ({
@@ -1089,7 +806,7 @@ export const useChatStore = create<ChatStore>()(
                       conversations: [
                         ...state.chats[id].conversations,
                         {
-                          message: `⚠️ File processing failed: ${processResult.message}. The AI may not be able to access the file content.`,
+                          message: createFileProcessingErrorMessage(processResult.message),
                           type: 'bot',
                           streaming: false,
                           timestamp: new Date().toISOString(),
@@ -1115,33 +832,32 @@ export const useChatStore = create<ChatStore>()(
               }
             }
           } catch (error) {
-            // File processing error - error handling can be added here if needed
+            handleFileProcessingError(id, error, set);
           }
         }
 
         try {
           // Only enhance query with file context when NEW files are attached
-          let enhancedQuery = message;
-          if (isNewFileUpload && files && files.length > 0) {
-            const fileNames = files.map((f) => f.fileName).join(', ');
-            if (files.length === 1) {
-              enhancedQuery = `[Context: User has attached 1 file: ${fileNames}. Focus on this specific file.]\n\n${message}`;
-            } else {
-              enhancedQuery = `[Context: User has attached ${files.length} files: ${fileNames}. IMPORTANT: Analyze and provide information about ALL ${files.length} files, not just one. Address each file separately in your response.]\n\n${message}`;
-            }
-          }
+          const enhancedQuery =
+            isNewFileUpload && files && files.length > 0
+              ? enhanceQueryWithFileContext(message, files)
+              : message;
 
-          getBotSSE(
+          createSSEHandler(
             enhancedQuery,
             chat,
-            (event) => {
+            (event, done) => {
               handleSSEMessage(id, event, undefined);
+
+              // Only turn off thinking state when stream completes, let handleSSEMessage manage endBotMessage
+              if (done && event.eventType === 'stream_complete') {
+                state.setBotThinking(id, false);
+              }
             },
             files
           );
         } catch (error) {
-          state.setBotThinking(id, false);
-          state.setCurrentEvent(id, null, '');
+          handleStreamError(id, set);
         }
       },
 
