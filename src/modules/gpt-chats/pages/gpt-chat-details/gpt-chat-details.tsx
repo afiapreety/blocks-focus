@@ -178,7 +178,7 @@ export const GptChatPageDetails = () => {
     <div className="flex flex-col h-full w-full bg-background relative">
       <div className="flex-1 overflow-y-auto scrollbar-hide">
         {isReady && (
-          <div className="max-w-4xl mx-auto px-4 py-6 pb-[250px] space-y-12">
+          <div className="w-full px-4 md:px-6 lg:px-8 py-4 pb-40 space-y-10">
             {conversations.map((msg, index) => (
               <div
                 key={index}
@@ -194,12 +194,12 @@ export const GptChatPageDetails = () => {
                   className={`group flex-1 relative ${msg.type === 'user' ? 'flex flex-col items-end gap-2' : ''} ${msg.type === 'bot' ? 'min-h-[48px]' : ''}`}
                 >
                   {msg.type === 'user' && msg.files && msg.files.length > 0 && (
-                    <div className="flex flex-col gap-2 max-w-[90%]">
+                    <div className="flex flex-col gap-2 max-w-[70%] md:max-w-[90%]">
                       {msg.files.map((file, fileIndex) => {
                         return (
                           <div
                             key={fileIndex}
-                            className="flex items-center gap-2.5 px-4 py-3 bg-muted/90 rounded-lg text-sm w-full"
+                            className="flex items-center gap-1 md:gap-2 px-2 py-1 md:px-4 md:py-3 bg-muted/90 rounded-lg text-sm w-full"
                           >
                             <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                             <span className="truncate font-medium flex-1" title={file.fileName}>
@@ -217,7 +217,7 @@ export const GptChatPageDetails = () => {
                   )}
 
                   <div
-                    className={`max-w-[90%] py-1 ${msg.type === 'user' && 'bg-accent rounded-2xl px-5'}`}
+                    className={`max-w-[90%] md:max-w-[80%] py-1 ${msg.type === 'user' && 'bg-accent rounded-xl px-5'}`}
                   >
                     {msg.type === 'user' ? (
                       <p className="text-[15px] leading-7 whitespace-pre-wrap">{msg.message}</p>

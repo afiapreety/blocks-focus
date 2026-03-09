@@ -6,7 +6,6 @@ import { GroupedModelSelector } from './model-selector';
 import { ToolsSelector } from './tools-selector';
 import { UploadFile } from './upload-file';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui-kit/tooltip';
-import { useSidebar } from '@/components/ui-kit/sidebar';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -48,7 +47,6 @@ export const GptChatInput = ({
   const [message, setMessage] = useState('');
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set());
-  const { state } = useSidebar();
   const { t } = useTranslation();
   const { toast } = useToast();
   const uploadMutation = useGetPreSignedUrlForUpload();
@@ -164,15 +162,13 @@ export const GptChatInput = ({
   return (
     <div
       className={cn(
-        'fixed bottom-0 left-0 right-0 z-10',
-        state === 'collapsed' ? 'md:ml-16 lg:ml-16 xl:ml-16' : 'md:ml-64 lg:ml-64 xl:ml-60',
+        'sticky bottom-0 w-full z-10',
+        variant === 'chat-details' ? 'bg-background/95 backdrop-blur-sm' : '',
         className
       )}
     >
       <div
-        className={`w-full mx-auto px-4  pb-4  max-w-4xl xl:max-w-5xl ${
-          variant === 'chat-details' ? ' bg-background backdrop-blur-3xl' : ''
-        }`}
+        className={`w-full px-2 md:px-6 lg:px-8 pb-4 pt-2 ${variant !== 'chat-details' && 'max-w-4xl mx-auto'}`}
       >
         <div className="bg-card relative rounded-3xl border-2 border-border hover:border-primary focus-within:border-primary">
           {uploadedFiles.length > 0 && (
