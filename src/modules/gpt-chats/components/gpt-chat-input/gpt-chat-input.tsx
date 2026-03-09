@@ -4,14 +4,15 @@ import { ArrowUp, FileText, X, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { GroupedModelSelector } from './model-selector';
 import { ToolsSelector } from './tools-selector';
-import { MoreMenu } from './more-menu';
-import { Tooltip, TooltipTrigger } from '@/components/ui-kit/tooltip';
+import { UploadFile } from './upload-file';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui-kit/tooltip';
 import { useSidebar } from '@/components/ui-kit/sidebar';
 import { useTranslation } from 'react-i18next';
-import { SelectModelType, ChatFileMetadata } from '../../hooks/use-chat-store';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useGetPreSignedUrlForUpload } from '@/lib/api/hooks/use-storage';
+import { ChatFileMetadata, SelectModelType } from '../../types/chat-store.types';
+import { formatFileSize } from '../../utils/format-file-size';
 
 interface GptChatInputProps {
   onSendMessage: (message: string, files?: ChatFileMetadata[]) => void;
@@ -179,13 +180,7 @@ export const GptChatInput = ({
               {uploadedFiles.map((uploadedFile, index) => {
                 const isUploading = uploadingFiles.has(uploadedFile.file.name);
                 const hasError = !uploadedFile.fileId && !isUploading;
-                const fileSizeKB = uploadedFile.file.size / 1024;
-                const fileSizeDisplay =
-                  fileSizeKB >= 1024
-                    ? `${(fileSizeKB / 1024).toFixed(1)} MB`
-                    : fileSizeKB >= 1
-                      ? `${fileSizeKB.toFixed(1)} KB`
-                      : `${uploadedFile.file.size} B`;
+                const fileSizeDisplay = formatFileSize(uploadedFile.file.size);
 
                 return (
                   <div
@@ -261,7 +256,6 @@ export const GptChatInput = ({
 
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 sm:px-6 pb-3 pt-2 border-t border-border/50 gap-2 sm:gap-0">
             <div className="flex items-center gap-2 flex-wrap">
-              {!isAgentChat && <MoreMenu onUploadFiles={handleUploadFiles} />}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div>
@@ -279,9 +273,20 @@ export const GptChatInput = ({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <div>
+                      <UploadFile onUploadFiles={handleUploadFiles} />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>Attach File</TooltipContent>
+                </Tooltip>
+              )}
+              {!isAgentChat && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
                       <ToolsSelector value={selectedTools} onChange={onToolsChange} />
                     </div>
                   </TooltipTrigger>
+                  <TooltipContent>Select Tools</TooltipContent>
                 </Tooltip>
               )}
             </div>
