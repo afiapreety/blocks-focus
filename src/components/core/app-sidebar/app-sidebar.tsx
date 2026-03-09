@@ -43,6 +43,7 @@ import { useCategorizedChatHistories } from '@/modules/gpt-chats/hooks/use-chat-
 import { useGetAgents } from '@/modules/gpt-chats/hooks/use-agents';
 import { AgentChatAccordion } from '@/modules/gpt-chats/components/agent-chat/agent-chat-accordion';
 import { cn } from '@/lib/utils';
+import { useChatStore } from '@/modules/gpt-chats/hooks/use-chat-store';
 
 const projectKey = import.meta.env.VITE_X_BLOCKS_KEY || '';
 const projectSlug = import.meta.env.VITE_PROJECT_SLUG || '';
@@ -58,6 +59,7 @@ export const AppSidebar = () => {
   const { toast } = useToast();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [chatToDelete, setChatToDelete] = useState<string | null>(null);
+  const activeChatId = useChatStore((state) => state.activeChatId);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const filteredMenuItems = useFilteredMenu(menuItems);
 
@@ -236,10 +238,15 @@ export const AppSidebar = () => {
   const confirmDelete = async () => {
     if (chatToDelete) {
       try {
-        const shouldNavigate = chatId === chatToDelete;
+        const isOnChatRoute = pathname.startsWith('/chat');
+        const isViewingDeletedChat =
+          pathname.includes(chatToDelete) ||
+          activeChatId === chatToDelete ||
+          (isOnChatRoute && chatId === chatToDelete);
+
         await deleteMutateAsync({ session_id: chatToDelete, project_key: projectKey });
 
-        if (shouldNavigate) {
+        if (isViewingDeletedChat) {
           navigate('/chat');
         }
 

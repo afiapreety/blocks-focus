@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui-kit/button';
-import { Clipboard, Check, Zap } from 'lucide-react';
+import { Clipboard, Check, Zap, FileText } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -16,6 +16,8 @@ import { ChatEventMessage, SparkleText } from '../../utils/chat-event-messages';
 import DummyProfile from '@/assets/images/dummy_profile.png';
 import { useGetAccount } from '@/modules/profile/hooks/use-account';
 import botLogoSELISEAI from '@/assets/images/selise_ai_small.png';
+import { ChatFileMetadata } from '../../types/chat-store.types';
+import { formatFileSize } from '../../utils/format-file-size';
 
 const formatTimestamp = (timestamp: string) => {
   if (!timestamp) return '';
@@ -126,9 +128,9 @@ export const GptChatPageDetails = () => {
     return () => clearTimeout(timeoutId);
   }, [conversations, isBotStreaming]);
 
-  const handleSendMessage = (message: string) => {
+  const handleSendMessage = (message: string, files?: ChatFileMetadata[]) => {
     if (!message.trim()) return;
-    sendMessage({ message });
+    sendMessage({ message, files });
   };
 
   const handleCopy = (content: string, messageId: number) => {
@@ -189,10 +191,33 @@ export const GptChatPageDetails = () => {
                 )}
 
                 <div
-                  className={`group flex-1 relative ${msg.type === 'user' ? 'flex justify-end' : ''} ${msg.type === 'bot' ? 'min-h-[48px]' : ''}`}
+                  className={`group flex-1 relative ${msg.type === 'user' ? 'flex flex-col items-end gap-2' : ''} ${msg.type === 'bot' ? 'min-h-[48px]' : ''}`}
                 >
+                  {msg.type === 'user' && msg.files && msg.files.length > 0 && (
+                    <div className="flex flex-col gap-2 max-w-[90%]">
+                      {msg.files.map((file, fileIndex) => {
+                        return (
+                          <div
+                            key={fileIndex}
+                            className="flex items-center gap-2.5 px-4 py-3 bg-muted/90 rounded-lg text-sm w-full"
+                          >
+                            <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            <span className="truncate font-medium flex-1" title={file.fileName}>
+                              {file.fileName}
+                            </span>
+                            {file.fileSize && (
+                              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                {formatFileSize(file.fileSize)}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
                   <div
-                    className={`max-w-[90%] py-1 ${msg.type === 'user' && 'bg-accent rounded px-5'}`}
+                    className={`max-w-[90%] py-1 ${msg.type === 'user' && 'bg-accent rounded-2xl px-5'}`}
                   >
                     {msg.type === 'user' ? (
                       <p className="text-[15px] leading-7 whitespace-pre-wrap">{msg.message}</p>

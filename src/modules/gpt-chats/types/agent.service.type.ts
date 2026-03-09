@@ -192,3 +192,26 @@ export interface IGetAgentByIdPayload {
 export interface IGetAgentByIdResponse {
   agent: Agent;
 }
+
+export interface IProcessFilesPayload {
+  session_id: string;
+  call_from: string;
+  file_ids: string[];
+}
+
+export interface IProcessFilesResponse {
+  success: boolean;
+  message?: string;
+  data?: string;
+}
+
+export interface IAgentChatFileMetadata {
+  file_id: string;
+  extension?: string;
+}
+
+export interface IAgentChatStreamPayload {
+  message: string;
+  message_type: string;
+  files?: IAgentChatFileMetadata[];
+}

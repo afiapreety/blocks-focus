@@ -80,6 +80,7 @@
     "i18next": "^22.5.1",
     "jspdf": "^4.0.0",
     "lucide-react": "^0.453.0",
+    "nuqs": "^2.8.9",
     "quill": "^2.0.3",
     "react": "^19.0.0",
     "react-big-calendar": "^1.18.0",
