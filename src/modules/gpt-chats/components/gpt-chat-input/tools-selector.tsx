@@ -77,7 +77,7 @@ export const ToolsSelector = ({ value = [], onChange, tenantId }: ToolsSelectorP
         align="start"
       >
         <div className="flex flex-col h-[380px] sm:h-[360px]">
-          <div className="px-4 py-3 border-b border-border/30 bg-muted/20 backdrop-blur-sm space-y-3">
+          <div className="px-4 py-3 border-b border-border/30 bg-muted/20 space-y-3">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               Available Tools
             </p>

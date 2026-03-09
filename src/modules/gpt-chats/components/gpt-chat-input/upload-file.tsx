@@ -129,10 +129,9 @@ export function UploadFile({ onUploadFiles, className }: UploadFileProps) {
       <PopoverContent
         className="w-[95vw] sm:w-[480px] lg:w-[520px] p-0 rounded-2xl border-border"
         align="start"
-        side="top"
       >
         <div className="flex flex-col max-h-[480px]">
-          <div className="px-4 py-3 border-b border-border/30 bg-muted/20 backdrop-blur-sm">
+          <div className="px-4 py-3 border-b border-border/30 bg-muted/20">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               Add Files
             </p>
@@ -157,7 +156,9 @@ export function UploadFile({ onUploadFiles, className }: UploadFileProps) {
                 <span className="text-primary font-semibold text-sm">Click to upload</span>
                 <span className="text-high-emphasis text-sm"> or drag and drop</span>
               </div>
-              <p className="text-xs text-muted-foreground">PDF, JSON, CSV, Excel, Text files</p>
+              <p className="text-xs text-muted-foreground">
+                Add files to include them in your conversation
+              </p>
               <p className="text-xs text-muted-foreground mt-1">(Max 5 files, 5MB each)</p>
             </div>
 
