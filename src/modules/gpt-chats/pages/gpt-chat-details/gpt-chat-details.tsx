@@ -17,6 +17,7 @@ import DummyProfile from '@/assets/images/dummy_profile.png';
 import { useGetAccount } from '@/modules/profile/hooks/use-account';
 import botLogoSELISEAI from '@/assets/images/selise_ai_small.png';
 import { ChatFileMetadata } from '../../types/chat-store.types';
+import { formatFileSize } from '../../utils/format-file-size';
 
 const formatTimestamp = (timestamp: string) => {
   if (!timestamp) return '';
@@ -195,15 +196,6 @@ export const GptChatPageDetails = () => {
                   {msg.type === 'user' && msg.files && msg.files.length > 0 && (
                     <div className="flex flex-col gap-2 max-w-[90%]">
                       {msg.files.map((file, fileIndex) => {
-                        const formatFileSize = (bytes?: number) => {
-                          if (!bytes) return '';
-                          if (bytes < 1024) return `${bytes} B`;
-                          if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-                          if (bytes < 1024 * 1024 * 1024)
-                            return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-                          return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
-                        };
-
                         return (
                           <div
                             key={fileIndex}

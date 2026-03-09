@@ -11,6 +11,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useDropzone } from 'react-dropzone';
 import { useToast } from '@/hooks/use-toast';
+import { formatFileSize } from '../../../utils/format-file-size';
 
 interface FileUploadProps {
   open: boolean;
@@ -144,11 +145,6 @@ export function FileUpload({ open, onOpenChange, onUpload }: FileUploadProps) {
               <p className="text-sm font-medium">Files added ({selectedFiles.length}/5)</p>
               <div className="grid grid-cols-2 gap-4 max-h-60">
                 {selectedFiles.map((file, index) => {
-                  const fileSizeKB = file.size / 1024;
-                  const fileSizeDisplay =
-                    fileSizeKB >= 1024
-                      ? `${(fileSizeKB / 1024).toFixed(1)} MB`
-                      : `${fileSizeKB.toFixed(1)} KB`;
                   return (
                     <div
                       key={index}
@@ -159,7 +155,7 @@ export function FileUpload({ open, onOpenChange, onUpload }: FileUploadProps) {
                         {file.name}
                       </span>
                       <span className="text-xs text-muted-foreground whitespace-nowrap">
-                        {fileSizeDisplay}
+                        {formatFileSize(file.size)}
                       </span>
                       <button
                         onClick={() => removeFile(index)}
