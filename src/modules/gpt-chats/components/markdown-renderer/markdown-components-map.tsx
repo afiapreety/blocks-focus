@@ -1,9 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Check, Clipboard, Download } from 'lucide-react';
+import type { Components } from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import dark from 'react-syntax-highlighter/dist/esm/styles/prism/atom-dark';
-import type { Components } from 'react-markdown';
-import { Check, Clipboard, Download } from 'lucide-react';
-import { useState } from 'react';
 
 type SyntaxHighlighterTheme = Record<string, React.CSSProperties>;
 
@@ -178,7 +177,9 @@ export const MarkdownComponentsMap: Partial<Components> = {
 
   table: (props) => (
     <div className="w-full overflow-x-auto">
-      <table className="w-full border-collapse border !mb-0 !mt-1.5">{props.children}</table>
+      <table className="w-full border-collapse border-[1.5px] !border-border !mb-0 !mt-1.5">
+        {props.children}
+      </table>
     </div>
   ),
 
