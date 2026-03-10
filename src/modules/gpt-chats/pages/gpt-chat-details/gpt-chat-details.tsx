@@ -143,7 +143,7 @@ export const GptChatPageDetails = () => {
     return (
       <div className="text-[15px]">
         <div className="inline-block relative">
-          <MarkdownRenderer content={content} />
+          <MarkdownRenderer content={content} isStreaming={isStreaming} />
           {isStreaming && (
             <>
               <span

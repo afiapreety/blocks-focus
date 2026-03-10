@@ -1,12 +1,67 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { ImageIcon, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MarkdownComponentsMap } from './markdown-components-map';
-import { ImageIcon, Download } from 'lucide-react';
 
 type MarkdownRendererProps = {
   content: string;
   className?: string;
+  isStreaming?: boolean;
+};
+
+const unwrapResultFromContent = (value: string) => {
+  try {
+    const parsed = JSON.parse(value);
+    if (!parsed || typeof parsed !== 'object') return value;
+
+    const obj = parsed as Record<string, unknown>;
+    const result = obj.result;
+
+    if (typeof result === 'string' && result.trim()) {
+      return result;
+    }
+
+    return value;
+  } catch {
+    return value;
+  }
+};
+
+const normalizeQuoteToBlockquote = (text: string): string => {
+  const trimmed = text.trim();
+
+  if (trimmed.startsWith('>')) {
+    return text;
+  }
+
+  const quoteWithAuthorPatterns = [
+    /^[""](.+?)[""][\s]*[-–—]\s*(.+)$/s,
+    /^"(.+?)"[\s]*[-–—]\s*(.+)$/s,
+    /^[''](.+?)[''][\s]*[-–—]\s*(.+)$/s,
+    /^'(.+?)'[\s]*[-–—]\s*(.+)$/s,
+    /^(.+?)[\s]*[-–—]\s*(.+)$/s,
+  ];
+
+  for (const pattern of quoteWithAuthorPatterns) {
+    const match = trimmed.match(pattern);
+    if (match) {
+      const quoteText = match[1].trim();
+      const author = match[2].trim();
+
+      if (author.length > 0 && author.length < 100 && !quoteText.includes('\n\n')) {
+        return `> ${quoteText} – ${author}`;
+      }
+    }
+  }
+
+  const simpleQuotePattern = /^[""](.+?)[""]$/s;
+  const simpleMatch = trimmed.match(simpleQuotePattern);
+  if (simpleMatch) {
+    return `> ${simpleMatch[1].trim()}`;
+  }
+
+  return text;
 };
 
 const JsonSkeletonBlock = ({ content }: { content: string }) => {
@@ -132,9 +187,17 @@ const ImageSkeletonBlock = () => {
   );
 };
 
-export const MarkdownRenderer = ({ content, className = '' }: MarkdownRendererProps) => {
+export const MarkdownRenderer = ({
+  content,
+  className = '',
+  isStreaming = false,
+}: MarkdownRendererProps) => {
+  const unwrappedContent = unwrapResultFromContent(content);
+  const normalizedContent = isStreaming
+    ? unwrappedContent
+    : normalizeQuoteToBlockquote(unwrappedContent);
   const jsonBlockRegex = /:::(json|json-skeleton|image-skeleton|image)\n([\s\S]*?)\n:::/g;
-  const hasJsonBlock = jsonBlockRegex.test(content);
+  const hasJsonBlock = jsonBlockRegex.test(normalizedContent);
 
   if (hasJsonBlock) {
     const parts: React.ReactNode[] = [];
@@ -143,12 +206,12 @@ export const MarkdownRenderer = ({ content, className = '' }: MarkdownRendererPr
 
     jsonBlockRegex.lastIndex = 0;
 
-    while ((match = jsonBlockRegex.exec(content)) !== null) {
+    while ((match = jsonBlockRegex.exec(normalizedContent)) !== null) {
       const blockType = match[1];
       const blockContent = match[2];
 
       if (match.index > lastIndex) {
-        const textBefore = content.slice(lastIndex, match.index);
+        const textBefore = normalizedContent.slice(lastIndex, match.index);
         if (textBefore.trim()) {
           parts.push(
             <ReactMarkdown
@@ -171,8 +234,8 @@ export const MarkdownRenderer = ({ content, className = '' }: MarkdownRendererPr
       lastIndex = match.index + match[0].length;
     }
 
-    if (lastIndex < content.length) {
-      const textAfter = content.slice(lastIndex);
+    if (lastIndex < normalizedContent.length) {
+      const textAfter = normalizedContent.slice(lastIndex);
       if (textAfter.trim()) {
         parts.push(
           <ReactMarkdown
@@ -219,7 +282,7 @@ export const MarkdownRenderer = ({ content, className = '' }: MarkdownRendererPr
       )}
     >
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponentsMap}>
-        {content}
+        {normalizedContent}
       </ReactMarkdown>
     </div>
   );

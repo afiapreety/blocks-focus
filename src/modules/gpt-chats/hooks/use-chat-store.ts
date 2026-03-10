@@ -5,6 +5,7 @@ import { NavigateFunction } from 'react-router-dom';
 import { Conversation } from '../types/conversation.service.type';
 import { conversationService } from '../services/conversation.service';
 import { handleSSEMessage } from '../utils/sse-message-handler';
+import { parseChatMessage } from '../utils/json-utils';
 import {
   ProcessFilesCallback,
   ChatFileMetadata,
@@ -414,6 +415,7 @@ export const useChatStore = create<ChatStore>()(
           const chatConversations: ChatMessage[] = conversations.flatMap((conversation: any) => {
             const tokenUsage = conversation.conversation?.TokenUsage || conversation.TokenUsage;
             const metadata = conversation.conversation?.Metadata || conversation.Metadata;
+            const parsedResponse = parseChatMessage(conversation.Response || '');
 
             return [
               {
@@ -423,7 +425,7 @@ export const useChatStore = create<ChatStore>()(
                 timestamp: conversation.QueryTimestamp,
               },
               {
-                message: conversation.Response,
+                message: parsedResponse.message || conversation.Response,
                 type: 'bot',
                 streaming: false,
                 timestamp: conversation.ResponseTimestamp,
@@ -469,6 +471,7 @@ export const useChatStore = create<ChatStore>()(
             .flatMap((conversation: any) => {
               const tokenUsage = conversation.conversation?.TokenUsage || conversation.TokenUsage;
               const metadata = conversation.conversation?.Metadata || conversation.Metadata;
+              const parsedResponse = parseChatMessage(conversation.Response || '');
 
               return [
                 {
@@ -478,7 +481,7 @@ export const useChatStore = create<ChatStore>()(
                   timestamp: conversation.QueryTimestamp,
                 },
                 {
-                  message: conversation.Response,
+                  message: parsedResponse.message || conversation.Response,
                   type: 'bot',
                   streaming: false,
                   timestamp: conversation.ResponseTimestamp,
