@@ -141,35 +141,33 @@ export const GptChatPageDetails = () => {
 
   const renderMessageContent = (content: string, isStreaming = false) => {
     return (
-      <div className="text-[15px]">
-        <div className="inline-block relative">
-          <MarkdownRenderer content={content} isStreaming={isStreaming} />
-          {isStreaming && (
-            <>
+      <div className="w-full relative">
+        <MarkdownRenderer content={content} isStreaming={isStreaming} />
+        {isStreaming && (
+          <>
+            <span
+              className="absolute w-[2px] h-[1.2em] bg-primary ml-[2px]"
+              style={{
+                bottom: '0.2em',
+                right: '-4px',
+                animation: 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+              }}
+            />
+
+            {[1, 2, 3, 4, 5].map((i) => (
               <span
-                className="absolute w-[2px] h-[1.2em] bg-primary ml-[2px]"
+                key={i}
+                className="absolute w-1 h-1 bg-primary rounded-full"
                 style={{
-                  bottom: '0.2em',
+                  bottom: '0.5em',
                   right: '-4px',
-                  animation: 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                  animation: `splash${i} 1.5s ease-out infinite`,
+                  opacity: 0,
                 }}
               />
-
-              {[1, 2, 3, 4, 5].map((i) => (
-                <span
-                  key={i}
-                  className="absolute w-1 h-1 bg-primary rounded-full"
-                  style={{
-                    bottom: '0.5em',
-                    right: '-4px',
-                    animation: `splash${i} 1.5s ease-out infinite`,
-                    opacity: 0,
-                  }}
-                />
-              ))}
-            </>
-          )}
-        </div>
+            ))}
+          </>
+        )}
       </div>
     );
   };

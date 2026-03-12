@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Check, Clipboard, Download } from 'lucide-react';
 import type { Components } from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import dark from 'react-syntax-highlighter/dist/esm/styles/prism/atom-dark';
+import light from 'react-syntax-highlighter/dist/esm/styles/prism/prism';
 
 type SyntaxHighlighterTheme = Record<string, React.CSSProperties>;
 
 const prismDarkTheme = dark as unknown as SyntaxHighlighterTheme;
+const prismLightTheme = light as unknown as SyntaxHighlighterTheme;
 
 type MarkdownCodeProps = React.ComponentPropsWithoutRef<'code'> & {
   inline?: boolean;
@@ -23,6 +25,23 @@ const MarkdownCode = ({
   const match = /language-(\w+)/.exec(className || '');
   const code = String(children).replace(/\n$/, '');
   const [copied, setCopied] = useState(false);
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    const checkTheme = () => {
+      setIsDark(document.documentElement.classList.contains('dark'));
+    };
+
+    checkTheme();
+
+    const observer = new MutationObserver(checkTheme);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(code);
@@ -32,13 +51,14 @@ const MarkdownCode = ({
 
   if (!inline && match) {
     const language = match[1];
+
     return (
-      <div className="max-w-full overflow-auto rounded-md bg-gray-900">
-        <div className="flex w-full items-center justify-between bg-gray-700 p-2.5 text-xs text-gray-300">
+      <div className="w-full max-w-full overflow-auto rounded-md border bg-muted">
+        <div className="flex w-full items-center justify-between border-b bg-muted/70 p-2.5 text-xs text-muted-foreground">
           <span className="text-sm uppercase">{language}</span>
           <button
             onClick={handleCopy}
-            className="flex items-center gap-1.5 rounded px-2 py-1 text-xs hover:bg-gray-600 "
+            className="flex items-center gap-1.5 rounded px-2 py-1 text-xs hover:bg-accent hover:text-accent-foreground"
             title="Copy code"
           >
             {copied ? (
@@ -56,11 +76,18 @@ const MarkdownCode = ({
         </div>
         <SyntaxHighlighter
           showLineNumbers
-          style={prismDarkTheme}
+          style={isDark ? prismDarkTheme : prismLightTheme}
           customStyle={{
             margin: 0,
-            scrollbarColor: '#424242 transparent',
+            padding: '1rem',
+            background: 'hsl(var(--surface))',
+            color: 'hsl(var(--foreground))',
+            fontSize: '0.875rem',
+            lineHeight: '1.5',
+            borderRadius: '0 0 0.375rem 0.375rem',
+            scrollbarColor: 'hsl(var(--border)) transparent',
             scrollMargin: '0',
+            maxWidth: '100%',
             ...(codeStyle || {}),
           }}
           language={language}
@@ -150,11 +177,9 @@ export const MarkdownComponentsMap: Partial<Components> = {
       isElementWithSrc(child)
     );
     if (hasImage) {
-      return (
-        <div className="whitespace-pre-wrap break-words leading-relaxed">{props.children}</div>
-      );
+      return <div className="break-words leading-relaxed">{props.children}</div>;
     }
-    return <p className="whitespace-pre-wrap break-words leading-relaxed">{props.children}</p>;
+    return <p className="break-words leading-relaxed">{props.children}</p>;
   },
 
   a: (props) => (
@@ -176,7 +201,7 @@ export const MarkdownComponentsMap: Partial<Components> = {
   ),
 
   table: (props) => (
-    <div className="w-full overflow-x-auto">
+    <div className="w-full max-w-full overflow-x-auto md:overflow-x-visible">
       <table className="w-full border-collapse border-[1.5px] !border-border !mb-0 !mt-1.5">
         {props.children}
       </table>
@@ -184,21 +209,21 @@ export const MarkdownComponentsMap: Partial<Components> = {
   ),
 
   th: (props) => (
-    <th className="min-w-[150px] max-w-[350px] break-all border p-2">{props.children}</th>
+    <th className="min-w-[100px] md:min-w-[150px] break-all border p-2">{props.children}</th>
   ),
   td: (props) => (
-    <td className="min-w-[150px] max-w-[350px] break-words border p-2">{props.children}</td>
+    <td className="min-w-[100px] md:min-w-[150px] break-words border p-2">{props.children}</td>
   ),
 
   blockquote: (props) => (
-    <blockquote className="whitespace-pre-wrap break-words border-l-4 border-border pl-4 text-foreground/90 [&>p]:m-0 [&>p+p]:mt-3">
+    <blockquote className="break-words py-2 border-l-4 border-border pl-4 text-foreground/90 [&>p]:m-0 [&>p+p]:mt-3">
       {props.children}
     </blockquote>
   ),
 
   code: MarkdownCode as Components['code'],
 
-  pre: (props) => <pre className="overflow-x-auto whitespace-pre-wrap p-0">{props.children}</pre>,
+  pre: (props) => <pre className="overflow-x-auto p-0">{props.children}</pre>,
 
   img: MarkdownImage,
 };

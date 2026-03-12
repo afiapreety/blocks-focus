@@ -257,7 +257,6 @@ export const MarkdownRenderer = ({
           'prose-p:leading-relaxed prose-p:p-0 prose-p:m-0',
           'prose-ol:list-decimal prose-ul:list-disc prose-ul:p-0',
           'prose-li:p-0 prose-li:m-0',
-
           'prose-pre:bg-transparent prose-pre:p-0',
           className
         )}
