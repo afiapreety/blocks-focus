@@ -177,7 +177,7 @@ export const GptChatPageDetails = () => {
     <div className="flex flex-col h-full w-full bg-background relative">
       <div className="flex-1 overflow-y-auto scrollbar-hide">
         {isReady && (
-          <div className="w-full px-4 md:px-6 lg:px-8 py-4 pb-40 space-y-10">
+          <div className="w-full px-4 md:px-6 lg:px-8 py-4 pb-16 space-y-10">
             {conversations.map((msg, index) => (
               <div
                 key={index}
