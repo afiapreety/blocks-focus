@@ -43,6 +43,11 @@ export const useGetAgentConversationSessionById = (
   return useQuery({
     queryKey: ['agent-conversation', queryPayload],
     queryFn: () => agentConversationService.getAgentConversationSessionById(queryPayload),
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
     enabled: enabled && !!queryPayload.session_id && !!queryPayload.agent_id,
   });
 };

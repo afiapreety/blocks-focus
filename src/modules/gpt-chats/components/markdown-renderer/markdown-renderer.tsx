@@ -252,7 +252,7 @@ export const MarkdownRenderer = ({
     return (
       <div
         className={cn(
-          'prose prose-sm max-w-none dark:prose-invert',
+          'prose prose-sm max-w-none min-w-0 dark:prose-invert',
           'prose-headings:font-semibold',
           'prose-p:leading-relaxed prose-p:p-0 prose-p:m-0',
           'prose-ol:list-decimal prose-ul:list-disc prose-ul:p-0',
@@ -269,7 +269,7 @@ export const MarkdownRenderer = ({
   return (
     <div
       className={cn(
-        'prose max-w-none dark:prose-invert',
+        'prose max-w-none min-w-0 dark:prose-invert',
         'prose-headings:font-semibold',
         'prose-h1:mb-3',
         'prose-h2:my-3',

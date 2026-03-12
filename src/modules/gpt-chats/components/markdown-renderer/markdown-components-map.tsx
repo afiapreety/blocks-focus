@@ -53,7 +53,7 @@ const MarkdownCode = ({
     const language = match[1];
 
     return (
-      <div className="w-full max-w-full overflow-auto rounded-md border bg-muted">
+      <div className="min-w-0 max-w-full overflow-auto rounded-md border bg-muted">
         <div className="flex w-full items-center justify-between border-b bg-muted/70 p-2.5 text-xs text-muted-foreground">
           <span className="text-sm uppercase">{language}</span>
           <button
@@ -201,8 +201,8 @@ export const MarkdownComponentsMap: Partial<Components> = {
   ),
 
   table: (props) => (
-    <div className="w-full max-w-full overflow-x-auto md:overflow-x-visible">
-      <table className="w-full border-collapse border-[1.5px] !border-border !mb-0 !mt-1.5">
+    <div className="min-w-0 max-w-full overflow-x-auto md:overflow-x-visible">
+      <table className="min-w-full border-collapse border-[1.5px] !border-border !mb-0 !mt-1.5">
         {props.children}
       </table>
     </div>
