@@ -158,7 +158,6 @@ export const useChatSSE = ({ chatId = '', agentId = null, widgetId = null }: Use
     isBotStreaming,
     selectedModel,
     selectedTools,
-
     onModelChange,
     onToolsChange,
     generateBotMessage,

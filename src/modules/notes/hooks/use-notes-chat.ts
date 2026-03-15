@@ -2,9 +2,9 @@ import { useState, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { conversationService } from '@/modules/gpt-chats/services/conversation.service';
 import { parseSSEBuffer } from '@/modules/gpt-chats/utils/parse-sse';
-import { SelectModelType } from '@/modules/gpt-chats/hooks/use-chat-store';
 import { getRandomEventMessage } from '@/modules/gpt-chats/utils/chat-event-messages';
 import { htmlToMarkdown } from '../utils/html-to-markdown';
+import { SelectModelType } from '@/modules/gpt-chats/types/chat-store.types';
 
 export interface ChatMessage {
   id: string;

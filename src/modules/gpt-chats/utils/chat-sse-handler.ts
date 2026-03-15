@@ -48,7 +48,7 @@ export const createSSEHandler = async (
           model_name: modelName,
           model_provider: modelProvider,
           tool_ids: chat.selectedTools,
-          last_n_turn: 5,
+          last_n_turn: 10,
           enable_summary: true,
           enable_next_suggestion: true,
           response_type: 'text',

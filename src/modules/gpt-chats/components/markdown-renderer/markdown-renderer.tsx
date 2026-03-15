@@ -28,6 +28,83 @@ const unwrapResultFromContent = (value: string) => {
   }
 };
 
+const wrapChecklistInCodeBlock = (text: string): string => {
+  const lines = text.split('\n');
+  const checklistPattern = /^(\s*)-\s*\[([ xX])\]\s*(.*)$/;
+
+  let inChecklist = false;
+  let checklistStart = -1;
+  let checklistEnd = -1;
+  const segments: { start: number; end: number; hasTitle?: boolean }[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const isChecklistItem = checklistPattern.test(line);
+
+    if (isChecklistItem && !inChecklist) {
+      inChecklist = true;
+      checklistStart = i;
+
+      // Check if previous line is a title (ends with colon or is short heading)
+      if (i > 0) {
+        const prevLine = lines[i - 1].trim();
+        if (prevLine && (prevLine.endsWith(':') || prevLine.startsWith('#'))) {
+          checklistStart = i - 1;
+          segments.push({ start: checklistStart, end: -1, hasTitle: true });
+        } else {
+          segments.push({ start: checklistStart, end: -1 });
+        }
+      } else {
+        segments.push({ start: checklistStart, end: -1 });
+      }
+    } else if (!isChecklistItem && inChecklist) {
+      inChecklist = false;
+      checklistEnd = i - 1;
+      if (segments.length > 0) {
+        segments[segments.length - 1].end = checklistEnd;
+      }
+    }
+  }
+
+  // Handle case where checklist goes to end of text
+  if (inChecklist && segments.length > 0) {
+    segments[segments.length - 1].end = lines.length - 1;
+  }
+
+  // If no checklists found, return original
+  if (segments.length === 0) {
+    return text;
+  }
+
+  // Build result by replacing checklist segments with custom markers
+  const result: string[] = [];
+  let currentIndex = 0;
+
+  for (const segment of segments) {
+    // Add content before this checklist
+    if (currentIndex < segment.start) {
+      const beforeLines = lines.slice(currentIndex, segment.start);
+      result.push(...beforeLines);
+    }
+
+    // Add the checklist wrapped in custom marker
+    const checklistLines = lines.slice(segment.start, segment.end + 1);
+    result.push(':::checklist');
+    result.push(checklistLines.join('\n'));
+    result.push(':::');
+
+    // Move current index past this checklist
+    currentIndex = segment.end + 1;
+  }
+
+  // Add any remaining content after last checklist
+  if (currentIndex < lines.length) {
+    result.push(...lines.slice(currentIndex));
+  }
+
+  return result.join('\n').trim();
+};
+
 const normalizeQuoteToBlockquote = (text: string): string => {
   const trimmed = text.trim();
 
@@ -62,6 +139,27 @@ const normalizeQuoteToBlockquote = (text: string): string => {
   }
 
   return text;
+};
+
+const ChecklistBlock = ({ content }: { content: string }) => {
+  return (
+    <div className="my-2 min-w-0 max-w-full overflow-auto rounded-md border bg-muted">
+      <div className="flex w-full items-center justify-between border-b bg-muted/70 p-2.5 text-xs text-muted-foreground">
+        <span className="text-sm uppercase">MARKDOWN</span>
+      </div>
+      <div className="p-4">
+        <pre
+          className="text-foreground whitespace-pre-wrap m-0 font-mono text-sm"
+          style={{
+            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+            lineHeight: '1.5',
+          }}
+        >
+          {content}
+        </pre>
+      </div>
+    </div>
+  );
 };
 
 const JsonSkeletonBlock = ({ content }: { content: string }) => {
@@ -193,20 +291,23 @@ export const MarkdownRenderer = ({
   isStreaming = false,
 }: MarkdownRendererProps) => {
   const unwrappedContent = unwrapResultFromContent(content);
-  const normalizedContent = isStreaming
+  const quoteNormalized = isStreaming
     ? unwrappedContent
     : normalizeQuoteToBlockquote(unwrappedContent);
-  const jsonBlockRegex = /:::(json|json-skeleton|image-skeleton|image)\n([\s\S]*?)\n:::/g;
-  const hasJsonBlock = jsonBlockRegex.test(normalizedContent);
+  const normalizedContent = wrapChecklistInCodeBlock(quoteNormalized);
+  const blockRegex = /:::(json|json-skeleton|image-skeleton|image|checklist)\n([\s\S]*?)\n:::/g;
+  const incompleteChecklistRegex = /:::checklist\n([\s\S]*)$/;
+  const hasSpecialBlock =
+    blockRegex.test(normalizedContent) || incompleteChecklistRegex.test(normalizedContent);
 
-  if (hasJsonBlock) {
+  if (hasSpecialBlock) {
     const parts: React.ReactNode[] = [];
     let lastIndex = 0;
     let match;
 
-    jsonBlockRegex.lastIndex = 0;
+    blockRegex.lastIndex = 0;
 
-    while ((match = jsonBlockRegex.exec(normalizedContent)) !== null) {
+    while ((match = blockRegex.exec(normalizedContent)) !== null) {
       const blockType = match[1];
       const blockContent = match[2];
 
@@ -227,11 +328,37 @@ export const MarkdownRenderer = ({
 
       if (blockType === 'image-skeleton') {
         parts.push(<ImageSkeletonBlock key={`image-skeleton-${match.index}`} />);
+      } else if (blockType === 'checklist') {
+        parts.push(<ChecklistBlock key={`checklist-${match.index}`} content={blockContent} />);
       } else {
         parts.push(<JsonSkeletonBlock key={`skeleton-${match.index}`} content={blockContent} />);
       }
 
       lastIndex = match.index + match[0].length;
+    }
+
+    // Check for incomplete checklist block (during streaming)
+    const remainingContent = normalizedContent.slice(lastIndex);
+    const incompleteMatch = incompleteChecklistRegex.exec(remainingContent);
+
+    if (incompleteMatch) {
+      const incompleteContent = incompleteMatch[1];
+      const beforeIncomplete = remainingContent.slice(0, incompleteMatch.index);
+
+      if (beforeIncomplete.trim()) {
+        parts.push(
+          <ReactMarkdown
+            key={`text-before-incomplete`}
+            remarkPlugins={[remarkGfm]}
+            components={MarkdownComponentsMap}
+          >
+            {beforeIncomplete}
+          </ReactMarkdown>
+        );
+      }
+
+      parts.push(<ChecklistBlock key={`checklist-incomplete`} content={incompleteContent} />);
+      lastIndex = normalizedContent.length;
     }
 
     if (lastIndex < normalizedContent.length) {
@@ -256,7 +383,6 @@ export const MarkdownRenderer = ({
           'prose-headings:font-semibold',
           'prose-p:leading-relaxed prose-p:p-0 prose-p:m-0',
           'prose-ol:list-decimal prose-ul:list-disc prose-ul:p-0',
-          'prose-li:p-0 prose-li:m-0',
           'prose-pre:bg-transparent prose-pre:p-0',
           className
         )}
@@ -276,7 +402,6 @@ export const MarkdownRenderer = ({
         'prose-p:leading-relaxed prose-p:p-0 prose-p:m-0',
         'prose-ol:list-decimal prose-ul:list-disc prose-ul:p-0',
         'prose-pre:p-0 prose-pre:m-0',
-        'prose-li:p-0 prose-li:m-0',
         className
       )}
     >

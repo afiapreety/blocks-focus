@@ -148,7 +148,7 @@ export const useChatStore = create<ChatStore>()(
                   ? chat.selectedModel.provider
                   : '',
                 tool_ids: tools,
-                last_n_turn: 5,
+                last_n_turn: 10,
                 enable_summary: true,
                 enable_next_suggestion: true,
                 response_type: 'text',
@@ -610,6 +610,9 @@ export const useChatStore = create<ChatStore>()(
                     streaming: true,
                     type: 'bot',
                     timestamp: new Date().toISOString(),
+                    tokenUsage: {
+                      model_name: chat.selectedModel?.model || 'gpt-4o-mini',
+                    },
                   },
                 ],
                 lastUpdated: new Date().toISOString(),

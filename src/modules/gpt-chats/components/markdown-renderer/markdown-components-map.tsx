@@ -192,13 +192,9 @@ export const MarkdownComponentsMap: Partial<Components> = {
   em: (props) => <em>{props.children}</em>,
   del: (props) => <del>{props.children}</del>,
 
-  ul: (props) => <ul className="list-disc list-outside">{props.children}</ul>,
-  ol: (props) => <ol className="list-decimal list-outside">{props.children}</ol>,
-  li: (props) => (
-    <li className="break-words pl-2 [&>*]:inline-block [&>*:first-child]:inline !mb-1">
-      {props.children}
-    </li>
-  ),
+  ul: (props) => <ul className="list-disc list-outside ml-0 [li_&]:ml-5">{props.children}</ul>,
+  ol: (props) => <ol className="list-decimal list-outside ml-0 [li_&]:ml-5">{props.children}</ol>,
+  li: (props) => <li className="break-words !mb-1">{props.children}</li>,
 
   table: (props) => (
     <div className="min-w-0 max-w-full overflow-x-auto md:overflow-x-visible">

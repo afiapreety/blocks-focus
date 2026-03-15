@@ -18,6 +18,7 @@ import { useGetAccount } from '@/modules/profile/hooks/use-account';
 import botLogoSELISEAI from '@/assets/images/selise_ai_small.png';
 import { ChatFileMetadata } from '../../types/chat-store.types';
 import { formatFileSize } from '../../utils/format-file-size';
+import { useGetLlmModels } from '../../hooks/use-gpt-chat';
 
 const formatTimestamp = (timestamp: string) => {
   if (!timestamp) return '';
@@ -90,8 +91,11 @@ export const GptChatPageDetails = () => {
   const widgetId = searchParams.get('widget');
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const hasScrolledToBottomRef = useRef<boolean>(false);
+  const userHasManuallyScrolledRef = useRef<boolean>(false);
   const { data } = useGetAccount();
+  const { data: llmModels } = useGetLlmModels();
   const {
     sendMessage,
     conversations,
@@ -100,7 +104,6 @@ export const GptChatPageDetails = () => {
     isReady,
     selectedModel,
     onModelChange,
-
     selectedTools,
     onToolsChange,
     currentEvent,
@@ -112,17 +115,60 @@ export const GptChatPageDetails = () => {
 
   useEffect(() => {
     hasScrolledToBottomRef.current = false;
+    userHasManuallyScrolledRef.current = false;
   }, [chatId]);
 
-  // Scroll to bottom when conversations load or update
+  // Detect user manual scrolling with wheel event
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      const scrollHeight = container.scrollHeight;
+      const scrollTop = container.scrollTop;
+      const clientHeight = container.clientHeight;
+      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+
+      // If user is scrolling down (deltaY > 0) and already at bottom, don't set flag
+      if (e.deltaY > 0 && distanceFromBottom < 10) {
+        return;
+      }
+
+      // If user is scrolling up or away from bottom, set flag
+      userHasManuallyScrolledRef.current = true;
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: true });
+    return () => container.removeEventListener('wheel', handleWheel);
+  }, []);
+
+  // Auto-scroll effect
   useEffect(() => {
     if (!isReady || conversations.length === 0) return;
+
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    // If user has manually scrolled during streaming, don't auto-scroll
+    if (userHasManuallyScrolledRef.current && isBotStreaming) {
+      return;
+    }
+
+    // Check if user is currently at bottom - if so, clear manual scroll flag
+    const scrollHeight = container.scrollHeight;
+    const scrollTop = container.scrollTop;
+    const clientHeight = container.clientHeight;
+    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+
+    if (distanceFromBottom < 10) {
+      userHasManuallyScrolledRef.current = false;
+    }
 
     const behavior = isBotStreaming ? 'auto' : hasScrolledToBottomRef.current ? 'smooth' : 'auto';
     const delay = isBotStreaming ? 10 : hasScrolledToBottomRef.current ? 100 : 0;
 
     const timeoutId = setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior });
+      messagesEndRef.current?.scrollIntoView({ behavior: behavior });
       hasScrolledToBottomRef.current = true;
     }, delay);
 
@@ -131,6 +177,7 @@ export const GptChatPageDetails = () => {
 
   const handleSendMessage = (message: string, files?: ChatFileMetadata[]) => {
     if (!message.trim()) return;
+    userHasManuallyScrolledRef.current = false;
     sendMessage({ message, files });
   };
 
@@ -140,44 +187,25 @@ export const GptChatPageDetails = () => {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const getModelLabel = (modelName?: string) => {
+    if (!modelName) return null;
+    const model = llmModels?.find((m) => m.model_name === modelName);
+    return model?.model_name_label || modelName;
+  };
+
   const renderMessageContent = (content: string, isStreaming = false) => {
     return (
       <div className="w-full min-w-0 relative">
         <MarkdownRenderer content={content} isStreaming={isStreaming} />
-        {isStreaming && (
-          <>
-            <span
-              className="absolute w-[2px] h-[1.2em] bg-primary ml-[2px]"
-              style={{
-                bottom: '0.2em',
-                right: '-4px',
-                animation: 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-              }}
-            />
-
-            {[1, 2, 3, 4, 5].map((i) => (
-              <span
-                key={i}
-                className="absolute w-1 h-1 bg-primary rounded-full"
-                style={{
-                  bottom: '0.5em',
-                  right: '-4px',
-                  animation: `splash${i} 1.5s ease-out infinite`,
-                  opacity: 0,
-                }}
-              />
-            ))}
-          </>
-        )}
       </div>
     );
   };
 
   return (
     <div className="flex flex-col h-full w-full bg-background relative">
-      <div className="flex-1 overflow-y-auto scrollbar-hide">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto scrollbar-hide">
         {isReady && (
-          <div className="w-full px-4 md:px-6 lg:px-8 py-4 pb-16 space-y-10">
+          <div className="w-full px-4 md:px-6 lg:px-8 py-4 pb-8 space-y-10">
             {conversations.map((msg, index) => (
               <div
                 key={index}
@@ -190,8 +218,14 @@ export const GptChatPageDetails = () => {
                 )}
 
                 <div
-                  className={`group flex-1 min-w-0 relative ${msg.type === 'user' ? 'flex flex-col items-end gap-2' : ''} ${msg.type === 'bot' ? 'min-h-[48px]' : ''}`}
+                  className={`group flex-1 min-w-0 relative ${msg.type === 'user' ? 'flex flex-col items-end gap-2' : ''} ${msg.type === 'bot' ? 'flex flex-col gap-1' : ''}`}
                 >
+                  {msg.type === 'bot' && (msg.tokenUsage?.model_name || selectedModel?.model) && (
+                    <span className="text-muted-foreground font-medium">
+                      {getModelLabel(msg.tokenUsage?.model_name || selectedModel?.model)}
+                    </span>
+                  )}
+
                   {msg.type === 'user' && msg.files && msg.files.length > 0 && (
                     <div className="flex flex-col gap-2 max-w-[70%] md:max-w-[90%]">
                       {msg.files.map((file, fileIndex) => {
@@ -216,7 +250,7 @@ export const GptChatPageDetails = () => {
                   )}
 
                   <div
-                    className={`max-w-[90%] md:max-w-[80%] min-w-0 py-1 ${msg.type === 'user' && 'bg-accent rounded-xl px-5'}`}
+                    className={`${msg.type === 'bot' ? 'min-w-0' : 'max-w-[90%] md:max-w-[80%] min-w-0'} py-1 ${msg.type === 'user' && 'bg-accent rounded-xl px-5'}`}
                   >
                     {msg.type === 'user' ? (
                       <p className="text-[15px] leading-7 whitespace-pre-wrap">{msg.message}</p>
