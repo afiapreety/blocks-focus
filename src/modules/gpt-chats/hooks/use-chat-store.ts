@@ -74,13 +74,15 @@ interface ChatStore {
     setSuggestions?: (suggestions: string[]) => void,
     files?: ChatFileMetadata[],
     isNewFileUpload?: boolean,
-    processFilesCallback?: ProcessFilesCallback
+    processFilesCallback?: ProcessFilesCallback,
+    queryClient?: QueryClient
   ) => Promise<void>;
   sendMessage: (
     id: string,
     message: string,
     files?: ChatFileMetadata[],
-    processFilesCallback?: ProcessFilesCallback
+    processFilesCallback?: ProcessFilesCallback,
+    queryClient?: QueryClient
   ) => Promise<void>;
   reset: () => void;
 }
@@ -306,7 +308,8 @@ export const useChatStore = create<ChatStore>()(
                   setTimeout(checkAndMigrate, 50);
                 }
               },
-              files
+              files,
+              queryClient
             );
           });
         } else {
@@ -360,7 +363,8 @@ export const useChatStore = create<ChatStore>()(
                 setTimeout(checkAndMigrate, 50);
               }
             },
-            files
+            undefined,
+            queryClient
           );
         }
 
@@ -413,22 +417,33 @@ export const useChatStore = create<ChatStore>()(
         set((state) => {
           const chat = state.chats[id] || { ...chatDefaultValue, id };
           const chatConversations: ChatMessage[] = conversations.flatMap((conversation: any) => {
-            const tokenUsage = conversation.conversation?.TokenUsage || conversation.TokenUsage;
-            const metadata = conversation.conversation?.Metadata || conversation.Metadata;
-            const parsedResponse = parseChatMessage(conversation.Response || '');
+            // Handle both PascalCase (old) and snake_case (new) API responses
+            const tokenUsage =
+              conversation.conversation?.TokenUsage ||
+              conversation.TokenUsage ||
+              conversation.conversation?.token_usage ||
+              conversation.token_usage;
+            const metadata =
+              conversation.conversation?.Metadata ||
+              conversation.Metadata ||
+              conversation.conversation?.metadata ||
+              conversation.metadata;
+            const parsedResponse = parseChatMessage(
+              conversation.Response || conversation.response || ''
+            );
 
             return [
               {
-                message: conversation.Query,
+                message: conversation.Query || conversation.query,
                 type: 'user',
                 streaming: false,
-                timestamp: conversation.QueryTimestamp,
+                timestamp: conversation.QueryTimestamp || conversation.query_timestamp,
               },
               {
-                message: parsedResponse.message || conversation.Response,
+                message: parsedResponse.message || conversation.Response || conversation.response,
                 type: 'bot',
                 streaming: false,
-                timestamp: conversation.ResponseTimestamp,
+                timestamp: conversation.ResponseTimestamp || conversation.response_timestamp,
                 metadata: metadata
                   ? {
                       tool_calls_made: metadata.tool_calls_made,
@@ -465,26 +480,39 @@ export const useChatStore = create<ChatStore>()(
         set((state) => {
           const chat = state.chats[id] || { ...chatDefaultValue, id };
           const chatConversations: ChatMessage[] = conversations
-            .sort(
-              (a, b) => new Date(a.QueryTimestamp).getTime() - new Date(b.QueryTimestamp).getTime()
-            )
+            .sort((a: any, b: any) => {
+              const aTimestamp = a.QueryTimestamp || a.query_timestamp;
+              const bTimestamp = b.QueryTimestamp || b.query_timestamp;
+              return new Date(aTimestamp).getTime() - new Date(bTimestamp).getTime();
+            })
             .flatMap((conversation: any) => {
-              const tokenUsage = conversation.conversation?.TokenUsage || conversation.TokenUsage;
-              const metadata = conversation.conversation?.Metadata || conversation.Metadata;
-              const parsedResponse = parseChatMessage(conversation.Response || '');
+              // Handle both PascalCase (old) and snake_case (new) API responses
+              const tokenUsage =
+                conversation.conversation?.TokenUsage ||
+                conversation.TokenUsage ||
+                conversation.conversation?.token_usage ||
+                conversation.token_usage;
+              const metadata =
+                conversation.conversation?.Metadata ||
+                conversation.Metadata ||
+                conversation.conversation?.metadata ||
+                conversation.metadata;
+              const parsedResponse = parseChatMessage(
+                conversation.Response || conversation.response || ''
+              );
 
               return [
                 {
-                  message: conversation.Query,
+                  message: conversation.Query || conversation.query,
                   type: 'user',
                   streaming: false,
-                  timestamp: conversation.QueryTimestamp,
+                  timestamp: conversation.QueryTimestamp || conversation.query_timestamp,
                 },
                 {
-                  message: parsedResponse.message || conversation.Response,
+                  message: parsedResponse.message || conversation.Response || conversation.response,
                   type: 'bot',
                   streaming: false,
-                  timestamp: conversation.ResponseTimestamp,
+                  timestamp: conversation.ResponseTimestamp || conversation.response_timestamp,
                   metadata: metadata
                     ? {
                         tool_calls_made: metadata.tool_calls_made,
@@ -774,7 +802,8 @@ export const useChatStore = create<ChatStore>()(
         setSuggestions,
         files,
         isNewFileUpload = false,
-        processFilesCallback
+        processFilesCallback,
+        queryClient
       ) => {
         const state = get();
         const chat = state.chats[id];
@@ -856,14 +885,15 @@ export const useChatStore = create<ChatStore>()(
                 state.setBotThinking(id, false);
               }
             },
-            files
+            files,
+            queryClient
           );
         } catch (error) {
           handleStreamError(id, set);
         }
       },
 
-      sendMessage: async (id, message, files, processFilesCallback) => {
+      sendMessage: async (id, message, files, processFilesCallback, queryClient) => {
         const state = get();
         const chat = state.chats[id];
 
@@ -898,7 +928,8 @@ export const useChatStore = create<ChatStore>()(
           undefined,
           currentSessionFiles.length > 0 ? currentSessionFiles : undefined,
           hasNewFiles,
-          processFilesCallback
+          processFilesCallback,
+          queryClient
         );
       },
 

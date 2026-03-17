@@ -544,6 +544,7 @@ export interface IConversationListResponse {
 
 export interface IConversationByIdPayload {
   allow_created_by_filter: boolean;
+  is_minimal: boolean;
   call_from: string;
   session_id: string;
   project_key: string;

@@ -8,17 +8,24 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui-kit/tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui-kit/dropdown-menu';
 import { cn } from '@/lib/utils';
-import { GptChatInput } from '../../components/gpt-chat-input/gpt-chat-input';
 import { useChatSSE } from '../../hooks/use-chat-sse';
-import { MarkdownRenderer } from '../../components/markdown-renderer/markdown-renderer';
-import { ChatEventMessage, SparkleText } from '../../utils/chat-event-messages';
 import DummyProfile from '@/assets/images/dummy_profile.png';
-import { useGetAccount } from '@/modules/profile/hooks/use-account';
 import botLogoSELISEAI from '@/assets/images/selise_ai_small.png';
+import { useGetAccount } from '@/modules/profile/hooks/use-account';
 import { ChatFileMetadata } from '../../types/chat-store.types';
 import { formatFileSize } from '../../utils/format-file-size';
 import { useGetLlmModels } from '../../hooks/use-gpt-chat';
+import { GptChatInput } from '../../components/gpt-chat-input/gpt-chat-input';
+import { ChatEventMessage, SparkleText } from '../../utils/chat-event-messages';
+import { handleCopyRaw, handleCopyWithStyling } from '../../utils/copy-chats';
+import { MarkdownRenderer } from '../../components/markdown-renderer/markdown-renderer';
 
 const formatTimestamp = (timestamp: string) => {
   if (!timestamp) return '';
@@ -181,21 +188,15 @@ export const GptChatPageDetails = () => {
     sendMessage({ message, files });
   };
 
-  const handleCopy = (content: string, messageId: number) => {
-    navigator.clipboard.writeText(content);
-    setCopiedId(messageId);
-    setTimeout(() => setCopiedId(null), 2000);
-  };
-
   const getModelLabel = (modelName?: string) => {
     if (!modelName) return null;
     const model = llmModels?.find((m) => m.model_name === modelName);
     return model?.model_name_label || modelName;
   };
 
-  const renderMessageContent = (content: string, isStreaming = false) => {
+  const renderMessageContent = (content: string, isStreaming = false, messageId?: number) => {
     return (
-      <div className="w-full min-w-0 relative">
+      <div className="w-full min-w-0 relative" data-message-id={messageId}>
         <MarkdownRenderer content={content} isStreaming={isStreaming} />
       </div>
     );
@@ -255,7 +256,7 @@ export const GptChatPageDetails = () => {
                     {msg.type === 'user' ? (
                       <p className="text-[15px] leading-7 whitespace-pre-wrap">{msg.message}</p>
                     ) : (
-                      renderMessageContent(msg.message, msg.streaming && isBotStreaming)
+                      renderMessageContent(msg.message, msg.streaming && isBotStreaming, index)
                     )}
                   </div>
 
@@ -281,27 +282,46 @@ export const GptChatPageDetails = () => {
                         </TooltipProvider>
                       )}
 
-                      <TooltipProvider delayDuration={0}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 rounded-lg hover:bg-muted"
-                              onClick={() => handleCopy(msg.message, index)}
-                            >
-                              {copiedId === index ? (
-                                <Check className="h-3.5 w-3.5 text-green-600" />
-                              ) : (
-                                <Clipboard className="h-3.5 w-3.5" />
-                              )}
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 border-slate-700 dark:border-slate-300">
-                            <p>{copiedId === index ? 'Copied' : 'Copy'}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                      <DropdownMenu>
+                        <TooltipProvider delayDuration={0}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 rounded-lg hover:bg-muted"
+                                >
+                                  {copiedId === index ? (
+                                    <Check className="h-3.5 w-3.5 text-green-600" />
+                                  ) : (
+                                    <Clipboard className="h-3.5 w-3.5" />
+                                  )}
+                                </Button>
+                              </DropdownMenuTrigger>
+                            </TooltipTrigger>
+                            <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 border-slate-700 dark:border-slate-300">
+                              <p>{copiedId === index ? 'Copied' : 'Copy'}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <DropdownMenuContent align="start" className="w-48">
+                          <DropdownMenuItem
+                            onClick={() =>
+                              handleCopyWithStyling(index, { setCopiedId, conversations })
+                            }
+                          >
+                            <Clipboard className="h-4 w-4 mr-2" />
+                            Copy with styling
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleCopyRaw(msg.message, index, { setCopiedId })}
+                          >
+                            <FileText className="h-4 w-4 mr-2" />
+                            Copy raw response
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
 
                       {msg.type === 'bot' && msg.metadata?.tool_calls_made !== undefined && (
                         <TooltipProvider delayDuration={0}>

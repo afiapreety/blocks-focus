@@ -1,3 +1,4 @@
+import type { QueryClient } from '@tanstack/react-query';
 import { conversationService } from '../services/conversation.service';
 import { agentService } from '../services/agent.service';
 import { parseSSEBuffer } from './parse-sse';
@@ -10,7 +11,8 @@ export const createSSEHandler = async (
   query: string,
   chat: Chat,
   cb: (event: SSEEvent, done: boolean) => void,
-  files?: ChatFileMetadata[]
+  files?: ChatFileMetadata[],
+  queryClient?: QueryClient
 ) => {
   const modelId = chat?.selectedModel
     ? chat?.selectedModel.isBlocksModels
@@ -81,8 +83,18 @@ export const createSSEHandler = async (
 
     if (isDone) {
       cb({ eventType: 'stream_complete', eventData: {} }, true);
+      if (queryClient) {
+        setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: ['conversations'] });
+          if (chat.sessionId) {
+            queryClient.invalidateQueries({
+              queryKey: ['conversation', { session_id: chat.sessionId }],
+            });
+          }
+        }, 500);
+      }
     }
   } catch (error) {
-    // Error handling can be added here if needed
+    console.error('Error in chat SSE handler:', error);
   }
 };
