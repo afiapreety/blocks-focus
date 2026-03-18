@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui-kit/button';
-import { Clipboard, Check, Zap, FileText } from 'lucide-react';
+import { Clipboard, Check, Zap, FileText, ArrowDown } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -97,6 +97,7 @@ export const GptChatPageDetails = () => {
   const agentId = searchParams.get('agent');
   const widgetId = searchParams.get('widget');
   const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [showScrollButton, setShowScrollButton] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const hasScrolledToBottomRef = useRef<boolean>(false);
@@ -131,23 +132,98 @@ export const GptChatPageDetails = () => {
     if (!container) return;
 
     const handleWheel = (e: WheelEvent) => {
-      const scrollHeight = container.scrollHeight;
-      const scrollTop = container.scrollTop;
-      const clientHeight = container.clientHeight;
-      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+      // Check container scroll first
+      if (container.scrollHeight > container.clientHeight) {
+        const distanceFromBottom =
+          container.scrollHeight - container.scrollTop - container.clientHeight;
 
-      // If user is scrolling down (deltaY > 0) and already at bottom, don't set flag
-      if (e.deltaY > 0 && distanceFromBottom < 10) {
+        // If user is scrolling down (deltaY > 0) and already at bottom, don't set flag
+        if (e.deltaY > 0 && distanceFromBottom < 10) return;
+
+        // If user is scrolling up or away from bottom, set flag
+        if (e.deltaY !== 0) {
+          userHasManuallyScrolledRef.current = true;
+        }
         return;
       }
 
-      // If user is scrolling up or away from bottom, set flag
-      userHasManuallyScrolledRef.current = true;
+      // Fallback to window scroll detection
+      const docHeight = document.documentElement.scrollHeight;
+      const winHeight = window.innerHeight;
+      const scrollY = window.scrollY || document.documentElement.scrollTop;
+
+      if (docHeight > winHeight) {
+        const distanceFromBottom = docHeight - scrollY - winHeight;
+
+        // If user is scrolling down (deltaY > 0) and already at bottom, don't set flag
+        if (e.deltaY > 0 && distanceFromBottom < 10) return;
+
+        // If user is scrolling up or away from bottom, set flag
+        if (e.deltaY !== 0) {
+          userHasManuallyScrolledRef.current = true;
+        }
+      }
     };
 
     container.addEventListener('wheel', handleWheel, { passive: true });
-    return () => container.removeEventListener('wheel', handleWheel);
+    window.addEventListener('wheel', handleWheel, { passive: true });
+
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+      window.removeEventListener('wheel', handleWheel);
+    };
   }, []);
+
+  // Detect scroll position to show/hide scroll-to-bottom button
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+
+    const checkScroll = () => {
+      // Check container scroll first
+      if (container && container.scrollHeight > container.clientHeight) {
+        const { scrollHeight, scrollTop, clientHeight } = container;
+        const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+        const shouldShow = distanceFromBottom > 50;
+        setShowScrollButton(shouldShow);
+        return;
+      }
+
+      // Fallback to window scroll
+      const scrollHeight = document.documentElement.scrollHeight;
+      const scrollTop = window.scrollY || document.documentElement.scrollTop;
+      const clientHeight = window.innerHeight;
+      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+      const isScrollable = scrollHeight > clientHeight;
+
+      const shouldShow = isScrollable && distanceFromBottom > 50;
+      setShowScrollButton(shouldShow);
+    };
+
+    const handleScroll = () => {
+      requestAnimationFrame(checkScroll);
+    };
+
+    // Add listeners to both container and window to cover all scroll scenarios
+    if (container) {
+      container.addEventListener('scroll', handleScroll, { passive: true });
+    }
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    // Initial check
+    const initialTimeout = setTimeout(checkScroll, 300);
+
+    // Check on resize
+    window.addEventListener('resize', handleScroll);
+
+    return () => {
+      if (container) {
+        container.removeEventListener('scroll', handleScroll);
+      }
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleScroll);
+      clearTimeout(initialTimeout);
+    };
+  }, [conversations.length]);
 
   // Auto-scroll effect
   useEffect(() => {
@@ -162,16 +238,30 @@ export const GptChatPageDetails = () => {
     }
 
     // Check if user is currently at bottom - if so, clear manual scroll flag
-    const scrollHeight = container.scrollHeight;
-    const scrollTop = container.scrollTop;
-    const clientHeight = container.clientHeight;
-    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+    let distanceFromBottom = 0;
 
-    if (distanceFromBottom < 10) {
+    if (container.scrollHeight > container.clientHeight) {
+      distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    } else {
+      // Check window scroll if container is not scrollable
+      distanceFromBottom =
+        document.documentElement.scrollHeight -
+        (window.scrollY || document.documentElement.scrollTop) -
+        window.innerHeight;
+    }
+
+    if (distanceFromBottom < 20) {
       userHasManuallyScrolledRef.current = false;
     }
 
-    const behavior = isBotStreaming ? 'auto' : hasScrolledToBottomRef.current ? 'smooth' : 'auto';
+    const shouldSmoothScroll = distanceFromBottom > 100;
+    const behavior = isBotStreaming
+      ? shouldSmoothScroll
+        ? 'smooth'
+        : 'auto'
+      : hasScrolledToBottomRef.current
+        ? 'smooth'
+        : 'auto';
     const delay = isBotStreaming ? 10 : hasScrolledToBottomRef.current ? 100 : 0;
 
     const timeoutId = setTimeout(() => {
@@ -186,6 +276,20 @@ export const GptChatPageDetails = () => {
     if (!message.trim()) return;
     userHasManuallyScrolledRef.current = false;
     sendMessage({ message, files });
+  };
+
+  const scrollToBottom = () => {
+    userHasManuallyScrolledRef.current = false;
+
+    const container = scrollContainerRef.current;
+    if (container && container.scrollHeight > container.clientHeight) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      window.scrollTo({
+        top: document.documentElement.scrollHeight,
+        behavior: 'smooth',
+      });
+    }
   };
 
   const getModelLabel = (modelName?: string) => {
@@ -282,46 +386,70 @@ export const GptChatPageDetails = () => {
                         </TooltipProvider>
                       )}
 
-                      <DropdownMenu>
+                      {msg.type === 'bot' ? (
+                        <DropdownMenu>
+                          <TooltipProvider delayDuration={0}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 rounded-lg hover:bg-muted"
+                                  >
+                                    {copiedId === index ? (
+                                      <Check className="h-3.5 w-3.5 text-green-600" />
+                                    ) : (
+                                      <Clipboard className="h-3.5 w-3.5" />
+                                    )}
+                                  </Button>
+                                </DropdownMenuTrigger>
+                              </TooltipTrigger>
+                              <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 border-slate-700 dark:border-slate-300">
+                                <p>{copiedId === index ? 'Copied' : 'Copy'}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <DropdownMenuContent align="start" className="w-48">
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handleCopyWithStyling(index, { setCopiedId, conversations })
+                              }
+                            >
+                              <Clipboard className="h-4 w-4 mr-2" />
+                              Copy with styling
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleCopyRaw(msg.message, index, { setCopiedId })}
+                            >
+                              <FileText className="h-4 w-4 mr-2" />
+                              Copy raw response
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      ) : (
                         <TooltipProvider delayDuration={0}>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7 rounded-lg hover:bg-muted"
-                                >
-                                  {copiedId === index ? (
-                                    <Check className="h-3.5 w-3.5 text-green-600" />
-                                  ) : (
-                                    <Clipboard className="h-3.5 w-3.5" />
-                                  )}
-                                </Button>
-                              </DropdownMenuTrigger>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 rounded-lg hover:bg-muted"
+                                onClick={() => handleCopyRaw(msg.message, index, { setCopiedId })}
+                              >
+                                {copiedId === index ? (
+                                  <Check className="h-3.5 w-3.5 text-green-600" />
+                                ) : (
+                                  <Clipboard className="h-3.5 w-3.5" />
+                                )}
+                              </Button>
                             </TooltipTrigger>
                             <TooltipContent className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 border-slate-700 dark:border-slate-300">
                               <p>{copiedId === index ? 'Copied' : 'Copy'}</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
-                        <DropdownMenuContent align="start" className="w-48">
-                          <DropdownMenuItem
-                            onClick={() =>
-                              handleCopyWithStyling(index, { setCopiedId, conversations })
-                            }
-                          >
-                            <Clipboard className="h-4 w-4 mr-2" />
-                            Copy with styling
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleCopyRaw(msg.message, index, { setCopiedId })}
-                          >
-                            <FileText className="h-4 w-4 mr-2" />
-                            Copy raw response
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      )}
 
                       {msg.type === 'bot' && msg.metadata?.tool_calls_made !== undefined && (
                         <TooltipProvider delayDuration={0}>
@@ -397,6 +525,21 @@ export const GptChatPageDetails = () => {
           </div>
         )}
       </div>
+
+      {showScrollButton && (
+        <div className="flex justify-center w-full">
+          <div className="fixed bottom-[208px] z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-10 w-10 rounded-full shadow-xl bg-background hover:bg-accent border border-border backdrop-blur-sm"
+              onClick={scrollToBottom}
+            >
+              <ArrowDown className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       <GptChatInput
         onSendMessage={handleSendMessage}

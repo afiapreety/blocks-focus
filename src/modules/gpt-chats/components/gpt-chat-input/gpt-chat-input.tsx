@@ -168,7 +168,7 @@ export const GptChatInput = ({
       )}
     >
       <div
-        className={`w-full px-2 md:px-6 lg:px-8 pb-4 pt-2 ${variant !== 'chat-details' && 'max-w-4xl mx-auto'}`}
+        className={`w-full px-2 md:px-6 lg:px-8 pb-4 ${variant !== 'chat-details' && 'max-w-4xl mx-auto'}`}
       >
         <div className="bg-card relative rounded-3xl border-2 border-border hover:border-primary focus-within:border-primary">
           {uploadedFiles.length > 0 && (
