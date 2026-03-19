@@ -1,5 +1,60 @@
 import { clients } from '@/lib/https';
 
+export type Agent = {
+  id: string;
+  created_date: string;
+  last_updated_date: string;
+  created_by: string;
+  language: string;
+  last_updated_by: string;
+  organization_ids: string[];
+  tags: string[];
+  name: string;
+  agent_type: string | null;
+  role: string;
+  description: string;
+  domain_expertise: string[];
+  enable_rag: boolean;
+  logo_url: string | null;
+  logo_id: string | null;
+  is_disabled: boolean;
+  is_archived: boolean;
+  enable_tools: boolean;
+  tool_ids: string[];
+  enable_knowledge_base: boolean;
+  enable_memory: boolean;
+  enable_human_handoff: boolean;
+  published_date?: string;
+  response_type: string;
+  response_format: string | null;
+  widget_id: string;
+};
+
+export type AgentSummary = Pick<
+  Agent,
+  | 'id'
+  | 'name'
+  | 'tags'
+  | 'role'
+  | 'description'
+  | 'logo_url'
+  | 'logo_id'
+  | 'is_archived'
+  | 'is_disabled'
+  | 'widget_id'
+>;
+
+export type IGetAgentsModelPayload = {
+  limit: number;
+  offset: number;
+  project_key: string;
+};
+
+export interface IGetAgentsResponse {
+  agents: AgentSummary[];
+  total_count: number;
+}
+
 export type IGetAgentModelResponse = {
   provider: string;
   model_name: string;
@@ -74,6 +129,9 @@ export interface IGetToolsResponse {
 }
 
 export class GptChatService {
+  getAgents(payload: IGetAgentsModelPayload): Promise<IGetAgentsResponse> {
+    return clients.post(`/blocksai-api/v1/agents/queries`, JSON.stringify(payload));
+  }
   getllmModels(): Promise<IGetAgentModelResponse> {
     return clients.get(`/blocksai-api/v1/agents/models`);
   }
