@@ -1,64 +1,37 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import type { QueryClient } from '@tanstack/react-query';
+import { NavigateFunction } from 'react-router-dom';
 import { Conversation } from '../types/conversation.service.type';
 import { conversationService } from '../services/conversation.service';
-import { parseSSEBuffer } from '../utils/parse-sse';
 import { handleSSEMessage } from '../utils/sse-message-handler';
-import { NavigateFunction } from 'react-router-dom';
-import { useAuthStore } from '@/state/store/auth';
+import { parseChatMessage } from '../utils/json-utils';
+import {
+  ProcessFilesCallback,
+  ChatFileMetadata,
+  SelectModelType,
+  ChatMessage,
+  Chat,
+  chatDefaultValue,
+} from '../types/chat-store.types';
+import { createSSEHandler } from '../utils/chat-sse-handler';
+import {
+  processUnstructuredFiles,
+  enhanceQueryWithFileContext,
+} from '../utils/chat-file-processor';
+import { syncChatToSidebar, updateUrlWithSessionId } from '../utils/chat-session-sync';
+import { generateUniqueId } from '../utils/chat-helpers';
+import {
+  handleSSEParseError,
+  handleFileProcessingError,
+  handleSessionSetupError,
+  handleStreamError,
+  createFileProcessingErrorMessage,
+} from '../utils/chat-error-handler';
+import { UNSTRUCTURED_EXTENSIONS } from '../utils/chat-file-processor';
 
 const projectSlug = import.meta.env.VITE_PROJECT_SLUG || '';
 const llmBasePrompt = import.meta.env.VITE_LLM_BASE_PROMPT || 'You are a helpful AI assistant.';
-const projectKey = import.meta.env.VITE_X_BLOCKS_KEY || '';
-
-const generateUniqueId = (): string => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-type MessageType = 'user' | 'bot';
-
-export type SelectModelType = {
-  isBlocksModels: boolean;
-  provider: string;
-  model: string;
-};
-
-interface ChatMessage {
-  message: string;
-  type: MessageType;
-  streaming: boolean;
-  timestamp: string;
-  metadata?: {
-    tool_calls_made?: number;
-  };
-}
-
-interface Chat {
-  id: string | null;
-  sessionId: string | null;
-  conversations: ChatMessage[];
-  isBotStreaming: boolean;
-  isBotThinking: boolean;
-  currentEvent: ChatEvent | null;
-  lastUpdated: string;
-  selectedModel: SelectModelType;
-  selectedTools: string[];
-}
-
-interface ChatEvent {
-  type: string;
-  message: string;
-}
-
-const chatDefaultValue: Chat = {
-  id: null,
-  conversations: [],
-  sessionId: null,
-  isBotStreaming: false,
-  isBotThinking: false,
-  currentEvent: null as ChatEvent | null,
-  lastUpdated: '',
-  selectedModel: { isBlocksModels: true, provider: 'azure', model: 'gpt-4o-mini' },
-  selectedTools: [],
-};
 
 interface ChatStore {
   chats: {
@@ -70,11 +43,20 @@ interface ChatStore {
     message: string,
     model: SelectModelType,
     tools: string[],
-    navigate: NavigateFunction
+    navigate: NavigateFunction,
+    queryClient?: QueryClient,
+    files?: ChatFileMetadata[],
+    processFilesCallback?: ProcessFilesCallback
   ) => void;
   loadChat: (id: string, conversations: Conversation[]) => void;
+  loadAgentChat: (
+    id: string,
+    conversations: Conversation[],
+    agentId: string,
+    widgetId?: string
+  ) => void;
   setSessionId: (id: string, sessionId: string) => void;
-  addUserMessage: (id: string, message: string) => void;
+  addUserMessage: (id: string, message: string, files?: ChatFileMetadata[]) => void;
   initiateBotMessage: (id: string, chunk: string) => void;
   startBotMessage: (id: string, chunk: string) => void;
   streamBotMessage: (id: string, chunk: string) => void;
@@ -89,136 +71,27 @@ interface ChatStore {
   generateBotMessage: (
     id: string,
     message: string,
-    setSuggestions?: (suggestions: string[]) => void
+    setSuggestions?: (suggestions: string[]) => void,
+    files?: ChatFileMetadata[],
+    isNewFileUpload?: boolean,
+    processFilesCallback?: ProcessFilesCallback,
+    queryClient?: QueryClient
   ) => Promise<void>;
-  sendMessage: (id: string, message: string) => Promise<void>;
+  sendMessage: (
+    id: string,
+    message: string,
+    files?: ChatFileMetadata[],
+    processFilesCallback?: ProcessFilesCallback,
+    queryClient?: QueryClient
+  ) => Promise<void>;
   reset: () => void;
 }
 
-const getBotSSE = async (
-  query: string,
-  chat: Chat
-): Promise<{
-  reader: ReadableStreamDefaultReader<Uint8Array>;
-  sessionId: string;
-}> => {
-  const modelId = chat?.selectedModel
-    ? chat?.selectedModel.isBlocksModels
-      ? ''
-      : chat?.selectedModel.model
-    : '';
-  const modelName = chat?.selectedModel
-    ? chat?.selectedModel.isBlocksModels
-      ? chat?.selectedModel.model
-      : ''
-    : '';
-  const modelProvider = chat?.selectedModel
-    ? chat?.selectedModel.isBlocksModels
-      ? chat?.selectedModel.provider
-      : ''
-    : '';
-
-  const reader = await conversationService.query({
-    query: query,
-    session_id: (chat.sessionId as string) || undefined,
-    base_prompt: llmBasePrompt,
-    model_id: modelId,
-    model_name: modelName,
-    model_provider: modelProvider,
-    tool_ids: chat.selectedTools,
-    last_n_turn: 5,
-    enable_summary: false,
-    enable_next_suggestion: false,
-    response_type: 'text',
-    response_format: 'string',
-    call_from: projectSlug,
-  });
-  return { reader, sessionId: chat.sessionId || '' };
-};
-
-const getAgentSSE = async (
-  query: string,
-  chat: Chat
-): Promise<{
-  reader: ReadableStreamDefaultReader<Uint8Array>;
-  sessionId: string;
-}> => {
-  const initiateResponse = await conversationService.initiate({
-    widget_id: chat.selectedModel.model,
-    project_key: projectSlug,
-    session_id: chat.sessionId || undefined,
-  });
-
-  const reader = await conversationService.agentSSEQuery({
-    message: query,
-    projectKey: projectKey,
-    sessionId: initiateResponse.session_id,
-    token: initiateResponse.token,
-  });
-
-  return {
-    reader,
-    sessionId: initiateResponse.session_id,
-  };
-};
-
-const getSSE = async (
-  query: string,
-  chat: Chat,
-  cb: (
-    event: {
-      eventType: string;
-      eventData: { session_id?: string; query?: string; message?: string };
-    },
-    sessionId: string,
-    done: boolean
-  ) => void
-) => {
-  try {
-    const { provider } = chat.selectedModel;
-    const { reader, sessionId } =
-      provider === 'agent' ? await getAgentSSE(query, chat) : await getBotSSE(query, chat);
-    const decoder = new TextDecoder();
-    let buffer = '';
-    let isDone = false;
-    let session_id = sessionId;
-    while (!isDone) {
-      const { done, value } = await reader.read();
-      isDone = done;
-
-      if (value) {
-        buffer += decoder.decode(value, { stream: true });
-        const { events, remaining } = parseSSEBuffer(buffer);
-        buffer = remaining;
-
-        events.forEach((event) => {
-          if (event.eventData.session_id) {
-            session_id = event.eventData.session_id as string;
-          }
-          cb(event, session_id, isDone);
-        });
-      }
-      if (isDone) {
-        cb(
-          {
-            eventType: 'done',
-            eventData: {},
-          },
-          session_id,
-          isDone
-        );
-      }
-    }
-  } catch (error) {
-    //
-  }
-};
-
 export const useChatStore = create<ChatStore>()(
-  persist(
+  persist<ChatStore>(
     (set, get) => ({
       chats: {},
-      activeChatId: null,
+      activeChatId: null as string | null,
 
       resolveChatId: (chatId) => {
         const state = get();
@@ -228,12 +101,13 @@ export const useChatStore = create<ChatStore>()(
         return chatId;
       },
 
-      startChat: async (message, model, tools, navigate) => {
+      startChat: (message, model, tools, navigate, queryClient, files, processFilesCallback) => {
         const chatMessage: ChatMessage = {
           message,
           type: 'user',
           streaming: false,
           timestamp: new Date().toISOString(),
+          ...(files && files.length > 0 && { files }),
         };
 
         const chatId = generateUniqueId();
@@ -245,7 +119,9 @@ export const useChatStore = create<ChatStore>()(
           lastUpdated: new Date().toISOString(),
           selectedModel: model,
           selectedTools: tools,
+          sessionFiles: files || [],
         };
+
         set((state) => ({
           chats: {
             ...state.chats,
@@ -253,79 +129,329 @@ export const useChatStore = create<ChatStore>()(
           },
           activeChatId: chatId,
         }));
+
         navigate(`/chat/new`);
-        const { itemId } = useAuthStore.getState().user || {};
-        const res = await conversationService.insertSession({
-          userId: itemId || '',
-          title: message.slice(0, 20),
-        });
-        const newChatId = res.insertsession.itemId || chatId;
-        delete get().chats[chatId];
-        window.history.replaceState(window.history.state, '', `/chat/${newChatId}`);
-        set((state) => ({
-          chats: {
-            ...state.chats,
-            [newChatId]: {
-              ...chat,
-              id: newChatId,
-              sessionId: newChatId,
-              isBotThinking: true,
-            },
-          },
-          activeChatId: newChatId,
-        }));
-        let botMessage = '';
-        return getSSE(message, chat, (event, sessionId, done) => {
-          handleSSEMessage(newChatId || '', event, undefined);
-          if (event.eventType === 'chat_response') {
-            botMessage = event.eventData.message || '';
+
+        let receivedSessionId: string | null = null;
+        let migrationScheduled = false;
+
+        // Handle file processing for unstructured files
+        const processFilesAndSendMessage = async () => {
+          try {
+            // If files are present, we need to get session_id first
+            if (files && files.length > 0) {
+              // Send user message to get session_id (use actual message for proper chat title)
+              const initReader = await conversationService.query({
+                query: message,
+                base_prompt: llmBasePrompt,
+                model_id: '',
+                model_name: chat.selectedModel.isBlocksModels ? chat.selectedModel.model : '',
+                model_provider: chat.selectedModel.isBlocksModels
+                  ? chat.selectedModel.provider
+                  : '',
+                tool_ids: tools,
+                last_n_turn: 10,
+                enable_summary: true,
+                enable_next_suggestion: true,
+                response_type: 'text',
+                response_format: 'string',
+                call_from: projectSlug,
+              });
+
+              // Read the response to get session_id
+              const decoder = new TextDecoder();
+              let buffer = '';
+              let isDone = false;
+              while (!isDone) {
+                const { done, value } = await initReader.read();
+                isDone = done;
+                if (done) break;
+                if (value) {
+                  buffer += decoder.decode(value, { stream: true });
+                  const lines = buffer.split('\n');
+                  buffer = lines.pop() || '';
+
+                  for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                      try {
+                        const data = JSON.parse(line.slice(6));
+                        if (data.session_id && !receivedSessionId) {
+                          receivedSessionId = data.session_id;
+                          set((state) => ({
+                            chats: {
+                              ...state.chats,
+                              [chatId]: {
+                                ...state.chats[chatId],
+                                sessionId: receivedSessionId,
+                              },
+                            },
+                          }));
+
+                          updateUrlWithSessionId(receivedSessionId, chat.selectedModel);
+
+                          if (queryClient) {
+                            syncChatToSidebar(
+                              queryClient,
+                              receivedSessionId,
+                              message,
+                              chat.selectedModel
+                            );
+                          }
+
+                          break;
+                        }
+                      } catch (e) {
+                        handleSSEParseError(e);
+                      }
+                    }
+                  }
+                  if (receivedSessionId) break;
+                }
+              }
+
+              if (receivedSessionId) {
+                const processResult = await processUnstructuredFiles(
+                  receivedSessionId,
+                  files,
+                  processFilesCallback
+                );
+
+                if (!processResult.success) {
+                  set((state) => ({
+                    chats: {
+                      ...state.chats,
+                      [chatId]: {
+                        ...state.chats[chatId],
+                        conversations: [
+                          ...state.chats[chatId].conversations,
+                          {
+                            message: createFileProcessingErrorMessage(processResult.message),
+                            type: 'bot',
+                            streaming: false,
+                            timestamp: new Date().toISOString(),
+                          },
+                        ],
+                      },
+                    },
+                  }));
+                }
+
+                set((state) => ({
+                  chats: {
+                    ...state.chats,
+                    [chatId]: {
+                      ...state.chats[chatId],
+                      sessionId: receivedSessionId,
+                      processedFileIds: files.map((f) => f.fileId),
+                      sessionFiles: files,
+                    },
+                  },
+                }));
+              }
+            }
+          } catch (error) {
+            handleSessionSetupError(chatId, error, set);
           }
-          if (done) {
-            const chat = get().chats[newChatId];
-            set((state) => ({
-              chats: {
-                ...state.chats,
-                [newChatId]: {
-                  ...chat,
-                  sessionId: sessionId,
-                },
+        };
+
+        if (files && files.length > 0) {
+          processFilesAndSendMessage().then(() => {
+            const enhancedQuery = enhanceQueryWithFileContext(message, files);
+
+            createSSEHandler(
+              enhancedQuery,
+              { ...chat, sessionId: receivedSessionId || chat.sessionId },
+              (event, done) => {
+                if (event.eventData.session_id && !receivedSessionId) {
+                  receivedSessionId = event.eventData.session_id;
+                  set((state) => ({
+                    chats: {
+                      ...state.chats,
+                      [chatId]: {
+                        ...state.chats[chatId],
+                        sessionId: receivedSessionId,
+                      },
+                    },
+                  }));
+
+                  updateUrlWithSessionId(receivedSessionId, chat.selectedModel);
+
+                  if (queryClient) {
+                    syncChatToSidebar(queryClient, receivedSessionId, message, chat.selectedModel);
+                  }
+                }
+
+                handleSSEMessage(chatId, event, undefined);
+
+                if (done && event.eventType === 'stream_complete') {
+                  const state = get();
+                  state.setBotThinking(chatId, false);
+                }
+
+                if (done && !migrationScheduled && receivedSessionId) {
+                  migrationScheduled = true;
+
+                  const checkAndMigrate = () => {
+                    const currentChat = get().chats[chatId];
+
+                    if (!currentChat) {
+                      return;
+                    }
+
+                    if (!currentChat.isBotStreaming && !currentChat.isBotThinking) {
+                      performMigration();
+                    } else {
+                      setTimeout(checkAndMigrate, 50);
+                    }
+                  };
+
+                  setTimeout(checkAndMigrate, 50);
+                }
               },
-              activeChatId: newChatId,
-            }));
-            conversationService.updateSession({
-              filter: { ItemId: newChatId || '' },
-              payload: { sessionId: sessionId },
-            });
-            conversationService.insertConversation({
-              query: message,
-              // queryTimestamp: chatMessage.timestamp,
-              response: botMessage,
-              // responseTimestamp: new Date().toISOString(),
-              chatId: newChatId,
-              sessionId,
-            });
+              files,
+              queryClient
+            );
+          });
+        } else {
+          createSSEHandler(
+            message,
+            chat,
+            (event, done) => {
+              if (event.eventData.session_id && !receivedSessionId) {
+                receivedSessionId = event.eventData.session_id;
+                set((state) => ({
+                  chats: {
+                    ...state.chats,
+                    [chatId]: {
+                      ...state.chats[chatId],
+                      sessionId: receivedSessionId,
+                    },
+                  },
+                }));
+
+                updateUrlWithSessionId(receivedSessionId, chat.selectedModel);
+
+                if (queryClient) {
+                  syncChatToSidebar(queryClient, receivedSessionId, message, chat.selectedModel);
+                }
+              }
+
+              handleSSEMessage(chatId, event, undefined);
+
+              if (done && event.eventType === 'stream_complete') {
+                const state = get();
+                state.setBotThinking(chatId, false);
+              }
+
+              if (done && !migrationScheduled && receivedSessionId) {
+                migrationScheduled = true;
+
+                const checkAndMigrate = () => {
+                  const currentChat = get().chats[chatId];
+
+                  if (!currentChat) {
+                    return;
+                  }
+
+                  if (!currentChat.isBotStreaming && !currentChat.isBotThinking) {
+                    performMigration();
+                  } else {
+                    setTimeout(checkAndMigrate, 50);
+                  }
+                };
+
+                setTimeout(checkAndMigrate, 50);
+              }
+            },
+            undefined,
+            queryClient
+          );
+        }
+
+        const performMigration = () => {
+          if (!receivedSessionId) {
+            return;
           }
-        });
+
+          const currentChat = get().chats[chatId];
+
+          if (!currentChat) {
+            return;
+          }
+
+          set((state) => ({
+            chats: {
+              ...state.chats,
+              [receivedSessionId as string]: {
+                ...currentChat,
+                id: receivedSessionId,
+                sessionId: receivedSessionId,
+              },
+            },
+            activeChatId: receivedSessionId,
+          }));
+
+          const updatedChats = { ...get().chats };
+          delete updatedChats[chatId];
+          set({ chats: updatedChats });
+
+          const isAgentChat = currentChat.selectedModel?.provider === 'agents';
+          const newUrl = isAgentChat
+            ? `/chat/${receivedSessionId}?agent=${currentChat.selectedModel.model}&widget=${currentChat.selectedModel.widget_id}`
+            : `/chat/${receivedSessionId}`;
+          window.history.replaceState(null, '', newUrl);
+
+          if (queryClient) {
+            if (isAgentChat) {
+              queryClient.refetchQueries({ queryKey: ['agent-conversation-list'] });
+            } else {
+              queryClient.refetchQueries({ queryKey: ['conversations'] });
+            }
+          }
+        };
+
+        return {};
       },
+
       loadChat: (id, conversations) =>
         set((state) => {
           const chat = state.chats[id] || { ...chatDefaultValue, id };
-          const chatConversations: ChatMessage[] = conversations.flatMap((conversation) => {
+          const chatConversations: ChatMessage[] = conversations.flatMap((conversation: any) => {
+            // Handle both PascalCase (old) and snake_case (new) API responses
+            const tokenUsage =
+              conversation.conversation?.TokenUsage ||
+              conversation.TokenUsage ||
+              conversation.conversation?.token_usage ||
+              conversation.token_usage;
+            const metadata =
+              conversation.conversation?.Metadata ||
+              conversation.Metadata ||
+              conversation.conversation?.metadata ||
+              conversation.metadata;
+            const parsedResponse = parseChatMessage(
+              conversation.Response || conversation.response || ''
+            );
+
             return [
               {
-                message: conversation.Query,
+                message: conversation.Query || conversation.query,
                 type: 'user',
                 streaming: false,
-                timestamp: conversation.QueryTimestamp,
+                timestamp: conversation.QueryTimestamp || conversation.query_timestamp,
               },
               {
-                message: conversation.Response,
+                message: parsedResponse.message || conversation.Response || conversation.response,
                 type: 'bot',
                 streaming: false,
-                timestamp: conversation.ResponseTimestamp,
-                metadata: conversation.Metadata
+                timestamp: conversation.ResponseTimestamp || conversation.response_timestamp,
+                metadata: metadata
                   ? {
-                      tool_calls_made: conversation.Metadata.tool_calls_made,
+                      tool_calls_made: metadata.tool_calls_made,
+                    }
+                  : undefined,
+                tokenUsage: tokenUsage
+                  ? {
+                      model_name: tokenUsage.model_name,
                     }
                   : undefined,
               },
@@ -344,6 +470,79 @@ export const useChatStore = create<ChatStore>()(
                 lastUpdated: new Date().toISOString(),
                 isBotThinking: false,
                 isBotStreaming: false,
+              },
+            },
+            activeChatId: conversations[0].SessionId,
+          };
+        }),
+
+      loadAgentChat: (id, conversations, agentId, widgetId) =>
+        set((state) => {
+          const chat = state.chats[id] || { ...chatDefaultValue, id };
+          const chatConversations: ChatMessage[] = conversations
+            .sort((a: any, b: any) => {
+              const aTimestamp = a.QueryTimestamp || a.query_timestamp;
+              const bTimestamp = b.QueryTimestamp || b.query_timestamp;
+              return new Date(aTimestamp).getTime() - new Date(bTimestamp).getTime();
+            })
+            .flatMap((conversation: any) => {
+              // Handle both PascalCase (old) and snake_case (new) API responses
+              const tokenUsage =
+                conversation.conversation?.TokenUsage ||
+                conversation.TokenUsage ||
+                conversation.conversation?.token_usage ||
+                conversation.token_usage;
+              const metadata =
+                conversation.conversation?.Metadata ||
+                conversation.Metadata ||
+                conversation.conversation?.metadata ||
+                conversation.metadata;
+              const parsedResponse = parseChatMessage(
+                conversation.Response || conversation.response || ''
+              );
+
+              return [
+                {
+                  message: conversation.Query || conversation.query,
+                  type: 'user',
+                  streaming: false,
+                  timestamp: conversation.QueryTimestamp || conversation.query_timestamp,
+                },
+                {
+                  message: parsedResponse.message || conversation.Response || conversation.response,
+                  type: 'bot',
+                  streaming: false,
+                  timestamp: conversation.ResponseTimestamp || conversation.response_timestamp,
+                  metadata: metadata
+                    ? {
+                        tool_calls_made: metadata.tool_calls_made,
+                      }
+                    : undefined,
+                  tokenUsage: tokenUsage
+                    ? {
+                        model_name: tokenUsage.model_name,
+                      }
+                    : undefined,
+                },
+              ];
+            });
+
+          return {
+            chats: {
+              ...state.chats,
+              [id]: {
+                ...chat,
+                sessionId: conversations[0].SessionId,
+                conversations: chatConversations,
+                lastUpdated: new Date().toISOString(),
+                isBotThinking: false,
+                isBotStreaming: false,
+                selectedModel: {
+                  isBlocksModels: false,
+                  provider: 'agents',
+                  model: agentId,
+                  widget_id: widgetId,
+                },
               },
             },
             activeChatId: conversations[0].SessionId,
@@ -383,7 +582,7 @@ export const useChatStore = create<ChatStore>()(
           };
         }),
 
-      addUserMessage: (id, message) =>
+      addUserMessage: (id, message, files) =>
         set((state) => {
           const chat = state.chats[id] || { ...chatDefaultValue, id };
           return {
@@ -398,6 +597,7 @@ export const useChatStore = create<ChatStore>()(
                     type: 'user',
                     streaming: false,
                     timestamp: new Date().toISOString(),
+                    ...(files && files.length > 0 && { files }),
                   },
                 ],
                 lastUpdated: new Date().toISOString(),
@@ -438,6 +638,9 @@ export const useChatStore = create<ChatStore>()(
                     streaming: true,
                     type: 'bot',
                     timestamp: new Date().toISOString(),
+                    tokenUsage: {
+                      model_name: chat.selectedModel?.model || 'gpt-4o-mini',
+                    },
                   },
                 ],
                 lastUpdated: new Date().toISOString(),
@@ -583,6 +786,7 @@ export const useChatStore = create<ChatStore>()(
             },
           };
         }),
+
       deleteChat: (id) =>
         set((state) => {
           const updatedChats = { ...state.chats };
@@ -592,57 +796,141 @@ export const useChatStore = create<ChatStore>()(
           };
         }),
 
-      generateBotMessage: async (id, message, setSuggestions) => {
+      generateBotMessage: async (
+        id,
+        message,
+        setSuggestions,
+        files,
+        isNewFileUpload = false,
+        processFilesCallback,
+        queryClient
+      ) => {
         const state = get();
         const chat = state.chats[id];
 
         state.setBotThinking(id, true);
-
         if (setSuggestions) setSuggestions([]);
 
-        try {
-          let botMessage = '';
-          getSSE(message, chat, (event, sessionId, isDone) => {
-            handleSSEMessage(id, event, setSuggestions);
-            if (event.eventType === 'chat_response') {
-              botMessage = event.eventData.message || '';
-            }
-            if (isDone) {
-              const chat = get().chats[id];
-              set((state) => ({
-                chats: {
-                  ...state.chats,
-                  [id]: {
-                    ...chat,
-                    sessionId: sessionId,
+        // Process unstructured files if present and not already processed
+        if (files && files.length > 0 && chat.sessionId) {
+          try {
+            const unstructuredFiles = files.filter((f) =>
+              UNSTRUCTURED_EXTENSIONS.includes(f.extension)
+            );
+
+            const unprocessedUnstructuredFiles = unstructuredFiles.filter(
+              (f) => !chat.processedFileIds.includes(f.fileId)
+            );
+
+            if (unprocessedUnstructuredFiles.length > 0) {
+              const processResult = await processUnstructuredFiles(
+                chat.sessionId as string,
+                unprocessedUnstructuredFiles,
+                processFilesCallback
+              );
+
+              if (!processResult.success) {
+                set((state) => ({
+                  chats: {
+                    ...state.chats,
+                    [id]: {
+                      ...state.chats[id],
+                      conversations: [
+                        ...state.chats[id].conversations,
+                        {
+                          message: createFileProcessingErrorMessage(processResult.message),
+                          type: 'bot',
+                          streaming: false,
+                          timestamp: new Date().toISOString(),
+                        },
+                      ],
+                    },
                   },
-                },
-                activeChatId: id,
-              }));
-              conversationService.updateSession({
-                filter: { ItemId: id || '' },
-                payload: { sessionId: sessionId },
-              });
-              conversationService.insertConversation({
-                query: message,
-                // queryTimestamp: chatMessage.timestamp,
-                response: botMessage,
-                // responseTimestamp: new Date().toISOString(),
-                chatId: id,
-                sessionId: sessionId,
-              });
+                }));
+              } else {
+                set((state) => ({
+                  chats: {
+                    ...state.chats,
+                    [id]: {
+                      ...state.chats[id],
+                      processedFileIds: [
+                        ...state.chats[id].processedFileIds,
+                        ...unprocessedUnstructuredFiles.map((f) => f.fileId),
+                      ],
+                    },
+                  },
+                }));
+              }
             }
-          });
+          } catch (error) {
+            handleFileProcessingError(id, error, set);
+          }
+        }
+
+        try {
+          // Only enhance query with file context when NEW files are attached
+          const enhancedQuery =
+            isNewFileUpload && files && files.length > 0
+              ? enhanceQueryWithFileContext(message, files)
+              : message;
+
+          createSSEHandler(
+            enhancedQuery,
+            chat,
+            (event, done) => {
+              handleSSEMessage(id, event, undefined);
+
+              // Only turn off thinking state when stream completes, let handleSSEMessage manage endBotMessage
+              if (done && event.eventType === 'stream_complete') {
+                state.setBotThinking(id, false);
+              }
+            },
+            files,
+            queryClient
+          );
         } catch (error) {
-          state.setBotThinking(id, false);
-          state.setCurrentEvent(id, null, '');
+          handleStreamError(id, set);
         }
       },
 
-      sendMessage: async (id, message) => {
+      sendMessage: async (id, message, files, processFilesCallback, queryClient) => {
         const state = get();
-        state.addUserMessage(id, message);
-        await state.generateBotMessage(id, message);
+        const chat = state.chats[id];
+
+        // Merge new files with existing session files for tracking (avoid duplicates)
+        if (files && files.length > 0) {
+          const updatedSessionFiles = [...(chat?.sessionFiles || [])];
+          files.forEach((newFile) => {
+            if (!updatedSessionFiles.some((f) => f.fileId === newFile.fileId)) {
+              updatedSessionFiles.push(newFile);
+            }
+          });
+
+          // Update session files in the chat for tracking purposes
+          set((state) => ({
+            chats: {
+              ...state.chats,
+              [id]: {
+                ...state.chats[id],
+                sessionFiles: updatedSessionFiles,
+              },
+            },
+          }));
+        }
+
+        state.addUserMessage(id, message, files);
+        // Always pass all session files to maintain context across the conversation
+        const currentSessionFiles = get().chats[id]?.sessionFiles || [];
+        const hasNewFiles = files && files.length > 0;
+        await state.generateBotMessage(
+          id,
+          message,
+          undefined,
+          currentSessionFiles.length > 0 ? currentSessionFiles : undefined,
+          hasNewFiles,
+          processFilesCallback,
+          queryClient
+        );
       },
 
       setSelectedModel: (id, model) => {
@@ -659,6 +947,7 @@ export const useChatStore = create<ChatStore>()(
           };
         });
       },
+
       setSelectedTools: (id, toolIds) => {
         set((state) => {
           const chat = state.chats[id] || { ...chatDefaultValue, id };

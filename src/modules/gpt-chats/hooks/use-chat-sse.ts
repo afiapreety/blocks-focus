@@ -1,20 +1,27 @@
-import { useCallback, useEffect, useState } from 'react';
-import { onlineManager } from '@tanstack/react-query';
-import { SelectModelType, useChatStore } from './use-chat-store';
-import { useGetLLMConversationById } from './use-conversation-api';
+import { useCallback, useEffect } from 'react';
+import { onlineManager, useQueryClient } from '@tanstack/react-query';
+import { ChatFileMetadata, ProcessFilesCallback, SelectModelType } from '../types/chat-store.types';
+import { useGetConversationById } from './use-conversation-api';
+import { useGetAgentConversationSessionById } from './use-agent-conversation';
+import { Conversation } from '../types/conversation.service.type';
+import { useProcessFiles } from './use-agents';
+import { useChatStore } from './use-chat-store';
 
 interface UseChatSSE {
   chatId?: string;
+  agentId?: string | null;
+  widgetId?: string | null;
 }
 
-// const projectKey = import.meta.env.VITE_X_BLOCKS_KEY || '';
-// const projectSlug = import.meta.env.VITE_PROJECT_SLUG || '';
+const projectKey = import.meta.env.VITE_X_BLOCKS_KEY || '';
+const projectSlug = import.meta.env.VITE_PROJECT_SLUG || '';
 
-export const useChatSSE = ({ chatId = '' }: UseChatSSE) => {
-  const [suggestions, setSuggestions] = useState<string[]>([]);
+export const useChatSSE = ({ chatId = '', agentId = null, widgetId = null }: UseChatSSE) => {
+  const queryClient = useQueryClient();
   const {
     chats,
     loadChat,
+    loadAgentChat,
     generateBotMessage: generateFromStore,
     sendMessage: sendFromStore,
     setSelectedModel,
@@ -34,40 +41,107 @@ export const useChatSSE = ({ chatId = '' }: UseChatSSE) => {
   const isBotThinking = chat.isBotThinking || false;
   const currentEvent = chat?.currentEvent || null;
 
-  // const { data, isFetching } = useGetConversationById({
-  //   allow_created_by_filter: true,
-  //   call_from: projectSlug,
-  //   project_key: projectKey,
-  //   session_id: activeChatId,
-  //   limit: 100,
-  //   offset: 0,
-  // });
+  // Determine if it's an agent chat from the store's selectedModel
+  const isAgentChat = chat?.selectedModel?.provider === 'agents' || !!agentId;
+  const { mutateAsync: processFilesMutation } = useProcessFiles();
 
-  const { data, isFetching } = useGetLLMConversationById({
-    chatId: activeChatId,
+  // Create callback wrapper for the store to use
+  const processFilesCallback: ProcessFilesCallback = useCallback(
+    async (params) => {
+      try {
+        const result = await processFilesMutation(params);
+        return result;
+      } catch (error) {
+        return {
+          success: false,
+          message: error instanceof Error ? error.message : 'Unknown error',
+        };
+      }
+    },
+    [processFilesMutation]
+  );
+
+  const { data: modelChatData, isFetching: isFetchingModelChat } = useGetConversationById({
+    allow_created_by_filter: true,
+    is_minimal: false,
+    call_from: projectSlug,
+    project_key: projectKey,
+    session_id: activeChatId,
+    limit: 100,
+    offset: 0,
+    enabled: !isAgentChat && activeChatId !== 'new',
   });
 
+  const { data: agentChatData, isFetching: isFetchingAgentChat } =
+    useGetAgentConversationSessionById({
+      allow_created_by_filter: true,
+      project_key: projectKey,
+      session_id: activeChatId,
+      agent_id: agentId || '',
+      limit: 100,
+      offset: 0,
+      enabled: isAgentChat && activeChatId !== 'new',
+    });
+
+  const data = isAgentChat ? agentChatData : modelChatData;
+  const isFetching = isAgentChat ? isFetchingAgentChat : isFetchingModelChat;
+
   useEffect(() => {
-    if (activeChatId && activeChatId != 'new' && data) {
-      if (data.total_count > 0) {
-        const conversationData = data.sessions;
-        loadChat(activeChatId, conversationData);
-      }
+    if (!activeChatId || activeChatId === 'new' || !data || data.total_count === 0) {
+      return;
     }
-  }, [activeChatId, data, loadChat]);
+
+    // Only load if chat doesn't exist in store or has no conversations
+    // This preserves local data (including files) when navigating back
+    const hasExistingConversations = chats[activeChatId]?.conversations?.length > 0;
+    if (hasExistingConversations) {
+      return;
+    }
+
+    const conversationData = data.sessions;
+    if (isAgentChat && agentId) {
+      loadAgentChat(
+        activeChatId,
+        conversationData as Conversation[],
+        agentId,
+        widgetId || undefined
+      );
+    } else {
+      loadChat(activeChatId, conversationData as Conversation[]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeChatId, data]);
 
   const generateBotMessage = useCallback(
-    async (data: { message: string }) => {
-      await generateFromStore(activeChatId, data.message, setSuggestions);
+    async (data: {
+      message: string;
+      setSuggestions?: (suggestions: string[]) => void;
+      files?: ChatFileMetadata[];
+    }) => {
+      await generateFromStore(
+        activeChatId,
+        data.message,
+        data.setSuggestions,
+        data.files,
+        false,
+        processFilesCallback,
+        queryClient
+      );
     },
-    [activeChatId, generateFromStore]
+    [activeChatId, generateFromStore, processFilesCallback, queryClient]
   );
 
   const sendMessage = useCallback(
-    async (data: { message: string }) => {
-      await sendFromStore(activeChatId, data.message);
+    async (data: { message: string; files?: ChatFileMetadata[] }) => {
+      await sendFromStore(
+        activeChatId,
+        data.message,
+        data.files,
+        processFilesCallback,
+        queryClient
+      );
     },
-    [activeChatId, sendFromStore]
+    [activeChatId, sendFromStore, processFilesCallback, queryClient]
   );
 
   const onModelChange = useCallback(
@@ -91,10 +165,8 @@ export const useChatSSE = ({ chatId = '' }: UseChatSSE) => {
     conversations,
     isBotThinking,
     isBotStreaming,
-    suggestions,
     selectedModel,
     selectedTools,
-
     onModelChange,
     onToolsChange,
     generateBotMessage,

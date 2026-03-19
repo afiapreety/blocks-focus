@@ -11,7 +11,7 @@ export const UnauthorizedPage = () => {
       image={unauthorized}
       title={t('ACCESS_DENIED')}
       description={t('DONT_HAVE_PERMISSION_RESOURCE')}
-      buttonText={t('GO_TO_DASHBOARD')}
+      buttonText={t('GO_TO_CHAT_HOME')}
       buttonIcon={<ArrowRight />}
       buttonLink="/"
     />

@@ -1,11 +1,67 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { ImageIcon, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MarkdownComponentsMap } from './markdown-components-map';
 
 type MarkdownRendererProps = {
   content: string;
   className?: string;
+  isStreaming?: boolean;
+};
+
+const unwrapResultFromContent = (value: string) => {
+  try {
+    const parsed = JSON.parse(value);
+    if (!parsed || typeof parsed !== 'object') return value;
+
+    const obj = parsed as Record<string, unknown>;
+    const result = obj.result;
+
+    if (typeof result === 'string' && result.trim()) {
+      return result;
+    }
+
+    return value;
+  } catch {
+    return value;
+  }
+};
+
+const normalizeQuoteToBlockquote = (text: string): string => {
+  const trimmed = text.trim();
+
+  if (trimmed.startsWith('>')) {
+    return text;
+  }
+
+  const quoteWithAuthorPatterns = [
+    /^[""](.+?)[""][\s]*[-–—]\s*(.+)$/s,
+    /^"(.+?)"[\s]*[-–—]\s*(.+)$/s,
+    /^[''](.+?)[''][\s]*[-–—]\s*(.+)$/s,
+    /^'(.+?)'[\s]*[-–—]\s*(.+)$/s,
+    /^(.+?)[\s]*[-–—]\s*(.+)$/s,
+  ];
+
+  for (const pattern of quoteWithAuthorPatterns) {
+    const match = trimmed.match(pattern);
+    if (match) {
+      const quoteText = match[1].trim();
+      const author = match[2].trim();
+
+      if (author.length > 0 && author.length < 100 && !quoteText.includes('\n\n')) {
+        return `> ${quoteText} – ${author}`;
+      }
+    }
+  }
+
+  const simpleQuotePattern = /^[""](.+?)[""]$/s;
+  const simpleMatch = trimmed.match(simpleQuotePattern);
+  if (simpleMatch) {
+    return `> ${simpleMatch[1].trim()}`;
+  }
+
+  return text;
 };
 
 const JsonSkeletonBlock = ({ content }: { content: string }) => {
@@ -68,23 +124,96 @@ const JsonSkeletonBlock = ({ content }: { content: string }) => {
   );
 };
 
-export const MarkdownRenderer = ({ content, className = '' }: MarkdownRendererProps) => {
-  const jsonBlockRegex = /:::(json|json-skeleton)\n([\s\S]*?)\n:::/g;
-  const hasJsonBlock = jsonBlockRegex.test(content);
+const ImageSkeletonBlock = () => {
+  return (
+    <div className="max-w-[512px] w-full rounded-lg border overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-2 bg-card ">
+        <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+        <div className="w-10 sm:w-60"></div>
+        <button
+          disabled
+          className="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs bg-white border border-gray-300 opacity-50 cursor-not-allowed ml-2 flex-shrink-0"
+          title="Download image"
+        >
+          <Download className="h-3.5 w-3.5 text-gray-400" />
+          <span className="text-gray-400">Download</span>
+        </button>
+      </div>
 
-  if (hasJsonBlock) {
+      <div className="bg-white w-full">
+        <div className="w-full h-[300px] sm:h-[400px] md:h-[512px] relative overflow-hidden bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800">
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background:
+                'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%)',
+              backgroundSize: '200% 100%',
+              animation: 'shimmer 2s infinite linear',
+            }}
+          />
+
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
+            <div className="relative">
+              <ImageIcon
+                className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400 dark:text-gray-500"
+                strokeWidth={1.5}
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                Generating image
+              </span>
+              <div className="flex items-center gap-1">
+                <div
+                  className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-gray-500 dark:bg-gray-400 "
+                  // style={{ animationDelay: '0s', animationDuration: '1s' }}
+                />
+                <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-gray-500 dark:bg-gray-400 " />
+                <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-gray-500 dark:bg-gray-400 " />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes shimmer {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+      `}</style>
+    </div>
+  );
+};
+
+export const MarkdownRenderer = ({
+  content,
+  className = '',
+  isStreaming = false,
+}: MarkdownRendererProps) => {
+  const unwrappedContent = unwrapResultFromContent(content);
+  const quoteNormalized = isStreaming
+    ? unwrappedContent
+    : normalizeQuoteToBlockquote(unwrappedContent);
+  // Don't wrap checklists in code blocks - let them render as normal markdown
+  const normalizedContent = quoteNormalized;
+  const blockRegex = /:::(json|json-skeleton|image-skeleton|image)\n([\s\S]*?)\n:::/g;
+  const hasSpecialBlock = blockRegex.test(normalizedContent);
+
+  if (hasSpecialBlock) {
     const parts: React.ReactNode[] = [];
     let lastIndex = 0;
     let match;
 
-    jsonBlockRegex.lastIndex = 0;
+    blockRegex.lastIndex = 0;
 
-    while ((match = jsonBlockRegex.exec(content)) !== null) {
-      // const blockType = match[1];
+    while ((match = blockRegex.exec(normalizedContent)) !== null) {
+      const blockType = match[1];
       const blockContent = match[2];
 
       if (match.index > lastIndex) {
-        const textBefore = content.slice(lastIndex, match.index);
+        const textBefore = normalizedContent.slice(lastIndex, match.index);
         if (textBefore.trim()) {
           parts.push(
             <ReactMarkdown
@@ -98,17 +227,17 @@ export const MarkdownRenderer = ({ content, className = '' }: MarkdownRendererPr
         }
       }
 
-      // if (blockType === 'json-skeleton') {
-      parts.push(<JsonSkeletonBlock key={`skeleton-${match.index}`} content={blockContent} />);
-      // } else {
-      //   parts.push(<JsonMonacoBlock key={`json-${match.index}`} content={blockContent} />);
-      // }
+      if (blockType === 'image-skeleton') {
+        parts.push(<ImageSkeletonBlock key={`image-skeleton-${match.index}`} />);
+      } else {
+        parts.push(<JsonSkeletonBlock key={`skeleton-${match.index}`} content={blockContent} />);
+      }
 
       lastIndex = match.index + match[0].length;
     }
 
-    if (lastIndex < content.length) {
-      const textAfter = content.slice(lastIndex);
+    if (lastIndex < normalizedContent.length) {
+      const textAfter = normalizedContent.slice(lastIndex);
       if (textAfter.trim()) {
         parts.push(
           <ReactMarkdown
@@ -125,12 +254,16 @@ export const MarkdownRenderer = ({ content, className = '' }: MarkdownRendererPr
     return (
       <div
         className={cn(
-          'prose prose-sm max-w-none dark:prose-invert',
-          'prose-headings:font-semibold',
-          'prose-p:leading-relaxed prose-p:p-0 prose-p:m-0',
+          'prose prose-sm max-w-none min-w-0 dark:prose-invert',
+          'prose-headings:font-semibold prose-headings:mb-2 prose-headings:mt-4',
+          'prose-h1:mt-0 prose-h1:mb-3',
+          'prose-h2:mt-4 prose-h2:mb-2',
+          'prose-h3:mt-4 prose-h3:mb-2',
+          'prose-h4:mt-3 prose-h4:mb-2',
+          'prose-h5:mt-3 prose-h5:mb-2',
+          'prose-h6:mt-3 prose-h6:mb-2',
+          'prose-p:leading-relaxed prose-p:p-0 prose-p:m-0 prose-p:mb-3',
           'prose-ol:list-decimal prose-ul:list-disc prose-ul:p-0',
-          'prose-li:p-0 prose-li:m-0',
-
           'prose-pre:bg-transparent prose-pre:p-0',
           className
         )}
@@ -143,19 +276,22 @@ export const MarkdownRenderer = ({ content, className = '' }: MarkdownRendererPr
   return (
     <div
       className={cn(
-        'prose max-w-none dark:prose-invert',
-        'prose-headings:font-semibold',
-        'prose-h1:mb-3',
-        'prose-h2:my-3',
-        'prose-p:leading-relaxed prose-p:p-0 prose-p:m-0',
+        'prose max-w-none min-w-0 dark:prose-invert',
+        'prose-headings:font-semibold prose-headings:mb-2 prose-headings:mt-4',
+        'prose-h1:mt-0 prose-h1:mb-3',
+        'prose-h2:mt-4 prose-h2:mb-2',
+        'prose-h3:mt-4 prose-h3:mb-2',
+        'prose-h4:mt-3 prose-h4:mb-2',
+        'prose-h5:mt-3 prose-h5:mb-2',
+        'prose-h6:mt-3 prose-h6:mb-2',
+        'prose-p:leading-relaxed prose-p:p-0 prose-p:m-0 prose-p:mb-3',
         'prose-ol:list-decimal prose-ul:list-disc prose-ul:p-0',
         'prose-pre:p-0 prose-pre:m-0',
-        'prose-li:p-0 prose-li:m-0',
         className
       )}
     >
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponentsMap}>
-        {content}
+        {normalizedContent}
       </ReactMarkdown>
     </div>
   );

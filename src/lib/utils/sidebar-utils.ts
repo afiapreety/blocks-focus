@@ -13,13 +13,15 @@ export function getSidebarStyle(
   openMobile: boolean
 ): React.CSSProperties {
   if (isMobile) {
+    const isMobileScreen = typeof window !== 'undefined' && window.innerWidth < 640;
+    const width = isMobileScreen ? '100%' : 'min(80vw, 280px)';
     return {
       position: 'fixed',
       top: 0,
       left: 0,
-      width: 'min(80vw, 280px)',
+      width: width,
       height: '100%',
-      maxWidth: '280px',
+      maxWidth: isMobileScreen ? 'none' : '280px',
       zIndex: 50,
       borderRight: 'none',
       transition: 'transform 0.3s ease-in-out',

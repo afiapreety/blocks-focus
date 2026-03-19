@@ -23,6 +23,8 @@ function getQueryClient() {
   }
 }
 
+export { getQueryClient };
+
 export default function QueryProviders({ children }: Readonly<{ children: ReactNode }>) {
   const queryClient = getQueryClient();
 

@@ -7,6 +7,7 @@ import {
   IConversationListPayload,
   IConversationListResponse,
   IDeleteConversationByIdPayload,
+  IQueryRequestPayload,
   Widget,
 } from '../types/conversation.service.type';
 import graphqlClient from '@/lib/graphql-client';
@@ -66,7 +67,7 @@ export class ConversationService {
     return clients.post(url, JSON.stringify(payload));
   }
 
-  query(body: Record<string, any>) {
+  query(body: IQueryRequestPayload) {
     const url = `/blocksai-api/v1/ai-agent/query/stream`;
     return clients.stream(url, JSON.stringify(body));
   }

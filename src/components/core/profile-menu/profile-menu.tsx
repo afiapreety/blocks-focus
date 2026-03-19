@@ -1,12 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, ChevronUp, Moon, Sun } from 'lucide-react';
+import { Check, ChevronDown, Info, Languages, LogOut, Moon, Shield, Sun, User } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui-kit/dropdown-menu';
 import { useSignoutMutation } from '@/modules/auth/hooks/use-auth';
@@ -15,6 +18,10 @@ import DummyProfile from '@/assets/images/dummy_profile.png';
 import { Skeleton } from '@/components/ui-kit/skeleton';
 import { useTheme } from '@/styles/theme/theme-provider';
 import { useGetAccount } from '@/modules/profile/hooks/use-account';
+import { useLanguageContext } from '@/i18n/language-context';
+import { Button } from '@/components/ui-kit/button';
+import { decodeJWT } from '@/lib/utils/decode-jwt-utils';
+import { useGetMultiOrgs } from '@/lib/api/hooks/use-multi-orgs';
 
 /**
  * ProfileMenu Component
@@ -42,16 +49,46 @@ import { useGetAccount } from '@/modules/profile/hooks/use-account';
  * // Basic usage in a header or navigation component
  * <ProfileMenu />
  */
+const projectKey = import.meta.env.VITE_X_BLOCKS_KEY || '';
 
 export const ProfileMenu = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const { theme, setTheme } = useTheme();
   const { t } = useTranslation();
-
-  const { logout } = useAuthStore();
+  const { logout, accessToken } = useAuthStore();
   const { mutateAsync } = useSignoutMutation();
   const navigate = useNavigate();
   const { data, isLoading } = useGetAccount();
+  const {
+    currentLanguage,
+    setLanguage,
+    availableLanguages,
+    isLoading: isLoadingLangs,
+  } = useLanguageContext();
+
+  const currentOrgId = useMemo(() => {
+    if (!accessToken) return null;
+    const decoded = decodeJWT(accessToken);
+    return decoded?.org_id ?? null;
+  }, [accessToken]);
+
+  const currentOrgRoles = useMemo(() => {
+    if (!data?.memberships?.length || !currentOrgId) return [];
+    const membership = data.memberships.find((m) => m.organizationId === currentOrgId);
+    return membership?.roles ?? [];
+  }, [data, currentOrgId]);
+
+  const { data: orgsData } = useGetMultiOrgs({
+    ProjectKey: projectKey,
+    Page: 0,
+    PageSize: 10,
+  });
+
+  const currentOrgName = useMemo(() => {
+    if (!currentOrgId || !orgsData?.organizations) return null;
+    const org = orgsData.organizations.find((org) => org.itemId === currentOrgId);
+    return org?.name ?? null;
+  }, [currentOrgId, orgsData]);
 
   const signoutHandler = async () => {
     try {
@@ -65,10 +102,11 @@ export const ProfileMenu = () => {
     }
   };
 
-  const fullName = `${data?.firstName ?? ''} ${data?.lastName ?? ''}`.trim() ?? ' ';
+  const fullName = `${data?.firstName ?? ''} ${data?.lastName ?? ''}`.trim() || 'User';
+  const email = data?.email ?? '';
 
-  const translatedRoles = data?.roles
-    ?.map((role) => {
+  const translatedOrgRoles = currentOrgRoles
+    .map((role: string) => {
       const roleKey = role.toUpperCase();
       return t(roleKey);
     })
@@ -86,66 +124,150 @@ export const ProfileMenu = () => {
     }
   }, [data, fullName]);
 
+  const changeLanguage = async (newLanguageCode: string) => {
+    await setLanguage(newLanguageCode);
+    setIsDropdownOpen(false);
+  };
+
   return (
     <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
-      <DropdownMenuTrigger asChild className="cursor-pointer p-1 rounded-[2px]">
-        <div className="flex justify-between items-center gap-1 sm:gap-3 cursor-pointer">
-          <div className="relative overflow-hidden rounded-full border shadow-sm border-white h-8 w-8">
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" className="h-9 px-2 gap-2 border-none focus-visible:ring-0">
+          <div className="relative h-7 w-7 rounded-full overflow-hidden">
             {isLoading ? (
-              <Skeleton className="h-8 w-8 rounded-full" />
+              <Skeleton className="h-7 w-7 rounded-full" />
             ) : (
               <img
-                src={
-                  data?.profileImageUrl !== ''
-                    ? (data?.profileImageUrl ?? DummyProfile)
-                    : DummyProfile
-                }
-                alt="profile"
+                src={data?.profileImageUrl || DummyProfile}
+                alt={fullName}
                 loading="lazy"
                 className="w-full h-full object-cover"
               />
             )}
           </div>
-          <div className="flex flex-col">
+          <div className="hidden md:flex flex-col items-start">
             {isLoading ? (
-              <Skeleton className="w-24 h-4 mb-1" />
+              <Skeleton className="w-20 h-3.5" />
             ) : (
-              <h2 className="text-xs font-semibold text-high-emphasis">{fullName}</h2>
+              <span className="text-sm font-medium text-high-emphasis max-w-[100px] truncate">
+                {fullName}
+              </span>
             )}
-            <p className="text-[10px] text-low-emphasis capitalize">{translatedRoles}</p>
           </div>
-          {isDropdownOpen ? (
-            <ChevronUp className="h-5 w-5 text-medium-emphasis" />
-          ) : (
-            <ChevronDown className="h-5 w-5 text-medium-emphasis" />
-          )}
-        </div>
+          <ChevronDown className="h-3.5 w-3.5 text-medium-emphasis opacity-50 hidden md:block" />
+        </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent
-        className="w-56 text-medium-emphasis"
-        align="end"
-        side="top"
-        sideOffset={10}
-      >
-        <DropdownMenuItem onClick={() => navigate('profile')}>{t('MY_PROFILE')}</DropdownMenuItem>
-        <DropdownMenuItem disabled>{t('ABOUT')}</DropdownMenuItem>
+      <DropdownMenuContent className="w-64" align="end" sideOffset={8}>
+        <div className="flex items-center gap-3 px-2 py-3">
+          <div className="relative h-10 w-10 rounded-full border-2  overflow-hidden">
+            <img
+              src={data?.profileImageUrl || DummyProfile}
+              alt={fullName}
+              className="w-full h-full object-cover"
+            />
+          </div>
+          <div className="flex flex-col flex-1 min-w-0">
+            <p className="text-sm font-semibold text-high-emphasis truncate">{fullName}</p>
+            <p className="text-xs text-low-emphasis truncate">{email}</p>
+            {translatedOrgRoles && (
+              <div className="flex items-center gap-1 mt-1">
+                <p className="text-[10px] text-medium-emphasis capitalize truncate">
+                  {translatedOrgRoles}
+                </p>
+                {currentOrgName && (
+                  <span className="text-[10px] text-low-emphasis">• {currentOrgName}</span>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuItem onClick={() => navigate('profile')} className="cursor-pointer">
+          <User className="h-4 w-4 mr-2" />
+          {t('MY_PROFILE')}
+        </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
+
+        {/* Language Submenu */}
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-2">
+                <Languages className="h-4 w-4 mr-2" />
+                <span>{t('LANGUAGE')}</span>
+              </div>
+              <span className="text-xs text-medium-emphasis">
+                {availableLanguages?.find((lang) => lang.languageCode === currentLanguage)
+                  ?.languageName || currentLanguage}
+              </span>
+            </div>
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent>
+            {isLoadingLangs ? (
+              <DropdownMenuItem disabled>
+                <Skeleton className="h-4 w-24" />
+              </DropdownMenuItem>
+            ) : (
+              availableLanguages?.map((lang) => (
+                <DropdownMenuItem
+                  key={lang.itemId}
+                  onClick={() => changeLanguage(lang.languageCode)}
+                  className="cursor-pointer"
+                >
+                  <span className="flex items-center gap-2">
+                    {lang.languageCode === currentLanguage && (
+                      <Check className="h-4 w-4 text-primary" />
+                    )}
+                    <span className={lang.languageCode !== currentLanguage ? 'ml-6' : ''}>
+                      {lang.languageName}
+                    </span>
+                    {lang.isDefault && (
+                      <span className="ml-auto text-xs text-medium-emphasis">(Default)</span>
+                    )}
+                  </span>
+                </DropdownMenuItem>
+              ))
+            )}
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+
+        {/* Theme Toggle */}
+        <DropdownMenuItem
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          className="cursor-pointer"
+        >
+          {theme === 'dark' ? <Sun className="h-4 w-4 mr-2" /> : <Moon className="h-4 w-4 mr-2" />}
+          {t('THEME')}
+          <span className="ml-auto text-xs text-medium-emphasis capitalize">{theme}</span>
+        </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuItem disabled>
+          <Info className="h-4 w-4 mr-2" />
+          {t('ABOUT')}
+        </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => window.open('https://selisegroup.com/privacy-policy/', '_blank')}
+          className="cursor-pointer"
         >
+          <Shield className="h-4 w-4 mr-2" />
           {t('PRIVACY_POLICY')}
         </DropdownMenuItem>
+
         <DropdownMenuSeparator />
+
+        {/* Logout */}
         <DropdownMenuItem
-          className="flex justify-between items-center transition-colors"
-          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          onClick={signoutHandler}
+          className="cursor-pointer text-destructive focus:text-destructive"
         >
-          <span>{t('THEME')}</span>
-          <button className="p-1 rounded-full transition-colors">
-            {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-          </button>
+          <LogOut className="h-4 w-4 mr-2" />
+          {t('LOG_OUT')}
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={signoutHandler}>{t('LOG_OUT')}</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

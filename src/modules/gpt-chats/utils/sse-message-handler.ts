@@ -133,33 +133,95 @@ export const handleSSEMessage = (
     'execution_long_running',
     'partial_failure',
     'execution_failed',
-    'message_start',
   ];
 
   const normalizedType = data.type.toLowerCase().replace(/_/g, '_');
 
-  if (eventTypes.includes(normalizedType) || normalizedType.startsWith('node_start')) {
-    const eventMessage = getRandomEventMessage(data.type);
-    console.log('Setting current event:', chatId, data.type, eventMessage);
-    setCurrentEvent(chatId, data.type, eventMessage);
+  if (normalizedType === 'task_progress' && data.task_action === 'generate_image') {
+    const imageSkeletonContent = `:::image-skeleton\nGenerating image...\n:::`;
+    setCurrentEvent(chatId, null, '');
     setBotThinking(chatId, true);
+
+    const currentChat = useChatStore.getState().chats[chatId];
+    const lastConversation = currentChat?.conversations?.[currentChat.conversations.length - 1];
+
+    const skeletonAlreadyShown =
+      lastConversation?.type === 'bot' && lastConversation?.message?.includes(':::image-skeleton');
+
+    if (!skeletonAlreadyShown) {
+      if (!currentChat?.conversations?.length || lastConversation?.type !== 'bot') {
+        initiateBotMessage(chatId, imageSkeletonContent);
+      } else {
+        startBotMessage(chatId, imageSkeletonContent);
+      }
+    }
+
     return;
   }
 
-  const fakeStream = (fullMessage: string | object, next_step_questions: string[] = []) => {
+  if (eventTypes.includes(normalizedType) || normalizedType.startsWith('node_start')) {
+    const currentChat = useChatStore.getState().chats[chatId];
+    const lastConversation = currentChat?.conversations?.[currentChat.conversations.length - 1];
+
+    const hasImageSkeleton =
+      lastConversation?.type === 'bot' && lastConversation?.message?.includes(':::image-skeleton');
+
+    if (!hasImageSkeleton) {
+      const eventMessage = getRandomEventMessage(data.type);
+      setCurrentEvent(chatId, data.type, eventMessage);
+      setBotThinking(chatId, true);
+    } else {
+      setCurrentEvent(chatId, null, '');
+    }
+    return;
+  }
+
+  const fakeStream = (
+    fullMessage: string | object,
+    next_step_questions: string[] = [],
+    hasImages = false
+  ) => {
     const chunkSize = 5;
     let index = 0;
     let timeoutId: NodeJS.Timeout;
     let messageToStream: string;
     let isJsonObject = false;
 
+    const unwrapResultMessage = (value: unknown) => {
+      if (!value || typeof value !== 'object') return null;
+
+      const obj = value as Record<string, unknown>;
+      const result = obj.result;
+
+      if (typeof result === 'string') {
+        return result;
+      }
+
+      if (result !== null && typeof result !== 'undefined') {
+        return String(result);
+      }
+
+      return null;
+    };
+
     if (typeof fullMessage === 'object' && fullMessage !== null) {
-      isJsonObject = true;
-      messageToStream = JSON.stringify(fullMessage);
+      const unwrapped = unwrapResultMessage(fullMessage);
+      if (typeof unwrapped === 'string' && unwrapped.trim()) {
+        isJsonObject = false;
+        messageToStream = unwrapped;
+      } else {
+        isJsonObject = true;
+        messageToStream = JSON.stringify(fullMessage);
+      }
     } else if (typeof fullMessage === 'string') {
       try {
         const parsed = JSON.parse(fullMessage);
-        if (typeof parsed === 'object' && parsed !== null) {
+        const unwrapped = unwrapResultMessage(parsed);
+
+        if (typeof unwrapped === 'string' && unwrapped.trim()) {
+          isJsonObject = false;
+          messageToStream = unwrapped;
+        } else if (typeof parsed === 'object' && parsed !== null) {
           isJsonObject = true;
           messageToStream = fullMessage;
         } else {
@@ -186,7 +248,15 @@ export const handleSSEMessage = (
 
     startBotMessage(chatId, '');
 
-    if (isJsonObject) {
+    const imageBlockRegex = /:::image\n[\s\S]*?\n:::/g;
+    if (imageBlockRegex.test(streamContent)) {
+      streamBotMessage(chatId, streamContent);
+      if (setSuggestions) setSuggestions(suggestions);
+      endBotMessage(chatId);
+      return;
+    }
+
+    if (isJsonObject && !hasImages) {
       const skeleton = generateJsonSkeleton(JSON.parse(messageToStream));
       const skeletonContent = `:::json-skeleton\n${skeleton}\n:::`;
       streamBotMessage(chatId, skeletonContent);
@@ -196,7 +266,7 @@ export const handleSSEMessage = (
         streamBotMessage(chatId, streamContent);
         if (setSuggestions) setSuggestions(suggestions);
         endBotMessage(chatId);
-      }, 1000);
+      }, 2000);
 
       return () => clearTimeout(timeoutId);
     }
@@ -228,7 +298,7 @@ export const handleSSEMessage = (
 
       streamBotMessage(chatId, chunk);
       index += chunk.length;
-      timeoutId = setTimeout(sendNextChunk, 20);
+      timeoutId = setTimeout(sendNextChunk, 50);
     };
 
     sendNextChunk();
@@ -236,33 +306,107 @@ export const handleSSEMessage = (
   };
 
   switch (data.type) {
-    case 'start':
+    case 'start': {
       setSessionId(chatId, data.session_id);
       break;
-    case 'typing':
+    }
+
+    case 'typing': {
       break;
+    }
 
-    // case 'message_start':
-    //   break;
+    case 'message_start': {
+      break;
+    }
 
-    case 'chat_response':
+    case 'chat_response': {
       setCurrentEvent(chatId, null, '');
-      initiateBotMessage(chatId, data.message);
-      fakeStream(data.message, data.next_step_questions || []);
-      break;
 
-    case 'error':
+      const hasImages = data.images && Array.isArray(data.images) && data.images.length > 0;
+
+      const currentChat = useChatStore.getState().chats[chatId];
+      const lastConversation = currentChat?.conversations?.[currentChat.conversations.length - 1];
+
+      const hasImageSkeleton =
+        lastConversation?.type === 'bot' &&
+        lastConversation?.message?.includes(':::image-skeleton');
+
+      const hasExistingBotMessage =
+        currentChat?.conversations?.length > 0 && lastConversation?.type === 'bot';
+
+      let contentWithImages = data.message;
+
+      if (hasImages) {
+        contentWithImages = contentWithImages.replace(/!\[.*?\]\(.*?\)/g, '').trim();
+
+        const urlPattern = /(https?:\/\/[^\s]+)/g;
+        contentWithImages = contentWithImages.replace(urlPattern, '').trim();
+
+        contentWithImages = contentWithImages.replace(/Here's your image:?/gi, '').trim();
+        contentWithImages = contentWithImages.replace(/Image:?/gi, '').trim();
+
+        contentWithImages = contentWithImages.replace(/\n\s*\n/g, '\n').trim();
+
+        data.images.forEach((img: any, index: number) => {
+          const separator = contentWithImages ? '\n\n' : '';
+          if (img.base64) {
+            contentWithImages += `${separator}![Generated Image ${index + 1}](data:image/${img.format || 'png'};base64,${img.base64})`;
+          } else if (img.url || img.image_url) {
+            const imageUrl = img.url || img.image_url;
+            contentWithImages += `${separator}![Generated Image ${index + 1}](${imageUrl})`;
+          }
+        });
+
+        const displayImage = () => {
+          if (!hasExistingBotMessage) {
+            initiateBotMessage(chatId, contentWithImages);
+          } else {
+            startBotMessage(chatId, contentWithImages);
+          }
+          if (setSuggestions) setSuggestions(data.next_step_questions || []);
+          endBotMessage(chatId);
+        };
+
+        if (hasImageSkeleton) {
+          setTimeout(displayImage, 300);
+        } else {
+          displayImage();
+        }
+      } else {
+        if (!hasExistingBotMessage) {
+          initiateBotMessage(chatId, '');
+        }
+
+        const urlRegex = /(https?:\/\/[^\s]+\.(?:png|jpg|jpeg|gif|webp)[^\s]*)/gi;
+        const urlMatches = contentWithImages.match(urlRegex);
+
+        if (urlMatches && urlMatches.length > 0) {
+          urlMatches.forEach((url: string) => {
+            contentWithImages = contentWithImages.replace(url, `\n\n![Image](${url})`);
+          });
+        }
+
+        fakeStream(contentWithImages, data.next_step_questions || [], false);
+      }
+      break;
+    }
+
+    case 'error': {
       setCurrentEvent(chatId, null, '');
       initiateBotMessage(chatId, data.message);
       setBotErrorMessage(chatId, data.message);
       endBotMessage(chatId);
       break;
+    }
 
     case 'message_end':
-    case 'workflow_end':
+    case 'workflow_end': {
       setCurrentEvent(chatId, null, '');
       setBotThinking(chatId, false);
       break;
+    }
+
     default:
+      break;
   }
 };
