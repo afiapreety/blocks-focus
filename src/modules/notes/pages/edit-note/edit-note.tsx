@@ -23,8 +23,10 @@ import { useAuthStore } from '@/state/store/auth';
 import { cn } from '@/lib/utils';
 import { NoteAIActions } from '../../components/notes-ai/notes-ai-actions/notes-ai-actions';
 import { useNoteAIEnhancement } from '../../hooks/use-notes-ai';
-import { SelectModelType } from '@/modules/gpt-chats/hooks/use-chat-store';
+import { SelectModelType } from '@/modules/gpt-chats/types/chat-store.types';
 import { NotesChatPanel } from '../../components/notes-ai/notes-chat-panel/notes-chat-panel';
+import { useUnsavedChanges } from '../../hooks/use-unsaved-changes';
+import { UnsavedChangesDialog } from '../../components/unsaved-changes-dialog/unsaved-changes-dialog';
 
 export function EditNotePage() {
   const navigate = useNavigate();
@@ -47,6 +49,9 @@ export function EditNotePage() {
     provider: 'azure',
     model: 'gpt-4o-mini',
   });
+  const [initialContent, setInitialContent] = useState('');
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [trackChanges, setTrackChanges] = useState(false);
 
   const {
     canUndo,
@@ -69,26 +74,59 @@ export function EditNotePage() {
     isMarkdownMode: true,
   });
 
+  const { showDialog, handleClose, handleDiscard, allowNavigation } = useUnsavedChanges(
+    hasUnsavedChanges,
+    () => {
+      setContent(initialContent);
+      setHasUnsavedChanges(false);
+    }
+  );
+
   const handleModelChange = (value: SelectModelType | undefined) => {
     setSelectedModel(value);
   };
 
   useEffect(() => {
     if (note) {
-      let initialContent = '';
+      let loadedContent = '';
       if (note.NoteData?.NoteContent?.md) {
-        initialContent = markdownToHtml(note.NoteData.NoteContent.md);
+        loadedContent = markdownToHtml(note.NoteData.NoteContent.md);
       } else if (note.NoteData?.NoteContent?.html) {
-        initialContent = note.NoteData.NoteContent.html;
+        loadedContent = note.NoteData.NoteContent.html;
       } else if (note.Content) {
-        initialContent = note.Content;
+        loadedContent = note.Content;
       }
-      setContent(initialContent);
-      resetHistory(initialContent);
+      setContent(loadedContent);
+      resetHistory(loadedContent);
       setIsPrivate(note.IsPrivate ?? true);
       setContentLoaded(true);
+      setTrackChanges(false);
     }
   }, [note, resetHistory]);
+
+  useEffect(() => {
+    if (contentLoaded && !trackChanges && content) {
+      const timer = setTimeout(() => {
+        setInitialContent(content);
+        setTrackChanges(true);
+      }, 1000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [contentLoaded, trackChanges, content]);
+
+  useEffect(() => {
+    if (contentLoaded && trackChanges) {
+      const normalizeHtml = (html: string) => {
+        return html.replace(/\s+/g, ' ').replace(/>\s+</g, '><').trim();
+      };
+
+      const normalizedContent = normalizeHtml(content);
+      const normalizedInitial = normalizeHtml(initialContent);
+      const hasChanges = normalizedContent !== normalizedInitial;
+      setHasUnsavedChanges(hasChanges);
+    }
+  }, [content, initialContent, contentLoaded, trackChanges]);
 
   const extractTitle = (html: string): string => {
     const tempDiv = document.createElement('div');
@@ -122,6 +160,7 @@ export function EditNotePage() {
 
   const handleConfirmDelete = () => {
     if (noteId) {
+      allowNavigation();
       const filter = JSON.stringify({ _id: noteId });
       deleteNote(
         { filter, input: { isHardDelete: true } },
@@ -189,6 +228,9 @@ export function EditNotePage() {
       },
       {
         onSuccess: () => {
+          allowNavigation(false);
+          setHasUnsavedChanges(false);
+          setInitialContent(content);
           queryClient.removeQueries({
             predicate: (query) => query.queryKey[0] === 'notes' || query.queryKey[0] === 'note',
           });
@@ -388,6 +430,13 @@ export function EditNotePage() {
         onConfirm={handleConfirmDelete}
         confirmText="Delete"
         cancelText="Cancel"
+      />
+
+      <UnsavedChangesDialog
+        open={showDialog}
+        onClose={handleClose}
+        onDiscard={handleDiscard}
+        onSave={handleSave}
       />
     </>
   );
