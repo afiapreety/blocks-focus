@@ -110,6 +110,7 @@ const MarkdownCode = ({
 
 const MarkdownImage: Components['img'] = ({ src, alt, ...props }) => {
   const [downloaded, setDownloaded] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   const handleDownload = async () => {
     if (!src) return;
@@ -135,6 +136,7 @@ const MarkdownImage: Components['img'] = ({ src, alt, ...props }) => {
       console.error('Download failed:', error);
     }
   };
+
   return (
     <div className="max-w-lg rounded-lg border overflow-hidden">
       <div className="flex items-center justify-between px-4 py-2 bg-card ">
@@ -157,12 +159,19 @@ const MarkdownImage: Components['img'] = ({ src, alt, ...props }) => {
           )}
         </button>
       </div>
-      <div className="bg-white">
+      <div className="bg-white relative min-h-[300px] sm:min-h-[400px] md:min-h-[512px] flex items-center justify-center">
+        {!isLoaded && (
+          <div className="absolute inset-0 flex items-center justify-center bg-muted/50 animate-pulse">
+            <div className="text-muted-foreground text-sm">Loading image...</div>
+          </div>
+        )}
         <img
-          loading="lazy"
+          loading="eager"
           alt={alt}
           src={src}
           className="h-auto max-w-[512px] w-full my-0 object-contain"
+          onLoad={() => setIsLoaded(true)}
+          style={{ opacity: isLoaded ? 1 : 0, transition: 'opacity 0.3s ease-in-out' }}
           {...props}
         />
       </div>
