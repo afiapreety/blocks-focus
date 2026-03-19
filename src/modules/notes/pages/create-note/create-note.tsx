@@ -18,9 +18,11 @@ import { useAuthStore } from '@/state/store/auth';
 import { NoteAIActions } from '../../components/notes-ai/notes-ai-actions/notes-ai-actions';
 import { useNoteAIEnhancement } from '../../hooks/use-notes-ai';
 import { htmlToMarkdown } from '../../utils/html-to-markdown';
-import { SelectModelType } from '@/modules/gpt-chats/hooks/use-chat-store';
+import { SelectModelType } from '@/modules/gpt-chats/types/chat-store.types';
 import { NotesChatPanel } from '../../components/notes-ai/notes-chat-panel/notes-chat-panel';
 import { cn } from '@/lib/utils';
+import { useUnsavedChanges } from '../../hooks/use-unsaved-changes';
+import { UnsavedChangesDialog } from '../../components/unsaved-changes-dialog/unsaved-changes-dialog';
 
 export function CreateNotePage() {
   const { toast } = useToast();
@@ -37,6 +39,9 @@ export function CreateNotePage() {
     provider: 'azure',
     model: 'gpt-4o-mini',
   });
+  const [initialContent, setInitialContent] = useState('');
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [trackChanges, setTrackChanges] = useState(false);
 
   const {
     canUndo,
@@ -50,7 +55,34 @@ export function CreateNotePage() {
 
   useEffect(() => {
     resetHistory('');
+    // Start tracking changes after a delay to allow editor to initialize
+    const timer = setTimeout(() => {
+      setInitialContent('');
+      setTrackChanges(true);
+    }, 1000);
+
+    return () => clearTimeout(timer);
   }, [resetHistory]);
+
+  useEffect(() => {
+    if (trackChanges) {
+      const normalizeHtml = (html: string) => {
+        return html.replace(/\s+/g, ' ').replace(/>\s+</g, '><').trim();
+      };
+
+      const normalizedContent = normalizeHtml(content);
+      const normalizedInitial = normalizeHtml(initialContent);
+
+      // Extract text content to check if there's actual content
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = content;
+      const textContent = tempDiv.textContent || '';
+      const hasActualContent = textContent.trim().length > 0;
+
+      const hasChanges = hasActualContent && normalizedContent !== normalizedInitial;
+      setHasUnsavedChanges(hasChanges);
+    }
+  }, [content, initialContent, trackChanges]);
   const { handleDownload } = useNoteActions();
 
   const { isEnhancing, handleEnhanceWithAI } = useNoteAIEnhancement({
@@ -58,6 +90,15 @@ export function CreateNotePage() {
     setContent,
     isMarkdownMode: true,
   });
+
+  const { showDialog, handleClose, handleDiscard, allowNavigation } = useUnsavedChanges(
+    hasUnsavedChanges,
+    () => {
+      setContent('');
+      setInitialContent('');
+      setHasUnsavedChanges(false);
+    }
+  );
 
   const handleModelChange = (value: SelectModelType | undefined) => {
     setSelectedModel(value);
@@ -125,6 +166,9 @@ export function CreateNotePage() {
       },
       {
         onSuccess: () => {
+          allowNavigation(false);
+          setHasUnsavedChanges(false);
+          setInitialContent(content);
           queryClient.removeQueries({
             predicate: (query) => query.queryKey[0] === 'notes',
           });
@@ -279,6 +323,13 @@ export function CreateNotePage() {
           />
         </div>
       )}
+
+      <UnsavedChangesDialog
+        open={showDialog}
+        onClose={handleClose}
+        onDiscard={handleDiscard}
+        onSave={handleSave}
+      />
     </div>
   );
 }

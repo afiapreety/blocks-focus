@@ -111,7 +111,6 @@ export const handleSSEMessage = (
     streamBotMessage,
     endBotMessage,
     initiateBotMessage,
-    setBotErrorMessage,
     setCurrentEvent,
     setBotThinking,
     setSessionId,
@@ -139,20 +138,37 @@ export const handleSSEMessage = (
 
   if (normalizedType === 'task_progress' && data.task_action === 'generate_image') {
     const imageSkeletonContent = `:::image-skeleton\nGenerating image...\n:::`;
-    setCurrentEvent(chatId, null, '');
-    setBotThinking(chatId, true);
 
-    const currentChat = useChatStore.getState().chats[chatId];
+    // Resolve the actual chatId - if chat doesn't exist with given chatId, use activeChatId
+    let state = useChatStore.getState();
+    let actualChatId = chatId;
+    if (!state.chats[chatId] && state.activeChatId) {
+      actualChatId = state.activeChatId;
+    }
+
+    // If chat still doesn't exist, it might be a timing issue - refresh state
+    if (!state.chats[actualChatId]) {
+      state = useChatStore.getState();
+    }
+
+    setCurrentEvent(actualChatId, null, '');
+    setBotThinking(actualChatId, true);
+
+    const currentChat = state.chats[actualChatId];
     const lastConversation = currentChat?.conversations?.[currentChat.conversations.length - 1];
+
+    if (!currentChat) {
+      initiateBotMessage(actualChatId, '');
+    }
 
     const skeletonAlreadyShown =
       lastConversation?.type === 'bot' && lastConversation?.message?.includes(':::image-skeleton');
 
     if (!skeletonAlreadyShown) {
       if (!currentChat?.conversations?.length || lastConversation?.type !== 'bot') {
-        initiateBotMessage(chatId, imageSkeletonContent);
+        initiateBotMessage(actualChatId, imageSkeletonContent);
       } else {
-        startBotMessage(chatId, imageSkeletonContent);
+        startBotMessage(actualChatId, imageSkeletonContent);
       }
     }
 
@@ -324,47 +340,101 @@ export const handleSSEMessage = (
 
       const hasImages = data.images && Array.isArray(data.images) && data.images.length > 0;
 
-      const currentChat = useChatStore.getState().chats[chatId];
+      const state = useChatStore.getState();
+      let actualChatId = chatId;
+      if (!state.chats[chatId] && state.activeChatId) {
+        actualChatId = state.activeChatId;
+      }
+
+      const currentChat = state.chats[actualChatId];
       const lastConversation = currentChat?.conversations?.[currentChat.conversations.length - 1];
 
+      // Robust regex detection for skeleton, handling quotes, spaces, and different dashes
+      const skeletonRegex = /:::image\s*[-–—]?\s*skeleton|image\s*[-–—]\s*skeleton/i;
       const hasImageSkeleton =
         lastConversation?.type === 'bot' &&
-        lastConversation?.message?.includes(':::image-skeleton');
+        lastConversation?.message &&
+        (lastConversation.message.includes(':::image-skeleton') ||
+          skeletonRegex.test(lastConversation.message));
 
       const hasExistingBotMessage =
         currentChat?.conversations?.length > 0 && lastConversation?.type === 'bot';
+
+      // Early validation - if chat doesn't exist now, we can't proceed
+      if (!currentChat) {
+        console.error('[ERROR] Chat does not exist in store during chat_response', {
+          chatId,
+          actualChatId,
+          availableChats: Object.keys(state.chats),
+          activeChatId: state.activeChatId,
+        });
+        return;
+      }
 
       let contentWithImages = data.message;
 
       if (hasImages) {
         contentWithImages = contentWithImages.replace(/!\[.*?\]\(.*?\)/g, '').trim();
 
+        contentWithImages = contentWithImages
+          .replace(/\[.*?\]\((https?:\/\/[^\s)]+)\)/g, '')
+          .trim();
+
         const urlPattern = /(https?:\/\/[^\s]+)/g;
         contentWithImages = contentWithImages.replace(urlPattern, '').trim();
 
-        contentWithImages = contentWithImages.replace(/Here's your image:?/gi, '').trim();
-        contentWithImages = contentWithImages.replace(/Image:?/gi, '').trim();
+        contentWithImages = contentWithImages
+          .replace(/Here's your image:?\s*/gi, "Here's your ")
+          .trim();
+        contentWithImages = contentWithImages.replace(/\bImage link:?\s*/gi, '').trim();
+        contentWithImages = contentWithImages.replace(/^Image:?\s*/gim, '').trim();
 
         contentWithImages = contentWithImages.replace(/\n\s*\n/g, '\n').trim();
 
         data.images.forEach((img: any, index: number) => {
           const separator = contentWithImages ? '\n\n' : '';
           if (img.base64) {
-            contentWithImages += `${separator}![Generated Image ${index + 1}](data:image/${img.format || 'png'};base64,${img.base64})`;
+            const imageMarkdown = `![Generated Image ${index + 1}](data:image/${img.format || 'png'};base64,${img.base64})`;
+            contentWithImages += `${separator}:::image\n${imageMarkdown}\n:::`;
           } else if (img.url || img.image_url) {
             const imageUrl = img.url || img.image_url;
-            contentWithImages += `${separator}![Generated Image ${index + 1}](${imageUrl})`;
+            const imageMarkdown = `![Generated Image ${index + 1}](${imageUrl})`;
+            contentWithImages += `${separator}:::image\n${imageMarkdown}\n:::`;
           }
         });
 
         const displayImage = () => {
-          if (!hasExistingBotMessage) {
-            initiateBotMessage(chatId, contentWithImages);
-          } else {
-            startBotMessage(chatId, contentWithImages);
+          // Get the current active chat ID in case migration happened
+          const currentState = useChatStore.getState();
+          const currentChatId = currentState.activeChatId || actualChatId;
+          const currentChatExists = !!currentState.chats[currentChatId];
+
+          if (!currentChatExists) {
+            console.error('[ERROR] Chat does not exist after migration check', {
+              currentChatId,
+              availableChats: Object.keys(currentState.chats),
+            });
+            return;
           }
-          if (setSuggestions) setSuggestions(data.next_step_questions || []);
-          endBotMessage(chatId);
+
+          // Always replace the skeleton if it exists
+          if (hasImageSkeleton) {
+            startBotMessage(currentChatId, contentWithImages);
+
+            // Delay endBotMessage to ensure state update is processed
+            setTimeout(() => {
+              if (setSuggestions) setSuggestions(data.next_step_questions || []);
+              endBotMessage(currentChatId);
+            }, 50);
+          } else if (!hasExistingBotMessage) {
+            initiateBotMessage(currentChatId, contentWithImages);
+            if (setSuggestions) setSuggestions(data.next_step_questions || []);
+            endBotMessage(currentChatId);
+          } else {
+            startBotMessage(currentChatId, contentWithImages);
+            if (setSuggestions) setSuggestions(data.next_step_questions || []);
+            endBotMessage(currentChatId);
+          }
         };
 
         if (hasImageSkeleton) {
@@ -373,29 +443,63 @@ export const handleSSEMessage = (
           displayImage();
         }
       } else {
-        if (!hasExistingBotMessage) {
-          initiateBotMessage(chatId, '');
-        }
+        // Handle images embedded in text (markdown links or naked URLs)
 
+        // 1. Convert Markdown Links that point to images: [Alt](url.png) -> :::image\n![Alt](url.png)\n:::
+        const markdownLinkRegex = /\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/gi;
+
+        contentWithImages = contentWithImages.replace(
+          markdownLinkRegex,
+          (match: string, alt: string, url: string) => {
+            // Check if the URL looks like an image (extension or common image parameters if any)
+            if (/\.(png|jpg|jpeg|gif|webp)(\?.*)?$/i.test(url)) {
+              const imageMarkdown = `![${alt}](${url})`;
+              return `\n\n:::image\n${imageMarkdown}\n:::`;
+            }
+            return match; // Keep as a link if not an image
+          }
+        );
+
+        // 2. Convert naked URLs that look like images: https://.../image.png -> :::image\n![Image](url)\n:::
         const urlRegex = /(https?:\/\/[^\s]+\.(?:png|jpg|jpeg|gif|webp)[^\s]*)/gi;
-        const urlMatches = contentWithImages.match(urlRegex);
 
-        if (urlMatches && urlMatches.length > 0) {
-          urlMatches.forEach((url: string) => {
-            contentWithImages = contentWithImages.replace(url, `\n\n![Image](${url})`);
-          });
+        contentWithImages = contentWithImages.replace(
+          urlRegex,
+          (match: string, url: string, offset: number, string: string) => {
+            // Check context: if this URL is inside a markdown link/image (preceded by '(' or ']('), skip it.
+            const precedingChar = string[offset - 1];
+            const precedingTwoChars = string.slice(offset - 2, offset);
+
+            if (
+              precedingChar === '(' ||
+              precedingTwoChars === '](' ||
+              precedingChar === '"' ||
+              precedingChar === "'"
+            ) {
+              return match;
+            }
+
+            const imageMarkdown = `![Image](${url})`;
+            return `\n\n:::image\n${imageMarkdown}\n:::`;
+          }
+        );
+
+        // Get the current active chat ID in case migration happened
+        const currentState = useChatStore.getState();
+        const currentChatId = currentState.activeChatId || actualChatId;
+
+        // If we have a skeleton, we MUST replace it, regardless of whether we stream or not
+        if (hasImageSkeleton) {
+          startBotMessage(currentChatId, contentWithImages);
+          if (setSuggestions) setSuggestions(data.next_step_questions || []);
+          endBotMessage(currentChatId);
+        } else {
+          if (!hasExistingBotMessage) {
+            initiateBotMessage(currentChatId, '');
+          }
+          fakeStream(contentWithImages, data.next_step_questions || [], false);
         }
-
-        fakeStream(contentWithImages, data.next_step_questions || [], false);
       }
-      break;
-    }
-
-    case 'error': {
-      setCurrentEvent(chatId, null, '');
-      initiateBotMessage(chatId, data.message);
-      setBotErrorMessage(chatId, data.message);
-      endBotMessage(chatId);
       break;
     }
 

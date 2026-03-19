@@ -3,6 +3,7 @@ import remarkGfm from 'remark-gfm';
 import { ImageIcon, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MarkdownComponentsMap } from './markdown-components-map';
+import { Skeleton } from '@/components/ui-kit/skeleton';
 
 type MarkdownRendererProps = {
   content: string;
@@ -11,21 +12,44 @@ type MarkdownRendererProps = {
 };
 
 const unwrapResultFromContent = (value: string) => {
-  try {
-    const parsed = JSON.parse(value);
-    if (!parsed || typeof parsed !== 'object') return value;
+  // First, try to unwrap JSON-stringified content
+  let unwrapped = value;
+  let attempts = 0;
+  const maxAttempts = 3; // Prevent infinite loops
 
-    const obj = parsed as Record<string, unknown>;
-    const result = obj.result;
+  // Keep unwrapping until we get a non-JSON string or hit max attempts
+  while (attempts < maxAttempts) {
+    try {
+      const parsed = JSON.parse(unwrapped);
 
-    if (typeof result === 'string' && result.trim()) {
-      return result;
+      // If parsed result is a string, it was stringified - unwrap it
+      if (typeof parsed === 'string') {
+        unwrapped = parsed;
+        attempts++;
+        continue;
+      }
+
+      // If it's an object with a 'result' property, extract it
+      if (parsed && typeof parsed === 'object') {
+        const obj = parsed as Record<string, unknown>;
+        const result = obj.result;
+
+        if (typeof result === 'string' && result.trim()) {
+          unwrapped = result;
+          attempts++;
+          continue;
+        }
+      }
+
+      // If we get here, it's an object but not what we're looking for
+      break;
+    } catch {
+      // Not JSON, we're done unwrapping
+      break;
     }
-
-    return value;
-  } catch {
-    return value;
   }
+
+  return unwrapped;
 };
 
 const normalizeQuoteToBlockquote = (text: string): string => {
@@ -127,62 +151,51 @@ const JsonSkeletonBlock = ({ content }: { content: string }) => {
 const ImageSkeletonBlock = () => {
   return (
     <div className="max-w-[512px] w-full rounded-lg border overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-2 bg-card ">
-        <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+      <div className="flex items-center justify-between px-4 py-2 bg-card">
+        <Skeleton className="h-4 w-32" />
         <div className="w-10 sm:w-60"></div>
         <button
           disabled
-          className="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs bg-white border border-gray-300 opacity-50 cursor-not-allowed ml-2 flex-shrink-0"
+          className="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs bg-card border opacity-50 cursor-not-allowed ml-2 flex-shrink-0"
           title="Download image"
         >
-          <Download className="h-3.5 w-3.5 text-gray-400" />
-          <span className="text-gray-400">Download</span>
+          <Download className="h-3.5 w-3.5 text-muted-foreground" />
+          <span className="text-muted-foreground">Download</span>
         </button>
       </div>
 
-      <div className="bg-white w-full">
-        <div className="w-full h-[300px] sm:h-[400px] md:h-[512px] relative overflow-hidden bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800">
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              background:
-                'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%)',
-              backgroundSize: '200% 100%',
-              animation: 'shimmer 2s infinite linear',
-            }}
-          />
-
+      <div className="bg-card w-full">
+        <Skeleton className="w-full h-[300px] sm:h-[400px] md:h-[512px] rounded-none relative">
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
             <div className="relative">
               <ImageIcon
-                className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400 dark:text-gray-500"
+                className="w-12 h-12 sm:w-16 sm:h-16 text-muted-foreground/60"
                 strokeWidth={1.5}
               />
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+              <span className="text-xs sm:text-sm font-medium text-muted-foreground/80">
                 Generating image
               </span>
               <div className="flex items-center gap-1">
                 <div
-                  className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-gray-500 dark:bg-gray-400 "
-                  // style={{ animationDelay: '0s', animationDuration: '1s' }}
+                  className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-primary/60 animate-bounce"
+                  style={{ animationDelay: '0s', animationDuration: '1.4s' }}
                 />
-                <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-gray-500 dark:bg-gray-400 " />
-                <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-gray-500 dark:bg-gray-400 " />
+                <div
+                  className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-primary/60 animate-bounce"
+                  style={{ animationDelay: '0.2s', animationDuration: '1.4s' }}
+                />
+                <div
+                  className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-primary/60 animate-bounce"
+                  style={{ animationDelay: '0.4s', animationDuration: '1.4s' }}
+                />
               </div>
             </div>
           </div>
-        </div>
+        </Skeleton>
       </div>
-
-      <style>{`
-        @keyframes shimmer {
-          0% { background-position: 200% 0; }
-          100% { background-position: -200% 0; }
-        }
-      `}</style>
     </div>
   );
 };
@@ -196,24 +209,27 @@ export const MarkdownRenderer = ({
   const quoteNormalized = isStreaming
     ? unwrappedContent
     : normalizeQuoteToBlockquote(unwrappedContent);
-  // Don't wrap checklists in code blocks - let them render as normal markdown
-  const normalizedContent = quoteNormalized;
-  const blockRegex = /:::(json|json-skeleton|image-skeleton|image)\n([\s\S]*?)\n:::/g;
-  const hasSpecialBlock = blockRegex.test(normalizedContent);
 
+  // Check for special blocks first before any other processing
+  // Handle both regular hyphens, en-dashes, and em-dashes in block names, with optional spaces
+  const specialBlockRegex =
+    /:::(json|json\s*[-–—]\s*skeleton|image\s*[-–—]\s*skeleton|image)(?:\n([\s\S]*?)\n:::|\s+(.*?)\s*:::)/g;
+  const hasSpecialBlock = specialBlockRegex.test(quoteNormalized);
+
+  // If we have special blocks, process them directly without going through markdown
   if (hasSpecialBlock) {
     const parts: React.ReactNode[] = [];
     let lastIndex = 0;
     let match;
 
-    blockRegex.lastIndex = 0;
+    specialBlockRegex.lastIndex = 0;
 
-    while ((match = blockRegex.exec(normalizedContent)) !== null) {
+    while ((match = specialBlockRegex.exec(quoteNormalized)) !== null) {
       const blockType = match[1];
-      const blockContent = match[2];
+      const blockContent = match[2] || match[3] || '';
 
       if (match.index > lastIndex) {
-        const textBefore = normalizedContent.slice(lastIndex, match.index);
+        const textBefore = quoteNormalized.slice(lastIndex, match.index);
         if (textBefore.trim()) {
           parts.push(
             <ReactMarkdown
@@ -227,8 +243,22 @@ export const MarkdownRenderer = ({
         }
       }
 
-      if (blockType === 'image-skeleton') {
+      // Normalize block type to handle spaces and dashes
+      const normalizedBlockType = blockType.replace(/\s*[-–—]\s*/g, '-');
+
+      if (normalizedBlockType === 'image-skeleton') {
         parts.push(<ImageSkeletonBlock key={`image-skeleton-${match.index}`} />);
+      } else if (normalizedBlockType === 'image') {
+        // Render the markdown image content inside the image block
+        parts.push(
+          <ReactMarkdown
+            key={`image-${match.index}`}
+            remarkPlugins={[remarkGfm]}
+            components={MarkdownComponentsMap}
+          >
+            {blockContent}
+          </ReactMarkdown>
+        );
       } else {
         parts.push(<JsonSkeletonBlock key={`skeleton-${match.index}`} content={blockContent} />);
       }
@@ -236,8 +266,8 @@ export const MarkdownRenderer = ({
       lastIndex = match.index + match[0].length;
     }
 
-    if (lastIndex < normalizedContent.length) {
-      const textAfter = normalizedContent.slice(lastIndex);
+    if (lastIndex < quoteNormalized.length) {
+      const textAfter = quoteNormalized.slice(lastIndex);
       if (textAfter.trim()) {
         parts.push(
           <ReactMarkdown
@@ -273,6 +303,7 @@ export const MarkdownRenderer = ({
     );
   }
 
+  // No special blocks found, render normal markdown
   return (
     <div
       className={cn(
@@ -291,7 +322,7 @@ export const MarkdownRenderer = ({
       )}
     >
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponentsMap}>
-        {normalizedContent}
+        {quoteNormalized}
       </ReactMarkdown>
     </div>
   );

@@ -658,11 +658,14 @@ export const useChatStore = create<ChatStore>()(
           const lastIndex = conversations.length - 1;
           const last = conversations[lastIndex];
 
-          if (last.type === 'bot' && last.streaming) {
+          // Allow updating if it's a bot message, even if streaming flag might be desync (e.g. after refresh)
+          if (last.type === 'bot') {
             conversations[lastIndex] = {
               ...last,
               message: chunk,
               timestamp: new Date().toISOString(),
+              // Ensure streaming is true if we are starting a message
+              streaming: true,
             };
           }
 
@@ -807,6 +810,15 @@ export const useChatStore = create<ChatStore>()(
       ) => {
         const state = get();
         const chat = state.chats[id];
+
+        if (!chat) {
+          console.error('[ERROR] generateBotMessage: Chat not found in store', {
+            id,
+            availableChats: Object.keys(state.chats),
+            activeChatId: state.activeChatId,
+          });
+          return;
+        }
 
         state.setBotThinking(id, true);
         if (setSuggestions) setSuggestions([]);
