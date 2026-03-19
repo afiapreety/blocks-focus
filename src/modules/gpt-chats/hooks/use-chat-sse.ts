@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from 'react';
-import { onlineManager } from '@tanstack/react-query';
+import { onlineManager, useQueryClient } from '@tanstack/react-query';
 import { ChatFileMetadata, ProcessFilesCallback, SelectModelType } from '../types/chat-store.types';
 import { useGetConversationById } from './use-conversation-api';
 import { useGetAgentConversationSessionById } from './use-agent-conversation';
@@ -17,6 +17,7 @@ const projectKey = import.meta.env.VITE_X_BLOCKS_KEY || '';
 const projectSlug = import.meta.env.VITE_PROJECT_SLUG || '';
 
 export const useChatSSE = ({ chatId = '', agentId = null, widgetId = null }: UseChatSSE) => {
+  const queryClient = useQueryClient();
   const {
     chats,
     loadChat,
@@ -62,6 +63,7 @@ export const useChatSSE = ({ chatId = '', agentId = null, widgetId = null }: Use
 
   const { data: modelChatData, isFetching: isFetchingModelChat } = useGetConversationById({
     allow_created_by_filter: true,
+    is_minimal: false,
     call_from: projectSlug,
     project_key: projectKey,
     session_id: activeChatId,
@@ -122,17 +124,24 @@ export const useChatSSE = ({ chatId = '', agentId = null, widgetId = null }: Use
         data.setSuggestions,
         data.files,
         false,
-        processFilesCallback
+        processFilesCallback,
+        queryClient
       );
     },
-    [activeChatId, generateFromStore, processFilesCallback]
+    [activeChatId, generateFromStore, processFilesCallback, queryClient]
   );
 
   const sendMessage = useCallback(
     async (data: { message: string; files?: ChatFileMetadata[] }) => {
-      await sendFromStore(activeChatId, data.message, data.files, processFilesCallback);
+      await sendFromStore(
+        activeChatId,
+        data.message,
+        data.files,
+        processFilesCallback,
+        queryClient
+      );
     },
-    [activeChatId, sendFromStore, processFilesCallback]
+    [activeChatId, sendFromStore, processFilesCallback, queryClient]
   );
 
   const onModelChange = useCallback(
@@ -158,7 +167,6 @@ export const useChatSSE = ({ chatId = '', agentId = null, widgetId = null }: Use
     isBotStreaming,
     selectedModel,
     selectedTools,
-
     onModelChange,
     onToolsChange,
     generateBotMessage,

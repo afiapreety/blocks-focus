@@ -4,14 +4,14 @@ import { ArrowUp, FileText, X, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { GroupedModelSelector } from './model-selector';
 import { ToolsSelector } from './tools-selector';
-import { MoreMenu } from './more-menu';
-import { Tooltip, TooltipTrigger } from '@/components/ui-kit/tooltip';
-import { useSidebar } from '@/components/ui-kit/sidebar';
+import { UploadFile } from './upload-file';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui-kit/tooltip';
 import { useTranslation } from 'react-i18next';
-import { SelectModelType, ChatFileMetadata } from '../../hooks/use-chat-store';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useGetPreSignedUrlForUpload } from '@/lib/api/hooks/use-storage';
+import { ChatFileMetadata, SelectModelType } from '../../types/chat-store.types';
+import { formatFileSize } from '../../utils/format-file-size';
 
 interface GptChatInputProps {
   onSendMessage: (message: string, files?: ChatFileMetadata[]) => void;
@@ -47,7 +47,6 @@ export const GptChatInput = ({
   const [message, setMessage] = useState('');
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set());
-  const { state } = useSidebar();
   const { t } = useTranslation();
   const { toast } = useToast();
   const uploadMutation = useGetPreSignedUrlForUpload();
@@ -163,15 +162,13 @@ export const GptChatInput = ({
   return (
     <div
       className={cn(
-        'fixed bottom-0 left-0 right-0 z-10',
-        state === 'collapsed' ? 'md:ml-16 lg:ml-16 xl:ml-16' : 'md:ml-64 lg:ml-64 xl:ml-60',
+        'sticky bottom-0 w-full z-10',
+        variant === 'chat-details' ? 'bg-background/95 backdrop-blur-sm' : '',
         className
       )}
     >
       <div
-        className={`w-full mx-auto px-4  pb-4  max-w-4xl xl:max-w-5xl ${
-          variant === 'chat-details' ? ' bg-background backdrop-blur-3xl' : ''
-        }`}
+        className={`w-full px-2 md:px-6 lg:px-8 pb-4 ${variant !== 'chat-details' && 'max-w-4xl mx-auto'}`}
       >
         <div className="bg-card relative rounded-3xl border-2 border-border hover:border-primary focus-within:border-primary">
           {uploadedFiles.length > 0 && (
@@ -179,13 +176,7 @@ export const GptChatInput = ({
               {uploadedFiles.map((uploadedFile, index) => {
                 const isUploading = uploadingFiles.has(uploadedFile.file.name);
                 const hasError = !uploadedFile.fileId && !isUploading;
-                const fileSizeKB = uploadedFile.file.size / 1024;
-                const fileSizeDisplay =
-                  fileSizeKB >= 1024
-                    ? `${(fileSizeKB / 1024).toFixed(1)} MB`
-                    : fileSizeKB >= 1
-                      ? `${fileSizeKB.toFixed(1)} KB`
-                      : `${uploadedFile.file.size} B`;
+                const fileSizeDisplay = formatFileSize(uploadedFile.file.size);
 
                 return (
                   <div
@@ -261,7 +252,6 @@ export const GptChatInput = ({
 
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 sm:px-6 pb-3 pt-2 border-t border-border/50 gap-2 sm:gap-0">
             <div className="flex items-center gap-2 flex-wrap">
-              {!isAgentChat && <MoreMenu onUploadFiles={handleUploadFiles} />}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div>
@@ -279,9 +269,20 @@ export const GptChatInput = ({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <div>
+                      <UploadFile onUploadFiles={handleUploadFiles} />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>Attach File</TooltipContent>
+                </Tooltip>
+              )}
+              {!isAgentChat && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
                       <ToolsSelector value={selectedTools} onChange={onToolsChange} />
                     </div>
                   </TooltipTrigger>
+                  <TooltipContent>Select Tools</TooltipContent>
                 </Tooltip>
               )}
             </div>

@@ -41,8 +41,11 @@ export const useGetConversationById = (
   return useQuery({
     queryKey: ['conversation', queryPayload],
     queryFn: () => conversationService.getConversationSessionById(queryPayload),
-    refetchOnMount: true,
-    staleTime: 0,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
     enabled,
   });
 };

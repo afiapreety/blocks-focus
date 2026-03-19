@@ -5,7 +5,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui-kit/pop
 import { cn } from '@/lib/utils';
 import { useGetCustomLlmModels, useGetLlmModels } from '@/modules/gpt-chats/hooks/use-gpt-chat';
 import { formatProviderName, getProviderConfig } from '../../utils/model-selector';
-import { SelectModelType } from '../../hooks/use-chat-store';
+import { SelectModelType } from '../../types/chat-store.types';
 import { useTranslation } from 'react-i18next';
 import { useGetAgents } from '../../hooks/use-agents';
 
