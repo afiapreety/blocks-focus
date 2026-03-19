@@ -49,13 +49,18 @@ const MarkdownCode = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  if (!inline && match) {
-    const language = match[1];
+  // Treat as block code if:
+  // 1. Not inline (undefined or false), AND
+  // 2. Either has a language class (from ```language) OR contains newlines (multi-line)
+  const isBlockCode = !inline && (match !== null || code.includes('\n'));
+
+  if (isBlockCode) {
+    const language = match ? match[1] : '';
 
     return (
       <div className="min-w-0 max-w-full overflow-auto rounded-md border bg-muted">
         <div className="flex w-full items-center justify-between border-b bg-muted/70 p-2.5 text-xs text-muted-foreground">
-          <span className="text-sm uppercase">{language}</span>
+          <span className="text-sm uppercase">{language || ''}</span>
           <button
             onClick={handleCopy}
             className="flex items-center gap-1.5 rounded px-2 py-1 text-xs hover:bg-accent hover:text-accent-foreground"
@@ -90,7 +95,7 @@ const MarkdownCode = ({
             maxWidth: '100%',
             ...(codeStyle || {}),
           }}
-          language={language}
+          language={language || 'text'}
           PreTag="div"
           {...props}
         >

@@ -255,8 +255,14 @@ export const MarkdownRenderer = ({
       <div
         className={cn(
           'prose prose-sm max-w-none min-w-0 dark:prose-invert',
-          'prose-headings:font-semibold',
-          'prose-p:leading-relaxed prose-p:p-0 prose-p:m-0',
+          'prose-headings:font-semibold prose-headings:mb-2 prose-headings:mt-4',
+          'prose-h1:mt-0 prose-h1:mb-3',
+          'prose-h2:mt-4 prose-h2:mb-2',
+          'prose-h3:mt-4 prose-h3:mb-2',
+          'prose-h4:mt-3 prose-h4:mb-2',
+          'prose-h5:mt-3 prose-h5:mb-2',
+          'prose-h6:mt-3 prose-h6:mb-2',
+          'prose-p:leading-relaxed prose-p:p-0 prose-p:m-0 prose-p:mb-3',
           'prose-ol:list-decimal prose-ul:list-disc prose-ul:p-0',
           'prose-pre:bg-transparent prose-pre:p-0',
           className
@@ -271,10 +277,14 @@ export const MarkdownRenderer = ({
     <div
       className={cn(
         'prose max-w-none min-w-0 dark:prose-invert',
-        'prose-headings:font-semibold',
-        'prose-h1:mb-3',
-        'prose-h2:my-3',
-        'prose-p:leading-relaxed prose-p:p-0 prose-p:m-0',
+        'prose-headings:font-semibold prose-headings:mb-2 prose-headings:mt-4',
+        'prose-h1:mt-0 prose-h1:mb-3',
+        'prose-h2:mt-4 prose-h2:mb-2',
+        'prose-h3:mt-4 prose-h3:mb-2',
+        'prose-h4:mt-3 prose-h4:mb-2',
+        'prose-h5:mt-3 prose-h5:mb-2',
+        'prose-h6:mt-3 prose-h6:mb-2',
+        'prose-p:leading-relaxed prose-p:p-0 prose-p:m-0 prose-p:mb-3',
         'prose-ol:list-decimal prose-ul:list-disc prose-ul:p-0',
         'prose-pre:p-0 prose-pre:m-0',
         className

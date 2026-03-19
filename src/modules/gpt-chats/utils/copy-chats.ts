@@ -101,6 +101,20 @@ export const handleCopyWithStyling = async (messageId: number, options: CopyChat
       checkbox.parentNode?.replaceChild(symbol, checkbox);
     });
 
+    // Add spacing after paragraphs that follow headings for better copy-paste formatting
+    const headings = clonedElement.querySelectorAll('h1, h2, h3, h4, h5, h6');
+    headings.forEach((heading) => {
+      const nextSibling = heading.nextElementSibling;
+      if (nextSibling && nextSibling.tagName === 'P') {
+        const spacer = document.createElement('br');
+        if (nextSibling.nextSibling) {
+          nextSibling.parentNode?.insertBefore(spacer, nextSibling.nextSibling);
+        } else {
+          nextSibling.parentNode?.appendChild(spacer);
+        }
+      }
+    });
+
     const styledHtml = clonedElement.outerHTML;
     const textContent = messageElement.textContent || '';
 
