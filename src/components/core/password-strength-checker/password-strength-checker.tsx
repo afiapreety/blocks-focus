@@ -148,7 +148,7 @@ const PasswordStrengthIndicator = ({
         </div>
         <div className="h-2 w-full rounded-full bg-gray-200">
           <div
-            className={`h-full rounded-full transition-all duration-300 ${getStrengthColor()}`}
+            className={`h-full rounded-full duration-300 ${getStrengthColor()}`}
             style={{ width: `${strength}%` }}
           />
         </div>

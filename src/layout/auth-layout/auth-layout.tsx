@@ -98,7 +98,7 @@ export const AuthLayout = () => {
                     Please create a project at{' '}
                     <a
                       href="https://cloud.seliseblocks.com"
-                      className="font-semibold underline decoration-red-400 underline-offset-2 hover:decoration-red-600 transition-colors"
+                      className="font-semibold underline decoration-red-400 underline-offset-2 hover:decoration-red-600 "
                       target="_blank"
                       rel="noopener noreferrer"
                     >
@@ -163,7 +163,7 @@ export const AuthLayout = () => {
           <div className="absolute top-2 right-4 flex items-center gap-2">
             <button
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="p-2 rounded-full transition-colors hover:bg-accent"
+              className="p-2 rounded-full  hover:bg-accent"
               aria-label={t('THEME')}
             >
               {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}

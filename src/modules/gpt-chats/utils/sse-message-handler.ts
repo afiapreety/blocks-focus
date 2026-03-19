@@ -187,13 +187,41 @@ export const handleSSEMessage = (
     let messageToStream: string;
     let isJsonObject = false;
 
+    const unwrapResultMessage = (value: unknown) => {
+      if (!value || typeof value !== 'object') return null;
+
+      const obj = value as Record<string, unknown>;
+      const result = obj.result;
+
+      if (typeof result === 'string') {
+        return result;
+      }
+
+      if (result !== null && typeof result !== 'undefined') {
+        return String(result);
+      }
+
+      return null;
+    };
+
     if (typeof fullMessage === 'object' && fullMessage !== null) {
-      isJsonObject = true;
-      messageToStream = JSON.stringify(fullMessage);
+      const unwrapped = unwrapResultMessage(fullMessage);
+      if (typeof unwrapped === 'string' && unwrapped.trim()) {
+        isJsonObject = false;
+        messageToStream = unwrapped;
+      } else {
+        isJsonObject = true;
+        messageToStream = JSON.stringify(fullMessage);
+      }
     } else if (typeof fullMessage === 'string') {
       try {
         const parsed = JSON.parse(fullMessage);
-        if (typeof parsed === 'object' && parsed !== null) {
+        const unwrapped = unwrapResultMessage(parsed);
+
+        if (typeof unwrapped === 'string' && unwrapped.trim()) {
+          isJsonObject = false;
+          messageToStream = unwrapped;
+        } else if (typeof parsed === 'object' && parsed !== null) {
           isJsonObject = true;
           messageToStream = fullMessage;
         } else {

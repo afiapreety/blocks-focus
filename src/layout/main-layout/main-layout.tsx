@@ -1,15 +1,10 @@
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import { SidebarTrigger, useSidebar } from '@/components/ui-kit/sidebar';
 import { ProfileMenu, AppSidebar } from '@/components/core';
 import { OrgSwitcher } from '@/components/core/org-switcher/org-switcher';
 
 export const MainLayout = () => {
   const { open, isMobile } = useSidebar();
-  const { pathname } = useLocation();
-  const segments = pathname?.split('/').filter(Boolean);
-  const firstSegment = segments?.[0] ?? undefined;
-  const isEmailRoute = firstSegment === 'mail';
-  const isChatRoute = firstSegment === 'chat';
 
   const getMarginClass = () => {
     if (isMobile) return 'ml-0';
@@ -42,9 +37,7 @@ export const MainLayout = () => {
         </header>
 
         <div
-          className={`flex h-full bg-surface ${
-            !isEmailRoute && !isChatRoute && 'p-4 sm:p-6 md:p-8'
-          } ${open && !isMobile ? 'w-[calc(100dvw-var(--sidebar-width))]' : 'w-full'}`}
+          className={`flex h-full bg-surface ${open && !isMobile ? 'w-[calc(100dvw-var(--sidebar-width))]' : 'w-full'}`}
         >
           <Outlet />
         </div>

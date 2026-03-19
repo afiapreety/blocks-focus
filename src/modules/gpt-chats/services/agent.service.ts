@@ -4,6 +4,8 @@ import {
   IGetAgentByIdResponse,
   IGetAgentsPayload,
   IGetAgentsResponse,
+  IProcessFilesPayload,
+  IAgentChatStreamPayload,
 } from '../types/agent.service.type';
 
 export class AgentService {
@@ -17,10 +19,14 @@ export class AgentService {
     );
   }
 
-  agentChatStream(widgetId: string, body: Record<string, any>, sessionId?: string) {
+  agentChatStream(widgetId: string, body: IAgentChatStreamPayload, sessionId?: string) {
     const queryParams = sessionId ? `?s_id=${sessionId}` : '';
     const url = `/blocksai-api/v1/ai-agent/chat/${widgetId}${queryParams}`;
     return clients.stream(url, JSON.stringify(body));
+  }
+
+  processFiles(payload: IProcessFilesPayload) {
+    return clients.stream(`/blocksai-api/v1/ai-agent/file/process`, JSON.stringify(payload));
   }
 }
 
