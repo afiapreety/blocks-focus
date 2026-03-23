@@ -12,6 +12,7 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   timestamp: Date;
   streaming?: boolean;
+  modelName?: string;
 }
 
 export interface ChatEvent {
@@ -31,6 +32,7 @@ export function useNotesChat({ noteContent }: UseNotesChatProps = {}) {
   const [currentEvent, setCurrentEvent] = useState<ChatEvent | null>(null);
   const [sessionId, setSessionId] = useState<string | undefined>();
   const abortControllerRef = useRef<AbortController | null>(null);
+  const streamTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const llmBasePrompt = import.meta.env.VITE_LLM_BASE_PROMPT;
 
@@ -63,6 +65,7 @@ export function useNotesChat({ noteContent }: UseNotesChatProps = {}) {
       role: 'assistant',
       timestamp: new Date(),
       streaming: true,
+      modelName: selectedModel.model,
     };
 
     setMessages((prev) => [...prev, assistantMsg]);
@@ -102,7 +105,7 @@ export function useNotesChat({ noteContent }: UseNotesChatProps = {}) {
 
       const decoder = new TextDecoder();
       let buffer = '';
-      let accumulatedContent = '';
+      let fullMessageContent = '';
       let isDone = false;
       let receivedSessionId: string | undefined;
 
@@ -122,22 +125,22 @@ export function useNotesChat({ noteContent }: UseNotesChatProps = {}) {
               setSessionId(receivedSessionId);
             }
 
-            // Handle message content first
+            // Handle message content - store complete message for streaming
             if (event.eventType === 'chat_response' && event.eventData.message) {
-              accumulatedContent = String(event.eventData.message);
+              fullMessageContent = String(event.eventData.message);
               setCurrentEvent(null);
             } else if (event.eventType === 'message' && event.eventData.message) {
-              if (!accumulatedContent) {
-                accumulatedContent = String(event.eventData.message);
+              if (!fullMessageContent) {
+                fullMessageContent = String(event.eventData.message);
               } else {
-                accumulatedContent += String(event.eventData.message);
+                fullMessageContent += String(event.eventData.message);
               }
               setCurrentEvent(null);
             } else if (
               event.eventType &&
               event.eventType !== 'message' &&
               event.eventType !== 'chat_response' &&
-              !accumulatedContent
+              !fullMessageContent
             ) {
               // Only show event messages if we haven't started receiving content yet
               const eventMessage = getRandomEventMessage(event.eventType);
@@ -146,28 +149,51 @@ export function useNotesChat({ noteContent }: UseNotesChatProps = {}) {
                 message: eventMessage,
               });
             }
-
-            // Update assistant message with streaming content
-            if (accumulatedContent) {
-              setMessages((prev) =>
-                prev.map((msg) =>
-                  msg.id === assistantMsgId
-                    ? { ...msg, content: accumulatedContent, streaming: true }
-                    : msg
-                )
-              );
-            }
           });
         }
       }
 
-      // Mark message as complete (not streaming)
-      setMessages((prev) =>
-        prev.map((msg) => (msg.id === assistantMsgId ? { ...msg, streaming: false } : msg))
-      );
-      setIsLoading(false);
-      setIsStreaming(false);
-      setCurrentEvent(null);
+      // Stream the complete message character-by-character
+      if (fullMessageContent) {
+        const chunkSize = 5;
+        let index = 0;
+
+        const streamNextChunk = () => {
+          if (index >= fullMessageContent.length) {
+            // Mark message as complete (not streaming)
+            setMessages((prev) =>
+              prev.map((msg) => (msg.id === assistantMsgId ? { ...msg, streaming: false } : msg))
+            );
+            setIsLoading(false);
+            setIsStreaming(false);
+            setCurrentEvent(null);
+            return;
+          }
+
+          const chunk = fullMessageContent.slice(0, index + chunkSize);
+
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === assistantMsgId
+                ? { ...msg, content: chunk, streaming: true, modelName: selectedModel.model }
+                : msg
+            )
+          );
+
+          index += chunkSize;
+          streamTimeoutRef.current = setTimeout(streamNextChunk, 50);
+        };
+
+        streamNextChunk();
+      } else {
+        // No content received, mark as complete
+        setMessages((prev) =>
+          prev.map((msg) => (msg.id === assistantMsgId ? { ...msg, streaming: false } : msg))
+        );
+        setIsLoading(false);
+        setIsStreaming(false);
+        setCurrentEvent(null);
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       setIsLoading(false);
@@ -196,6 +222,10 @@ export function useNotesChat({ noteContent }: UseNotesChatProps = {}) {
       setIsLoading(false);
       setIsStreaming(false);
       setCurrentEvent(null);
+    }
+    if (streamTimeoutRef.current) {
+      clearTimeout(streamTimeoutRef.current);
+      streamTimeoutRef.current = null;
     }
   };
 

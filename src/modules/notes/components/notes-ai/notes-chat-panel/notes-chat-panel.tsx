@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { Mic, ArrowUp, Trash2, Clipboard, Check, X } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Mic, ArrowUp, ArrowDown, Trash2, Clipboard, Check, X } from 'lucide-react';
+import { format } from 'date-fns';
 import { Button } from '@/components/ui-kit/button';
 import { Input } from '@/components/ui-kit/input';
 import {
@@ -8,16 +9,16 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui-kit/tooltip';
-import { useNotesChat } from '../../../hooks/use-notes-chat';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { useNotesChat } from '../../../hooks/use-notes-chat';
 import { GroupedModelSelector } from '@/modules/gpt-chats/components/gpt-chat-input/model-selector';
-import { SelectModelType } from '@/modules/gpt-chats/hooks/use-chat-store';
+import { SelectModelType } from '@/modules/gpt-chats/types/chat-store.types';
 import { MarkdownRenderer } from '@/modules/gpt-chats/components/markdown-renderer/markdown-renderer';
 import { ChatEventMessage, SparkleText } from '@/modules/gpt-chats/utils/chat-event-messages';
 import botLogoSELISEAI from '@/assets/images/selise_ai_small.png';
 import { useGetAccount } from '@/modules/profile/hooks/use-account';
 import DummyProfile from '@/assets/images/dummy_profile.png';
+import { useGetLlmModels } from '@/modules/gpt-chats/hooks/use-gpt-chat';
 
 interface NotesChatPanelProps {
   noteContent?: string;
@@ -33,32 +34,137 @@ export function NotesChatPanel({ noteContent, isOpen, onClose }: NotesChatPanelP
     model: 'gpt-4o-mini',
   });
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [showScrollButton, setShowScrollButton] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const hasScrolledToBottomRef = useRef<boolean>(false);
+  const userHasManuallyScrolledRef = useRef<boolean>(false);
   const { data: accountData } = useGetAccount();
+  const { data: llmModels } = useGetLlmModels();
 
   const { messages, isLoading, isStreaming, currentEvent, sendMessage, clearChat } = useNotesChat({
     noteContent,
   });
 
-  const scrollToBottom = useCallback(() => {
-    const behavior = isStreaming ? 'auto' : 'smooth';
-    messagesEndRef.current?.scrollIntoView({ behavior });
-  }, [isStreaming]);
-
+  // Detect user manual scrolling with wheel event
   useEffect(() => {
-    const delay = isStreaming ? 10 : 100;
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (container.scrollHeight > container.clientHeight) {
+        const distanceFromBottom =
+          container.scrollHeight - container.scrollTop - container.clientHeight;
+
+        if (e.deltaY > 0 && distanceFromBottom < 10) return;
+
+        if (e.deltaY !== 0) {
+          userHasManuallyScrolledRef.current = true;
+        }
+      }
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: true });
+
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+    };
+  }, []);
+
+  // Detect scroll position to show/hide scroll-to-bottom button
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+
+    const checkScroll = () => {
+      if (container && container.scrollHeight > container.clientHeight) {
+        const { scrollHeight, scrollTop, clientHeight } = container;
+        const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+        const shouldShow = distanceFromBottom > 50;
+        setShowScrollButton(shouldShow);
+      }
+    };
+
+    const handleScroll = () => {
+      requestAnimationFrame(checkScroll);
+    };
+
+    if (container) {
+      container.addEventListener('scroll', handleScroll, { passive: true });
+    }
+
+    const initialTimeout = setTimeout(checkScroll, 300);
+
+    return () => {
+      if (container) {
+        container.removeEventListener('scroll', handleScroll);
+      }
+      clearTimeout(initialTimeout);
+    };
+  }, [messages.length]);
+
+  // Auto-scroll effect
+  useEffect(() => {
+    if (messages.length === 0) return;
+
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    // If user has manually scrolled during streaming, don't auto-scroll
+    if (userHasManuallyScrolledRef.current && isStreaming) {
+      return;
+    }
+
+    // Check if user is currently at bottom - if so, clear manual scroll flag
+    let distanceFromBottom = 0;
+
+    if (container.scrollHeight > container.clientHeight) {
+      distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    }
+
+    if (distanceFromBottom < 20) {
+      userHasManuallyScrolledRef.current = false;
+    }
+
+    const shouldSmoothScroll = distanceFromBottom > 100;
+    const behavior = isStreaming
+      ? shouldSmoothScroll
+        ? 'smooth'
+        : 'auto'
+      : hasScrolledToBottomRef.current
+        ? 'smooth'
+        : 'auto';
+    const delay = isStreaming ? 10 : hasScrolledToBottomRef.current ? 100 : 0;
+
     const timeoutId = setTimeout(() => {
-      scrollToBottom();
+      messagesEndRef.current?.scrollIntoView({ behavior: behavior });
+      hasScrolledToBottomRef.current = true;
     }, delay);
+
     return () => clearTimeout(timeoutId);
-  }, [messages, isStreaming, scrollToBottom]);
+  }, [messages, isStreaming]);
 
   const handleSend = async () => {
     if (message.trim() && !isLoading) {
       const userMessage = message;
       setMessage('');
+      userHasManuallyScrolledRef.current = false;
       await sendMessage(userMessage, selectedModel);
     }
+  };
+
+  const scrollToBottom = () => {
+    userHasManuallyScrolledRef.current = false;
+
+    const container = scrollContainerRef.current;
+    if (container && container.scrollHeight > container.clientHeight) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const getModelLabel = (modelName?: string) => {
+    if (!modelName) return null;
+    const model = llmModels?.find((m) => m.model_name === modelName);
+    return model?.model_name_label || modelName;
   };
 
   const handleClearChat = () => {
@@ -79,24 +185,10 @@ export function NotesChatPanel({ noteContent, isOpen, onClose }: NotesChatPanelP
     return format(timestamp, 'MMM d, yyyy h:mm a');
   };
 
-  const renderMessageContent = (content: string, streaming = false) => {
+  const renderMessageContent = (content: string) => {
     return (
       <div className="text-[15px]">
-        <div className="inline-block relative">
-          <MarkdownRenderer content={content} />
-          {streaming && (
-            <>
-              <span
-                className="absolute w-[2px] h-[1.2em] bg-primary ml-[2px]"
-                style={{
-                  bottom: '0.2em',
-                  right: '-4px',
-                  animation: 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                }}
-              />
-            </>
-          )}
-        </div>
+        <MarkdownRenderer content={content} />
       </div>
     );
   };
@@ -142,7 +234,7 @@ export function NotesChatPanel({ noteContent, isOpen, onClose }: NotesChatPanelP
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto bg-background p-4">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto bg-background p-4">
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full text-center">
             <div className="space-y-2">
@@ -174,9 +266,15 @@ export function NotesChatPanel({ noteContent, isOpen, onClose }: NotesChatPanelP
                     className={cn(
                       'group flex-1 relative',
                       msg.role === 'user' ? 'flex justify-end' : '',
-                      msg.role === 'assistant' ? 'min-h-[32px]' : ''
+                      msg.role === 'assistant' ? 'min-h-[32px] flex flex-col gap-1' : ''
                     )}
                   >
+                    {msg.role === 'assistant' && msg.modelName && (
+                      <span className="text-muted-foreground font-medium">
+                        {getModelLabel(msg.modelName)}
+                      </span>
+                    )}
+
                     <div
                       className={cn(
                         'max-w-[90%] py-1',
@@ -186,7 +284,7 @@ export function NotesChatPanel({ noteContent, isOpen, onClose }: NotesChatPanelP
                       {msg.role === 'user' ? (
                         <p className="text-[15px] leading-7 whitespace-pre-wrap">{msg.content}</p>
                       ) : (
-                        renderMessageContent(msg.content, msg.streaming && isStreaming)
+                        renderMessageContent(msg.content)
                       )}
                     </div>
 
@@ -275,6 +373,21 @@ export function NotesChatPanel({ noteContent, isOpen, onClose }: NotesChatPanelP
           </div>
         )}
       </div>
+
+      {showScrollButton && (
+        <div className="flex justify-center w-full">
+          <div className="fixed bottom-[178px] z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-10 w-10 rounded-full shadow-xl bg-background hover:bg-accent border border-border backdrop-blur-sm"
+              onClick={scrollToBottom}
+            >
+              <ArrowDown className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="p-4 bg-background border-t border-border">
         <div className="bg-muted/40 rounded-2xl p-4">

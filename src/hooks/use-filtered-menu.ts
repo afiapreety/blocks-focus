@@ -20,7 +20,11 @@ export const useFilteredMenu = (menuItems: MenuItem[]): MenuItem[] => {
 
   const filterMenuItem = (item: MenuItem): MenuItem | null => {
     // Check if the item has role requirements
-    if (!hasRequiredRole(item.roles)) {
+    if (
+      !hasRequiredRole(
+        Array.isArray(item.roles) ? item.roles : item.roles ? [item.roles] : undefined
+      )
+    ) {
       return null;
     }
 

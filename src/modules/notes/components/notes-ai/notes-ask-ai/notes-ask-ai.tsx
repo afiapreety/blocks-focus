@@ -19,7 +19,7 @@ import { useNotesChat } from '../../../hooks/use-notes-chat';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { GroupedModelSelector } from '@/modules/gpt-chats/components/gpt-chat-input/model-selector';
-import { SelectModelType } from '@/modules/gpt-chats/hooks/use-chat-store';
+import { SelectModelType } from '@/modules/gpt-chats/types/chat-store.types';
 import { MarkdownRenderer } from '@/modules/gpt-chats/components/markdown-renderer/markdown-renderer';
 import { ChatEventMessage, SparkleText } from '@/modules/gpt-chats/utils/chat-event-messages';
 import botLogoSELISEAI from '@/assets/images/selise_ai_small.png';
