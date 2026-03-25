@@ -41,9 +41,21 @@ export const useGetConversationById = (
   return useQuery({
     queryKey: ['conversation', queryPayload],
     queryFn: () => conversationService.getConversationSessionById(queryPayload),
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    enabled,
+  });
+};
+
+export const useGetLLMConversationById = (payload: { chatId: string }) => {
+  return useQuery({
+    queryKey: ['llm-conversation', payload],
+    queryFn: () => conversationService.getLLMConversationSessionById(payload),
     refetchOnMount: true,
     staleTime: 0,
-    enabled,
   });
 };
 
@@ -54,6 +66,25 @@ export const useDeleteConversationById = () => {
     mutationFn: conversationService.deleteConversationSession,
     onSuccess: () => {
       client.invalidateQueries({ queryKey: ['conversations'] });
+    },
+  });
+};
+
+export const useGetSessions = (payload: { userId?: string }) => {
+  return useQuery({
+    queryKey: ['sessions', payload],
+    queryFn: () => conversationService.getSessions(payload),
+    refetchInterval: 5000,
+  });
+};
+
+export const useDeleteLLMConversationById = () => {
+  const client = useQueryClient();
+  return useMutation({
+    mutationKey: ['delete-conversation'],
+    mutationFn: conversationService.deleteSession,
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: ['sessions'] });
     },
   });
 };

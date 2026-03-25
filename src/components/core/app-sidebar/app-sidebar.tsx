@@ -43,6 +43,7 @@ import { useCategorizedChatHistories } from '@/modules/gpt-chats/hooks/use-chat-
 import { useGetAgents } from '@/modules/gpt-chats/hooks/use-agents';
 import { AgentChatAccordion } from '@/modules/gpt-chats/components/agent-chat/agent-chat-accordion';
 import { cn } from '@/lib/utils';
+import { useChatStore } from '@/modules/gpt-chats/hooks/use-chat-store';
 
 const projectKey = import.meta.env.VITE_X_BLOCKS_KEY || '';
 const projectSlug = import.meta.env.VITE_PROJECT_SLUG || '';
@@ -58,6 +59,7 @@ export const AppSidebar = () => {
   const { toast } = useToast();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [chatToDelete, setChatToDelete] = useState<string | null>(null);
+  const activeChatId = useChatStore((state) => state.activeChatId);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const filteredMenuItems = useFilteredMenu(menuItems);
 
@@ -236,10 +238,15 @@ export const AppSidebar = () => {
   const confirmDelete = async () => {
     if (chatToDelete) {
       try {
-        const shouldNavigate = chatId === chatToDelete;
+        const isOnChatRoute = pathname.startsWith('/chat');
+        const isViewingDeletedChat =
+          pathname.includes(chatToDelete) ||
+          activeChatId === chatToDelete ||
+          (isOnChatRoute && chatId === chatToDelete);
+
         await deleteMutateAsync({ session_id: chatToDelete, project_key: projectKey });
 
-        if (shouldNavigate) {
+        if (isViewingDeletedChat) {
           navigate('/chat');
         }
 
@@ -262,7 +269,7 @@ export const AppSidebar = () => {
   const renderChatItem = (chat: (typeof chatList)[0]) => (
     <div
       key={chat.id}
-      className={`rounded-lg hover:bg-accent/100 cursor-pointer flex justify-between items-center h-fit group/item px-2 py-1 transition-colors ${
+      className={`rounded-lg hover:bg-accent/100 cursor-pointer flex justify-between items-center h-fit group/item px-2 py-1  ${
         chatId === chat.id ? 'bg-accent/100' : ''
       } ${openDropdownId === chat.id ? 'bg-accent/100' : ''}`}
       onClick={() => {
@@ -393,8 +400,8 @@ export const AppSidebar = () => {
         </SidebarHeader>
 
         <SidebarContent className="text-base px-3 py-2 text-high-emphasis font-normal overflow-x-hidden">
-          <div className="mb-4 pb-4 border-b border-border/50">
-            <div>
+          <div className="mb-4 pb-4 border-b border-border/50 ">
+            <div className="mt-4">
               {filteredMenuItems.map((item) => (
                 <Button
                   key={item.id}
@@ -405,7 +412,7 @@ export const AppSidebar = () => {
                     }
                   }}
                   variant="ghost"
-                  className={` justify-start hover:bg-accent/50 mb-0 mt-4 px-3 w-full ${
+                  className={` justify-start hover:bg-accent/50 mb-0  px-3 w-full ${
                     pathname === item.path ? 'bg-accent/50' : ''
                   }`}
                 >

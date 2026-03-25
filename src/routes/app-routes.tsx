@@ -16,6 +16,7 @@ import { GptChatPage } from '@/modules/gpt-chats/pages/gpt-chat/gpt-chat';
 import { GptChatPageDetails } from '@/modules/gpt-chats/pages/gpt-chat-details/gpt-chat-details';
 import { ProtectedRoute } from '@/state/store/auth/protected-route';
 import { UsersTablePage } from '@/modules/iam';
+import { CreateNotePage, EditNotePage, NotesPage } from '@/modules/notes';
 
 export const AppRoutes = () => {
   const { isLoading } = useLanguageContext();
@@ -49,6 +50,10 @@ export const AppRoutes = () => {
 
                 <Route path="/chat" element={<GptChatPage />} />
                 <Route path="/chat/:chatId" element={<GptChatPageDetails />} />
+
+                <Route path="/notes" element={<NotesPage />} />
+                <Route path="/notes/create" element={<CreateNotePage />} />
+                <Route path="/notes/:noteId" element={<EditNotePage />} />
 
                 <Route path="/503" element={<ServiceUnavailablePage />} />
                 <Route path="/404" element={<NotFoundPage />} />
