@@ -12,8 +12,6 @@ import { SidebarProvider } from '@/components/ui-kit/sidebar';
 import { Toaster } from '@/components/ui-kit/toaster';
 import { useLanguageContext } from '@/i18n/language-context';
 import { LoadingOverlay } from '@/components/core';
-import { GptChatPage } from '@/modules/gpt-chats/pages/gpt-chat/gpt-chat';
-import { GptChatPageDetails } from '@/modules/gpt-chats/pages/gpt-chat-details/gpt-chat-details';
 import { ProtectedRoute } from '@/state/store/auth/protected-route';
 import { UsersTablePage } from '@/modules/iam';
 import { CreateNotePage, EditNotePage, NotesPage } from '@/modules/notes';
@@ -48,9 +46,6 @@ export const AppRoutes = () => {
                 />
                 <Route path="/profile" element={<ProfilePage />} />
 
-                <Route path="/chat" element={<GptChatPage />} />
-                <Route path="/chat/:chatId" element={<GptChatPageDetails />} />
-
                 <Route path="/notes" element={<NotesPage />} />
                 <Route path="/notes/create" element={<CreateNotePage />} />
                 <Route path="/notes/:noteId" element={<EditNotePage />} />
@@ -60,7 +55,7 @@ export const AppRoutes = () => {
               </Route>
 
               {/* Redirects */}
-              <Route path="/" element={<Navigate to="/chat" />} />
+              <Route path="/" element={<Navigate to="/notes" />} />
 
               <Route path="*" element={<Navigate to="/404" />} />
             </Routes>
